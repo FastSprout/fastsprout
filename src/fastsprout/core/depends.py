@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 try:
     from fastapi.params import (  # type: ignore
-        Depends as DependsClass,
+        Depends as DependsClass,  # pyright: ignore[reportAssignmentType]
     )
 except ImportError:
 
