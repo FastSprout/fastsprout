@@ -1,0 +1,69 @@
+# .gitlab-ci.yml — fastsprout-data (public library)
+# Public pull: pypi-proxy (public PyPI) + pypi-hosted-public (our pkgs), anon on nexus.3dcra.eu.
+# Release on tag, ordered by stage: Nexus -> TestPyPI -> PyPI.
+stages: [static-analysis, test, release-nexus, release-testpypi, release-pypi]
+
+include:
+  - component: $CI_SERVER_FQDN/opensource/templates/python-quality@0.1.10
+    inputs:
+      internal_ca: false
+      index_url: https://nexus.3dcra.eu/repository/pypi-proxy/simple
+      extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
+      checks:
+        - uv run --all-extras --all-groups --all-packages ruff check
+        - uv run --all-extras --all-groups --all-packages basedpyright --pythonversion $UV_PYTHON src
+        - uv run  --all-extras --all-groups --all-packages pylint --disable=all --enable=C0302 --max-module-lines=300 --ignore-paths=src/tests ./src
+
+  - component: $CI_SERVER_FQDN/opensource/templates/pytest@0.1.10
+    inputs:
+      internal_ca: false
+      index_url: https://nexus.3dcra.eu/repository/pypi-proxy/simple
+      extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
+
+  # -> Nexus pypi-hosted-public
+  - component: $CI_SERVER_FQDN/opensource/templates/pypi-publish@0.1.10
+    inputs:
+      job_name: nexus-release
+      stage: release-nexus
+      internal_ca: false
+      index_url: https://nexus.3dcra.eu/repository/pypi-proxy/simple
+      extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
+      repository_url: https://nexus.3dcra.net/repository/pypi-hosted-public/
+
+  # -> TestPyPI
+  - component: $CI_SERVER_FQDN/opensource/templates/pypi-publish@0.1.10
+    inputs:
+      job_name: testpypi-release
+      stage: release-testpypi
+      internal_ca: false
+      index_url: https://nexus.3dcra.eu/repository/pypi-proxy/simple
+      extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
+      repository_url: https://test.pypi.org/legacy/
+      username: __token__
+      password: $TEST_PYPI_TOKEN
+      cert: ""
+
+  # -> public PyPI
+  - component: $CI_SERVER_FQDN/opensource/templates/pypi-publish@0.1.10
+    inputs:
+      job_name: pypi-release
+      stage: release-pypi
+      internal_ca: false
+      index_url: https://nexus.3dcra.eu/repository/pypi-proxy/simple
+      extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
+      repository_url: https://upload.pypi.org/legacy/
+      username: __token__
+      password: $OFFICIAL_PYPI_PUSH
+      cert: ""
+
+pytest:
+  parallel:
+    matrix:
+      - UV_PYTHON: ["3.12", "3.13", "3.14"]
+  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
+
+python-quality:
+  parallel:
+    matrix:
+      - UV_PYTHON: ["3.12", "3.13", "3.14"]
+  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim

@@ -162,20 +162,34 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# ---> Linux
-*~
+# ---> macOS
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
 
-# temporary files which can be created if a process still has a handle open of a deleted file
-.fuse_hidden*
+# Icon must end with two \r
+Icon
 
-# KDE directory preferences
-.directory
 
-# Linux trash folder which might appear on any partition or disk
-.Trash-*
+# Thumbnails
+._*
 
-# .nfs files are created when an open file is removed but is still being accessed
-.nfs*
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
 
 # ---> Windows
 # Windows thumbnail cache files
@@ -203,31 +217,17 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# ---> macOS
-# General
-.DS_Store
-.AppleDouble
-.LSOverride
+# ---> Linux
+*~
 
-# Icon must end with two \r
-Icon
+# temporary files which can be created if a process still has a handle open of a deleted file
+.fuse_hidden*
 
-# Thumbnails
-._*
+# KDE directory preferences
+.directory
 
-# Files that might appear in the root of a volume
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
+# Linux trash folder which might appear on any partition or disk
+.Trash-*
 
-# Directories potentially created on remote AFP share
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
-
+# .nfs files are created when an open file is removed but is still being accessed
+.nfs*

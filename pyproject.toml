@@ -1,0 +1,107 @@
+[project]
+name = "fastsprout"
+version = "0.1.0"
+description = "FastSprout - Python backend framework that grows from a seed. Modular monolith first. Async-native. Built on FastAPI."
+readme = "README.md"
+license = "Apache-2.0"
+authors = [{ name = "Illia Bahlai", email = "illia@bahlai.xyz" }]
+requires-python = ">=3.12,<3.15"
+keywords = [
+    "fastsprout",
+    "framework",
+    "backend",
+    "async",
+    "modular-monolith",
+    "monolith",
+    "pydantic",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Typing :: Typed",
+]
+dependencies = ["pydantic>=2.13.5"]
+
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.39.3",
+    "import-linter[ui]>=2.3",
+    "ipython>=9.4.0",
+    "pre-commit>=4.2.0",
+    "pylint>=4.0.5",
+    "ruff>=0.12.1",
+    "basedpyright>=1.39.3",
+    "ipython>=9.4.0",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
+    "pytest-asyncio>=1.4.0",
+    "mypy>=2.3.1",
+]
+
+
+[project.urls]
+Homepage = "https://fastsprout.dev"
+Repository = "https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout"
+Issues = "https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fastsprout"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/fastsprout/py.typed" = "fastsprout/py.typed"
+
+[tool.ruff]
+exclude = [".git", "__pycache__", "build", "dist"]
+lint.fixable = ["ALL"]
+lint.unfixable = []
+lint.ignore = ["E501"]
+lint.select = ["B", "C9", "E", "F", "I", "N", "RUF", "UP", "T"]
+line-length = 80
+
+[tool.ruff.lint.per-file-ignores]
+"examples/*.py" = ["T201"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 5
+
+[tool.ruff.lint.flake8-annotations]
+mypy-init-return = true
+
+[tool.mypy]
+plugins = ["fastsprout.core.mypy_plugin"]
+
+[tool.basedpyright]
+include = ["src", "examples"]
+typeCheckingMode = "standard"
+
+[[tool.basedpyright.executionEnvironments]]
+root = "src/tests"
+reportArgumentType = false
+reportOptionalCall = false
+reportCallIssue = false
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -vvv --cov=src/fastsprout --cov-report=term-missing --cov-fail-under=85"
+testpaths = ["src/tests"]
+asyncio_mode = "auto"
+markers = [
+    "unit: Unit tests - no external dependencies",
+    "integration: Integration tests - testcontainers or in-memory mocks",
+    "slow: Tests taking more than 5 seconds",
+]
+
+[tool.coverage.run]
+omit = ["src/fastsprout/core/mypy_plugin.py"]
