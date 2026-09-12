@@ -4,7 +4,7 @@ from typing import Any
 from uuid import uuid4
 
 from fastsprout.core import IdentificatorType
-from fastsprout.data.entity import BaseEntity
+from fastsprout.data.entity import BaseEntity, Entitieable
 
 __all__ = [
     "RANGE_START_END",
@@ -67,7 +67,7 @@ def build_test_entity_uuid() -> TestEntityUUID:
     return TestEntityUUID(id=uuid4())
 
 
-def make_entity_range[E: BaseEntity[Any]](
+def make_entity_range[E: Entitieable[Any]](
     builder: Callable[[], E] = build_test_entity_int,
     start=RANGE_START_END[0],
     end=RANGE_START_END[1],
@@ -75,7 +75,7 @@ def make_entity_range[E: BaseEntity[Any]](
     return (builder() for _ in range(start, end))
 
 
-def make_async_entity_range[E: BaseEntity[Any]](
+def make_async_entity_range[E: Entitieable[Any]](
     builder: Callable[[], E] = build_test_entity_int,
     start=RANGE_START_END[0],
     end=RANGE_START_END[1],

@@ -2,17 +2,17 @@ from collections.abc import (
     AsyncIterable,
     Sequence,
 )
-from typing import Protocol, runtime_checkable
+from typing import Any
 
-from fastsprout.data.capabilities.query import BaseQuery
+from fastsprout.data.adapters.sql.entity import SQLEntity
+from fastsprout.data.adapters.sql.query import SQLQuery
+from fastsprout.data.capabilities.protocols import Iterable
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
-from fastsprout.data.entity import Entitieable
 
-__all__ = ["Iterable"]
+__all__ = ["SQLIterable"]
 
 
-@runtime_checkable
-class Iterable[E: Entitieable, Q: BaseQuery](Protocol):
+class SQLIterable[E: SQLEntity[Any], Q: SQLQuery](Iterable[E, Q]):
     async def iter(self, query: Q, /) -> AsyncIterable[E]: ...
     async def iter_per(
         self, query: Q, /, *, chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE

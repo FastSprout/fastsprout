@@ -1,12 +1,11 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any
 
-from fastsprout.data.entity import BaseEntity
+from fastsprout.data.entity import Entitieable
 
 
 @dataclass
-class BaseQuery[E: BaseEntity[Any], QueryT](ABC):
+class BaseQuery[E: Entitieable, QueryT](ABC):
     """Base for filters."""
 
     entity: type[E]

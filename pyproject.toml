@@ -30,6 +30,10 @@ classifiers = [
 dependencies = ["pydantic>=2.13.5"]
 
 
+[project.optional-dependencies]
+sql = ["sqlmodel>=0.0.42", 'sqlalchemy']
+
+
 [dependency-groups]
 dev = [
     "basedpyright>=1.39.3",

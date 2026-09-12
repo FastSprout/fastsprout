@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import AsyncGenerator, AsyncIterable
+from collections.abc import AsyncIterable, AsyncIterator
 
 from fastsprout.core.decorators import hidden_lazy_await, lazy_await
 from fastsprout.core.types import LazyAwait
@@ -48,11 +48,11 @@ async def test_lazy_await_gen():
     result = test_asyncgen()
     # then
     assert isinstance(result, LazyAwait)
-    assert not isinstance(result, AsyncGenerator)
+    assert not isinstance(result, AsyncIterator)
     async for _ in result:
         pass
     assert isinstance(result, LazyAwait)
-    assert not isinstance(result, AsyncGenerator)
+    assert not isinstance(result, AsyncIterator)
 
 
 async def test_hidden_lazy_await_gen():
@@ -66,8 +66,8 @@ async def test_hidden_lazy_await_gen():
     result: AsyncIterable[int] = test_asyncgen()
     # then
     assert isinstance(result, LazyAwait)
-    assert not isinstance(result, AsyncGenerator)
+    assert not isinstance(result, AsyncIterator)
     async for _ in result:
         pass
     assert isinstance(result, LazyAwait)
-    assert not isinstance(result, AsyncGenerator)
+    assert not isinstance(result, AsyncIterator)

@@ -10,7 +10,7 @@ from fastsprout.core import lazy_await
 from fastsprout.core.types import AnyIterable
 from fastsprout.core.types.protocols.ables import Addable, RichComparisonable
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
-from fastsprout.data.entity import BaseEntity
+from fastsprout.data.entity import Entitieable
 from fastsprout.data.types import (
     ConsumerCallable,
     GetterCallable,
@@ -24,7 +24,7 @@ from fastsprout.data.utils.iterable import resolve_any_iterable
 __all__ = ["BaseCommonStream"]
 
 
-class BaseCommonStream[T: Valuable | BaseEntity]:
+class BaseCommonStream[T: Valuable | Entitieable]:
     def __init__(self, values: AnyIterable[T]) -> None:
         self.__values: AsyncIterable[T] = resolve_any_iterable(values)
 

@@ -4,7 +4,7 @@ from typing import Any, Protocol, runtime_checkable
 from fastsprout.core.types import AnyIterable, LazyAwait
 from fastsprout.core.types.protocols.ables import RichComparisonable
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
-from fastsprout.data.entity import BaseEntity
+from fastsprout.data.entity import Entitieable
 from fastsprout.data.types import (
     ConsumerCallable,
     GetterCallable,
@@ -20,7 +20,7 @@ __all__ = ["AsyncEntityStream"]
 
 
 @runtime_checkable
-class AsyncEntityStream[E: BaseEntity[Any]](Protocol):
+class AsyncEntityStream[E: Entitieable](Protocol):
     """Composable async stream of entities.
 
     Transformations are lazy. Terminal operations materialize results.
@@ -31,7 +31,7 @@ class AsyncEntityStream[E: BaseEntity[Any]](Protocol):
         self, *others: "AsyncEntityStream[E] | AnyIterable[E]"
     ) -> "AsyncEntityStream[E]": ...
 
-    def map[R: BaseEntity[Any]](
+    def map[R: Entitieable](
         self, mapper: MapperCallable[E, R]
     ) -> "AsyncEntityStream[R]": ...
 

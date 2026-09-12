@@ -14,5 +14,5 @@ type GetterCallable[S, R] = AnyCallable[S, R]
 
 type ConsumerCallable[S] = AnyCallable[S, None]
 type ReducerCallable[S, R] = (
-    ables.Callable[[R, S], R] | ables.Callable[[R, S], ables.Awaitable[R]]
+    ables.Callable[[S, R], R] | ables.Callable[[S, R], ables.Awaitable[R]]
 )

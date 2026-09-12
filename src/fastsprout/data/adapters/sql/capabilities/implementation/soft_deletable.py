@@ -1,16 +1,18 @@
 from collections.abc import AsyncIterator, Sequence
-from typing import Protocol, runtime_checkable
+from typing import Any
 
 from fastsprout.core.types import AnyIterable
-from fastsprout.data.capabilities.query import BaseQuery
+from fastsprout.data.adapters.sql.entity import SoftDeletableSQLEntity
+from fastsprout.data.adapters.sql.query import SQLQuery
+from fastsprout.data.capabilities.protocols import SoftDeletable
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
-from fastsprout.data.entity import Entitieable
 
-__all__ = ["SoftDeletable"]
+__all__ = ["SQLSoftDeletable"]
 
 
-@runtime_checkable
-class SoftDeletable[E: Entitieable, Q: BaseQuery](Protocol):
+class SQLSoftDeletable[E: SoftDeletableSQLEntity[Any], Q: SQLQuery](
+    SoftDeletable[E, Q]
+):
     async def soft_delete(self, entity: E, /) -> None: ...
     async def bulk_soft_delete(self, entities: AnyIterable[E], /) -> None: ...
     async def soft_delete_by_query(self, query: Q, /) -> int: ...
@@ -18,17 +20,19 @@ class SoftDeletable[E: Entitieable, Q: BaseQuery](Protocol):
     async def _handle_before_start(
         self,
         entities: AnyIterable[E],
-    ) -> AnyIterable[E]: ...
+    ) -> AnyIterable[E]:
+        return entities
 
     async def _handle_before_soft_delete(
         self, entities: Sequence[E]
-    ) -> Sequence[E]: ...
+    ) -> Sequence[E]:
+        return entities
 
-    async def _handle_after_soft_delete(
-        self, entities: Sequence[E]
-    ) -> None: ...
+    async def _handle_after_soft_delete(self, entities: Sequence[E]) -> None:
+        return None
 
-    async def _handle_after_complete(self) -> None: ...
+    async def _handle_after_complete(self) -> None:
+        return None
 
     async def restore(self, entity: E, /) -> E: ...
     async def bulk_restore(
@@ -44,6 +48,8 @@ class SoftDeletable[E: Entitieable, Q: BaseQuery](Protocol):
 
     async def _handle_before_restore(
         self, entities: Sequence[E]
-    ) -> Sequence[E]: ...
+    ) -> Sequence[E]:
+        return entities
 
-    async def _handle_after_restore(self, entities: Sequence[E]) -> None: ...
+    async def _handle_after_restore(self, entities: Sequence[E]) -> None:
+        return None

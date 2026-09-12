@@ -5,7 +5,7 @@ from typing import Any, cast
 from fastsprout.core import hidden_lazy_await
 from fastsprout.core.types import AnyIterable
 from fastsprout.core.types.protocols.ables import RichComparisonable
-from fastsprout.data.entity import BaseEntity
+from fastsprout.data.entity import Entitieable
 from fastsprout.data.streams.implementation.base_common_stream import (
     BaseCommonStream,
 )
@@ -25,7 +25,7 @@ from .simple_value_stream import SimpleAsyncValueStream
 __all__ = ["SimpleAsyncEntityStream"]
 
 
-class SimpleAsyncEntityStream[E: BaseEntity[Any]](
+class SimpleAsyncEntityStream[E: Entitieable](
     BaseCommonStream[E], AsyncEntityStream[E]
 ):
     @hidden_lazy_await
@@ -35,7 +35,7 @@ class SimpleAsyncEntityStream[E: BaseEntity[Any]](
         )
 
     @hidden_lazy_await
-    async def map[R: BaseEntity[Any]](self, mapper: MapperCallable[E, R]):
+    async def map[R: Entitieable](self, mapper: MapperCallable[E, R]):
         resolved_mapper = resolve_any_callable(mapper)
 
         async def gen():

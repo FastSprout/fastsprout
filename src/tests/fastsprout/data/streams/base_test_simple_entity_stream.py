@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from fastsprout.core.types import AnyIterable
-from fastsprout.data.entity import BaseEntity
+from fastsprout.data.entity import Entitieable
 from fastsprout.data.streams.implementation import SimpleAsyncEntityStream
 from tests.fastsprout.data.streams.conftest import (
     RANGE_START_END,
@@ -16,7 +16,7 @@ from tests.fastsprout.data.streams.conftest import (
 __all__ = ["BaseTestSimpleAsyncEntityStream"]
 
 
-class BaseTestSimpleAsyncEntityStream[E: BaseEntity[Any]]:
+class BaseTestSimpleAsyncEntityStream[E: Entitieable[Any]]:
     __slots__ = ("_entity_builder", "_entity_type", "_range_generator")
 
     _entity_type: type[E]
