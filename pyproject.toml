@@ -31,7 +31,8 @@ dependencies = ["pydantic>=2.13.5"]
 
 
 [project.optional-dependencies]
-sql = ["sqlmodel>=0.0.42", 'sqlalchemy']
+data-sql = ["sqlmodel==0.0.42", 'sqlalchemy']
+standard = ["fastsprout[data-sql]"]
 
 
 [dependency-groups]
@@ -48,7 +49,6 @@ dev = [
     "pytest-cov>=7.1.0",
     "pytest-asyncio>=1.4.0",
     "mypy>=2.3.1",
-    "sqlmodel>=0.0.40",
 ]
 
 

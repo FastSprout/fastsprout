@@ -274,7 +274,11 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-sql = [
+data-sql = [
+    { name = "sqlalchemy" },
+    { name = "sqlmodel" },
+]
+standard = [
     { name = "sqlalchemy" },
     { name = "sqlmodel" },
 ]
@@ -291,16 +295,16 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "ruff" },
-    { name = "sqlmodel" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "fastsprout", extras = ["data-sql"], marker = "extra == 'standard'" },
     { name = "pydantic", specifier = ">=2.13.5" },
-    { name = "sqlalchemy", marker = "extra == 'sql'" },
-    { name = "sqlmodel", marker = "extra == 'sql'", specifier = ">=0.0.42" },
+    { name = "sqlalchemy", marker = "extra == 'data-sql'" },
+    { name = "sqlmodel", marker = "extra == 'data-sql'", specifier = "==0.0.42" },
 ]
-provides-extras = ["sql"]
+provides-extras = ["data-sql", "standard"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -314,7 +318,6 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "ruff", specifier = ">=0.12.1" },
-    { name = "sqlmodel", specifier = ">=0.0.40" },
 ]
 
 [[package]]
