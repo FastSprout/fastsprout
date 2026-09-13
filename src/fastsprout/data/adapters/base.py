@@ -12,6 +12,12 @@ class BaseAdapter[E: Entitieable[Any], Q: BaseQuery](ABC):
 
     def __init_subclass__(cls, **kwargs: object):
         super().__init_subclass__(**kwargs)
+        if (
+            ABC in cls.__bases__
+            or getattr(cls, "__abstractmethods__", None)
+            or getattr(cls, "__parameters__", None)
+        ):
+            raise TypeError(f"{cls.__name__} is a Abstract Class")
         if not hasattr(cls, "entity") or cls.entity is None:
             raise TypeError(f"{cls.__name__} must define 'entity'")
 
