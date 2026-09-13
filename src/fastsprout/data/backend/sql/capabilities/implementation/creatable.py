@@ -5,8 +5,8 @@ from collections.abc import (
 from typing import Any
 
 from fastsprout.core.types import AnyIterable
-from fastsprout.data.adapters.sql.base import SQLAdapter
-from fastsprout.data.adapters.sql.entity import SQLEntity
+from fastsprout.data.backend.sql.base import SQLBackend
+from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.capabilities.protocols import Creatable
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.streams.implementation import SimpleAsyncEntityStream
@@ -15,7 +15,7 @@ from fastsprout.data.utils.collect import collect
 __all__ = ["SQLDataCreatable"]
 
 
-class SQLDataCreatable[E: SQLEntity[Any]](Creatable[E], SQLAdapter[E]):
+class SQLDataCreatable[E: SQLEntity[Any]](Creatable[E], SQLBackend[E]):
     async def create(self, entity: E, /) -> E:
         return (await self.bulk_create([entity]))[0]
 

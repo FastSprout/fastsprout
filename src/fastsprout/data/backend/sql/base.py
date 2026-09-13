@@ -5,16 +5,16 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastsprout.data.adapters.base import BaseAdapter
-from fastsprout.data.adapters.sql.query import SQLQuery
+from fastsprout.data.backend.base import BaseBackend
+from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.exceptions import NoSessionError
 
 from .entity import SQLEntity
 
-__all__ = ["SQLAdapter"]
+__all__ = ["SQLBackend"]
 
 
-class SQLAdapter[E: SQLEntity[Any]](BaseAdapter[E, SQLQuery[E]], ABC):
+class SQLBackend[E: SQLEntity[Any]](BaseBackend[E, SQLQuery[E]], ABC):
     session_factory: (
         Callable[[], AbstractAsyncContextManager[AsyncSession]] | None
     ) = None
@@ -58,7 +58,7 @@ class SQLAdapter[E: SQLEntity[Any]](BaseAdapter[E, SQLQuery[E]], ABC):
                 yield session
             return
         raise NoSessionError(
-            "No async session or factory provided for the sql adapter."
+            "No async session or factory provided for the sql a."
         )
 
     @property

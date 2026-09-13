@@ -4,8 +4,8 @@ from collections.abc import (
 )
 from typing import Any
 
-from fastsprout.data.adapters.sql.entity import SQLEntity
-from fastsprout.data.adapters.sql.query import SQLQuery
+from fastsprout.data.backend.sql.entity import SQLEntity
+from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.capabilities.protocols import Iterable
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 

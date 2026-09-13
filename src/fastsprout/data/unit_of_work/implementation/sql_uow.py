@@ -3,7 +3,7 @@ from typing import NotRequired, Self, TypedDict, Unpack
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from fastsprout.data.adapters.sql.base import SQLAdapter
+from fastsprout.data.backend.sql.base import SQLBackend
 
 from .simple_uow import SimpleUnitOfWork
 
@@ -15,7 +15,7 @@ class SQLUnitOfWorkParams(TypedDict):
     session_factory: NotRequired[async_sessionmaker[AsyncSession] | None]
 
 
-class SQLUnitOfWork(SimpleUnitOfWork[SQLAdapter, *Unpack[SQLUnitOfWorkParams]]):
+class SQLUnitOfWork(SimpleUnitOfWork[SQLBackend, *Unpack[SQLUnitOfWorkParams]]):
     """SQLAlchemy-backed unit of work.
 
     Equivalent of CobraPack's ``unit_of_work.BaseSQLUnitOfWork``.
@@ -43,7 +43,7 @@ class SQLUnitOfWork(SimpleUnitOfWork[SQLAdapter, *Unpack[SQLUnitOfWorkParams]]):
             raise RuntimeError("Async session is not initialized")
         return self._session
 
-    def _init_attr(self, class_: type[SQLAdapter]) -> SQLAdapter:
+    def _init_attr(self, class_: type[SQLBackend]) -> SQLBackend:
         return class_(async_session=self.session)
 
     def begin(

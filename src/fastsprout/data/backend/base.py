@@ -4,10 +4,10 @@ from typing import Any
 from fastsprout.data.capabilities import BaseQuery
 from fastsprout.data.entity import Entitieable
 
-__all__ = ["BaseAdapter"]
+__all__ = ["BaseBackend"]
 
 
-class BaseAdapter[E: Entitieable[Any], Q: BaseQuery](ABC):
+class BaseBackend[E: Entitieable[Any], Q: BaseQuery](ABC):
     entity: type[E]
 
     def __init_subclass__(cls, **kwargs: object):

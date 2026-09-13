@@ -6,9 +6,9 @@ from typing import Any
 
 from fastsprout.core.fields.field_assigment import FieldAssignment
 from fastsprout.core.types import AnyIterable
-from fastsprout.data.adapters.sql.base import SQLAdapter
-from fastsprout.data.adapters.sql.entity import SQLEntity
-from fastsprout.data.adapters.sql.query import SQLQuery
+from fastsprout.data.backend.sql.base import SQLBackend
+from fastsprout.data.backend.sql.entity import SQLEntity
+from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.capabilities.protocols import (
     Updatable,
     UpdatableByQuery,
@@ -20,7 +20,7 @@ from fastsprout.data.utils.collect import collect
 __all__ = ["SQLUpdatable", "SQLUpdatableByQuery"]
 
 
-class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLAdapter[E]):
+class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLBackend[E]):
     async def update(self, entity: E, /) -> E:
         return (await self.bulk_update([entity]))[0]
 
@@ -63,7 +63,7 @@ class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLAdapter[E]):
 
 
 class SQLUpdatableByQuery[E: SQLEntity[Any], Q: SQLQuery](
-    UpdatableByQuery[E, Q], SQLAdapter[E]
+    UpdatableByQuery[E, Q], SQLBackend[E]
 ):
     async def update_by_query(
         self,

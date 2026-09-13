@@ -2,8 +2,8 @@ from collections.abc import AsyncIterator, Sequence
 from typing import Any
 
 from fastsprout.core.types import AnyIterable
-from fastsprout.data.adapters.sql.entity import SoftDeletableSQLEntity
-from fastsprout.data.adapters.sql.query import SQLQuery
+from fastsprout.data.backend.sql.entity import SoftDeletableSQLEntity
+from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.capabilities.protocols import SoftDeletable
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 
