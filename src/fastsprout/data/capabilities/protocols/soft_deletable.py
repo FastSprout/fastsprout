@@ -3,7 +3,6 @@ from typing import Protocol, runtime_checkable
 
 from fastsprout.core.types import AnyIterable
 from fastsprout.data.capabilities.query import BaseQuery
-from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.entity import Entitieable
 
 __all__ = ["SoftDeletable"]
@@ -38,8 +37,6 @@ class SoftDeletable[E: Entitieable, Q: BaseQuery](Protocol):
         self,
         entities: AnyIterable[E],
         /,
-        *,
-        chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,
     ) -> AsyncIterator[E]: ...
 
     async def _handle_before_restore(

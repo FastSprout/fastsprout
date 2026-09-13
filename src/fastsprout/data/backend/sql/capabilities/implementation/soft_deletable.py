@@ -5,7 +5,6 @@ from fastsprout.core.types import AnyIterable
 from fastsprout.data.backend.sql.entity import SoftDeletableSQLEntity
 from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.capabilities.protocols import SoftDeletable
-from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 
 __all__ = ["SQLSoftDeletable"]
 
@@ -39,11 +38,7 @@ class SQLSoftDeletable[E: SoftDeletableSQLEntity[Any], Q: SQLQuery](
         self, entities: AnyIterable[E], /
     ) -> Sequence[E]: ...
     async def iter_bulk_restore(
-        self,
-        entities: AnyIterable[E],
-        /,
-        *,
-        chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,
+        self, entities: AnyIterable[E], /
     ) -> AsyncIterator[E]: ...
 
     async def _handle_before_restore(

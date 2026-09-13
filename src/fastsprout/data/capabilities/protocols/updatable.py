@@ -7,7 +7,6 @@ from typing import Any, Protocol, runtime_checkable
 from fastsprout.core.fields.field_assigment import FieldAssignment
 from fastsprout.core.types import AnyIterable
 from fastsprout.data.capabilities.query import BaseQuery
-from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.entity import Entitieable
 
 __all__ = ["Updatable", "UpdatableByQuery"]
@@ -21,8 +20,6 @@ class Updatable[E: Entitieable](Protocol):
         self,
         entities: AnyIterable[E],
         /,
-        *,
-        chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,
     ) -> AsyncIterator[E]: ...
 
     async def _handle_before_start(

@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterable
+from collections.abc import AsyncIterable, Sequence
 from typing import Protocol, runtime_checkable
 
 from fastsprout.data.capabilities.query import BaseQuery
@@ -13,4 +13,4 @@ class Iterable[E: Entitieable, Q: BaseQuery](Protocol):
     async def iter(self, query: Q, /) -> AsyncIterable[E]: ...
     async def iter_per(
         self, query: Q, /, *, chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE
-    ) -> AsyncIterable[E]: ...
+    ) -> AsyncIterable[Sequence[E]]: ...

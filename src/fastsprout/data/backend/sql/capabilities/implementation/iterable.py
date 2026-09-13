@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterable
+from collections.abc import AsyncIterable, Sequence
 from typing import Any
 
 from fastsprout.data.backend.sql.entity import SQLEntity
@@ -12,5 +12,9 @@ __all__ = ["SQLIterable"]
 class SQLIterable[E: SQLEntity[Any], Q: SQLQuery](Iterable[E, Q]):
     async def iter(self, query: Q, /) -> AsyncIterable[E]: ...
     async def iter_per(
-        self, query: Q, /, *, chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE
-    ) -> AsyncIterable[E]: ...
+        self,
+        query: Q,
+        /,
+        *,
+        chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,
+    ) -> AsyncIterable[Sequence[E]]: ...

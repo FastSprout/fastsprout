@@ -5,7 +5,6 @@ from collections.abc import (
 from typing import Protocol, runtime_checkable
 
 from fastsprout.core.types import AnyIterable
-from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.entity import Entitieable
 
 __all__ = ["Upsertable"]
@@ -19,6 +18,4 @@ class Upsertable[E: Entitieable](Protocol):
         self,
         entities: AnyIterable[E],
         /,
-        *,
-        chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,
     ) -> AsyncIterator[E]: ...

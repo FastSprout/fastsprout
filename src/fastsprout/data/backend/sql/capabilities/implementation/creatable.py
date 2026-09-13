@@ -8,7 +8,6 @@ from fastsprout.core.types import AnyIterable
 from fastsprout.data.backend.sql.base import SQLBackend
 from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.capabilities.protocols import Creatable
-from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.streams.implementation import SimpleAsyncEntityStream
 from fastsprout.data.utils.collect import collect
 
@@ -41,14 +40,12 @@ class SQLDataCreatable[E: SQLEntity[Any]](Creatable[E], SQLBackend[E]):
         self,
         entities: AnyIterable[E],
         /,
-        *,
-        chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,
     ) -> AsyncIterator[E]:
         entities = await self._handle_before_start(entities)
         async with self._get_session_factory() as session:
             stream = SimpleAsyncEntityStream(entities)
             async with self._session_transaction(session):
-                async for chunk in stream.chunked(chunk_size):
+                async for chunk in stream.chunked():
                     chunk = await self._handle_before_add(chunk)
                     session.add_all(chunk)
                     await session.flush()
