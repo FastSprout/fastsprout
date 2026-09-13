@@ -1,3 +1,5 @@
+from fastsprout.core.exceptions import FastSproutError
+
 __all__ = [
     "FSDataError",
     "NoPrimaryKeyError",
@@ -7,7 +9,7 @@ __all__ = [
 ]
 
 
-class FSDataError(Exception):
+class FSDataError(FastSproutError):
     """Base exception for all data errors."""
 
 
