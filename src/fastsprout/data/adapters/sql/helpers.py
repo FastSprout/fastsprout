@@ -6,8 +6,9 @@ import sqlalchemy
 from sqlalchemy import Column, func
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import declared_attr
-from sqlmodel import Field
+from sqlmodel import Field as SQLModField
 
+from fastsprout.core import Field
 from fastsprout.core.types.identificable import IdentificatableType
 from fastsprout.data.exceptions import NoPrimaryKeyError
 
@@ -55,8 +56,8 @@ def PrimaryKey[ID: IdentificatableType | UUID](  # noqa: N802
     default_factory: Callable[[], ID] = uuid4,
     description="Unique identifier for the entity",
     sa_column: Column[ID] | None = None,
-) -> ID:
-    return Field(
+) -> Field[ID]:
+    return SQLModField(
         default_factory=default_factory,
         description=description,
         sa_column=(
