@@ -22,9 +22,9 @@ class SQLBackend[E: SQLEntity[Any]](BaseBackend[E, SQLQuery[E]], ABC):
     def __init__(
         self,
         *,
-        async_session: AsyncSession | None = None,
+        session: AsyncSession | None = None,
     ) -> None:
-        self._async_session: AsyncSession | None = async_session
+        self._async_session: AsyncSession | None = session
 
     def _get_session_factory(self) -> AbstractAsyncContextManager[AsyncSession]:
         """

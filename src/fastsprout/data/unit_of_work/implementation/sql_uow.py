@@ -44,7 +44,7 @@ class SQLUnitOfWork(SimpleUnitOfWork[SQLBackend, *Unpack[SQLUnitOfWorkParams]]):
         return self._session
 
     def _init_attr(self, class_: type[SQLBackend]) -> SQLBackend:
-        return class_(async_session=self.session)
+        return class_(session=self.session)
 
     def begin(
         self, is_transaction: bool | None = None, *args, **kwargs
