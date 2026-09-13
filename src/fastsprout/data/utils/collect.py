@@ -9,17 +9,14 @@ __all__ = ["collect", "collect_first", "collect_one"]
 
 
 def collect[T, **P](
-    func: Callable[P, AsyncIterator[Sequence[T]]],
+    func: Callable[P, AsyncIterator[T]],
 ) -> Callable[P, Coroutine[Any, Any, Sequence[T]]]:
     """Convert an async-generator yielding ``Sequence[T]`` chunks
     into a regular async function returning a flat ``list[T]``."""
 
     @wraps(func)
     async def wrapper(*args: Any, **kwargs: Any) -> list[T]:
-        result: list[T] = []
-        async for chunk in func(*args, **kwargs):
-            result.extend(chunk)
-        return result
+        return [x async for x in func(*args, **kwargs)]
 
     cast(Any, wrapper).__signature__ = inspect.signature(func)
     return cast(Callable[P, Coroutine[Any, Any, list[T]]], wrapper)

@@ -21,7 +21,7 @@ class Creatable[E: Entitieable[Any]](Protocol):
         /,
         *,
         chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,
-    ) -> AsyncIterator[Sequence[E]]: ...
+    ) -> AsyncIterator[E]: ...
 
     async def _handle_before_start(
         self,

@@ -43,7 +43,7 @@ class SQLDataCreatable[E: SQLEntity[Any]](Creatable[E], SQLBackend[E]):
         /,
         *,
         chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,
-    ) -> AsyncIterator[Sequence[E]]:
+    ) -> AsyncIterator[E]:
         entities = await self._handle_before_start(entities)
         async with self._get_session_factory() as session:
             stream = SimpleAsyncEntityStream(entities)
@@ -52,6 +52,7 @@ class SQLDataCreatable[E: SQLEntity[Any]](Creatable[E], SQLBackend[E]):
                     chunk = await self._handle_before_add(chunk)
                     session.add_all(chunk)
                     await session.flush()
-                    yield chunk
+                    for item in chunk:
+                        yield item
                     await self._handle_after_add(chunk)
         await self._handle_after_complete()

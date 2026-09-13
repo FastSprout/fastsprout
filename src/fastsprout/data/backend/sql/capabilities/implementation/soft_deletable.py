@@ -44,7 +44,7 @@ class SQLSoftDeletable[E: SoftDeletableSQLEntity[Any], Q: SQLQuery](
         /,
         *,
         chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,
-    ) -> AsyncIterator[Sequence[E]]: ...
+    ) -> AsyncIterator[E]: ...
 
     async def _handle_before_restore(
         self, entities: Sequence[E]
