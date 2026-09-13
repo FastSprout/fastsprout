@@ -1,10 +1,17 @@
-from typing import Any, overload
+import contextvars
+from typing import TYPE_CHECKING, Any, overload
+
+from sqlalchemy.orm import Mapped
 
 from .field_assigment import FieldAssignment
 from .field_ref import FieldRef
 from .has_orm import HasOrm
 
 __all__ = ["Field"]
+
+model_building_context_var: contextvars.ContextVar[bool] = (
+    contextvars.ContextVar("fastsprout_model_building", default=False)
+)
 
 
 class Field[T]:
@@ -34,6 +41,13 @@ class Field[T]:
     def set(self, value: T) -> FieldAssignment[T]:
         return FieldAssignment(self.name, value)
 
+    if TYPE_CHECKING:
+
+        @overload
+        def __get__(
+            self, instance: None, owner: type[HasOrm[Mapped[Any]]]
+        ) -> FieldRef[Any, T, Mapped[T]]: ...
+
     @overload
     def __get__[OrmCtor](
         self, instance: None, owner: type[HasOrm[OrmCtor]]
@@ -48,6 +62,8 @@ class Field[T]:
         self, instance: object | None, owner: type
     ) -> FieldRef[Any, T, Any] | T:
         if instance is None:
+            if model_building_context_var.get():
+                raise AttributeError(self.name)
             return FieldRef(self.name, owner, self._orm)
         try:
             return instance.__dict__[self.name]  # type: ignore[no-any-return]

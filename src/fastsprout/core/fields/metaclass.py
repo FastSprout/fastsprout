@@ -2,7 +2,7 @@ from typing import Any, dataclass_transform
 
 from pydantic._internal._model_construction import ModelMetaclass
 
-from .field import Field
+from .field import Field, model_building_context_var
 
 __all__ = [
     "TypedModelMeta",
@@ -143,6 +143,10 @@ class TypedModelMeta(ModelMetaclass):
         annotations = read_annotations(namespace)
         field_descriptors = collect_field_descriptors(annotations)
         unwrap_field_annotations(annotations, namespace)
-        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+        token = model_building_context_var.set(True)
+        try:
+            cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+        finally:
+            model_building_context_var.reset(token)
         install_descriptors(cls, field_descriptors)
         return cls
