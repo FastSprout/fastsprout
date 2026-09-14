@@ -6,13 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastsprout.data.exceptions import NoSessionError
 
-from .base_backend import BaseBackend
+from .base_backend import BaseDataBackend
 from .session import SessionFactory as SessionFactory
 
 __all__ = ["SQLDataBackend", "SessionFactory"]
 
 
-class SQLDataBackend(BaseBackend, ABC):
+class SQLDataBackend(BaseDataBackend, ABC):
     session_factory: (
         Callable[[], AbstractAsyncContextManager[AsyncSession]] | None
     ) = None
