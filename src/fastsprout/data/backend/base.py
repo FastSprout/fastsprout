@@ -1,27 +1,19 @@
-from abc import ABC, abstractmethod
-from typing import Any
+from abc import ABC
 
-from fastsprout.data.capabilities import BaseQuery
-from fastsprout.data.entity import Entitieable
-
-__all__ = ["BaseBackend"]
+__all__ = ["BaseDataBackend"]
 
 
-class BaseBackend[E: Entitieable[Any], Q: BaseQuery](ABC):
-    entity: type[E]
+class BaseDataBackend(ABC):  # noqa: B024
+    """Base class for data backends.
 
-    def __init_subclass__(cls, **kwargs: object):
-        super().__init_subclass__(**kwargs)
-        if (
-            ABC in cls.__bases__
-            or getattr(cls, "__abstractmethods__", None)
-            or getattr(cls, "__parameters__", None)
+    Class hierarchy may be abstract (framework machinery like SQLBackend
+    and capability mixins), but only concrete classes — all type
+    parameters bound, no abstract methods left — can be instantiated.
+    """
+
+    def __init__(self) -> None:
+        cls = type(self)
+        if getattr(cls, "__abstractmethods__", None) or getattr(
+            cls, "__parameters__", None
         ):
-            raise TypeError(f"{cls.__name__} is a Abstract Class")
-        if not hasattr(cls, "entity") or cls.entity is None:
-            raise TypeError(f"{cls.__name__} must define 'entity'")
-
-    @property
-    @abstractmethod
-    def default_query(self) -> Q:
-        raise NotImplementedError
+            raise TypeError(f"{cls.__name__} is an abstract backend")
