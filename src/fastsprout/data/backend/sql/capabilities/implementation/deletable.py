@@ -32,7 +32,7 @@ class SQLDeletable[E: SQLEntity[Any], Q: SQLQuery](
                     deleted += cast(CursorResult[Any], result).rowcount
         return deleted
 
-    async def delete_by_query(self, query: Q, /) -> int:
+    async def delete_by_query(self, query: SQLQuery[E], /) -> int:
         entity = query.entity
         built_q_id = query._built_query.with_only_columns(
             entity.__table__.c.id

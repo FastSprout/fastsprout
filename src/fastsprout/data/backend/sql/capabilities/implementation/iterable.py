@@ -15,7 +15,7 @@ __all__ = ["SQLIterable"]
 class SQLIterable[E: SQLEntity[Any], Q: SQLQuery](
     Iterable[E, Q], SQLDataBackend
 ):
-    async def iter(self, query: Q, /) -> AsyncIterator[E]:  # pyright: ignore[reportIncompatibleMethodOverride]
+    async def iter(self, query: SQLQuery[E], /) -> AsyncIterator[E]:  # pyright: ignore[reportIncompatibleMethodOverride]
         built_q: Select[tuple[E]] = query._built_query
         async with self._get_session_factory() as session:
             result = await session.stream(
@@ -27,7 +27,7 @@ class SQLIterable[E: SQLEntity[Any], Q: SQLQuery](
 
     async def iter_per(  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
-        query: Q,
+        SQLQuery[E]Q,
         /,
         *,
         chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,

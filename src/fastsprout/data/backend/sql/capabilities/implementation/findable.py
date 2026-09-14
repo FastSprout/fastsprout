@@ -12,7 +12,7 @@ __all__ = ["SQLFindable"]
 class SQLFindable[E: SQLEntity[Any], Q: SQLQuery](
     Findable[E, Q], SQLDataBackend
 ):
-    async def find_first(self, query: Q, /) -> E | None:
+    async def find_first(self, query: SQLQuery[E], /) -> E | None:
         async with self._get_session_factory() as session:
             return cast(
                 E | None,
@@ -21,7 +21,7 @@ class SQLFindable[E: SQLEntity[Any], Q: SQLQuery](
                 .first(),
             )
 
-    async def find_exactly_one(self, query: Q, /) -> E:
+    async def find_exactly_one(self, query: SQLQuery[E], /) -> E:
         async with self._get_session_factory() as session:
             return cast(
                 E,
@@ -30,7 +30,7 @@ class SQLFindable[E: SQLEntity[Any], Q: SQLQuery](
                 .one(),
             )
 
-    async def find_all(self, query: Q, /) -> Sequence[E]:
+    async def find_all(self, query: SQLQuery[E], /) -> Sequence[E]:
         async with self._get_session_factory() as session:
             return cast(
                 Sequence[E],

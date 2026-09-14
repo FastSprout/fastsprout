@@ -32,7 +32,7 @@ class SQLSoftDeletable[E: SoftDeletableSQLEntity[Any], Q: SQLQuery](
                         .values(remove=True)
                     )
 
-    async def soft_delete_by_query(self, query: Q, /) -> int:
+    async def soft_delete_by_query(self, query: SQLQuery[E], /) -> int:
         entity: type[E] = query.entity
         table = entity.__table__
         built_q_id = query._built_query.with_only_columns(table.c.id).order_by(

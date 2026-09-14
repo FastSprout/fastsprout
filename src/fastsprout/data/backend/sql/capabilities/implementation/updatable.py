@@ -95,7 +95,7 @@ class SQLUpdatableByQuery[E: SQLEntity[Any], Q: SQLQuery[SQLEntity[Any]]](
 ):
     async def update_by_query(
         self,
-        query: Q,
+        query: SQLQuery[E],
         /,
         *assignments: FieldAssignment[Any],
     ) -> int:
