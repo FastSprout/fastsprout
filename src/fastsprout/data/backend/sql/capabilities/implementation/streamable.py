@@ -1,15 +1,16 @@
 from typing import Any
 
-from fastsprout.data.backend.sql.base import SQLBackend
+from fastsprout.data.backend.sql.base import SQLDataBackend
 from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.query import SQLQuery
+from fastsprout.data.backend.sql.streams.entity_stream import SQLEntityStream
 from fastsprout.data.capabilities.protocols import Streamable
-from fastsprout.data.streams.protocols import AsyncEntityStream
 
 __all__ = ["SQLStreamable"]
 
 
 class SQLStreamable[E: SQLEntity[Any], Q: SQLQuery](
-    Streamable[E, Q], SQLBackend[E]
+    Streamable[E, Q], SQLDataBackend
 ):
-    def stream(self, query: Q, /) -> AsyncEntityStream[E]: ...
+    def stream(self, query: SQLQuery[E], /):
+        return SQLEntityStream(query._built_query, self._get_session_factory)

@@ -27,7 +27,7 @@ class SQLIterable[E: SQLEntity[Any], Q: SQLQuery](
 
     async def iter_per(  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
-        SQLQuery[E]Q,
+        query: SQLQuery[E],
         /,
         *,
         chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,

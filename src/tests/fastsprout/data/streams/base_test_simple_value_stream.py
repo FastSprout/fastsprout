@@ -7,11 +7,9 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from fastsprout.core.types import AnyIterable
+from fastsprout.core.types.iterable import AnyIterable
 from fastsprout.data.streams.implementation import SimpleAsyncValueStream
-from fastsprout.data.types import (
-    HashableAndValuable,
-)
+from fastsprout.data.types.valuable import HashableAndValuable
 from fastsprout.data.utils.iterable import resolve_any_iterable
 
 from .conftest import RANGE_START_END, make_async_range, make_range
