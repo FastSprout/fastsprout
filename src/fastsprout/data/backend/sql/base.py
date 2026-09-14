@@ -1,20 +1,18 @@
 from abc import ABC
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastsprout.data.backend.base import BaseBackend
-from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.exceptions import NoSessionError
 
-from .entity import SQLEntity
+from .base_backend import BaseBackend
+from .session import SessionFactory as SessionFactory
 
-__all__ = ["SQLBackend"]
+__all__ = ["SQLDataBackend", "SessionFactory"]
 
 
-class SQLBackend[E: SQLEntity[Any]](BaseBackend[E, SQLQuery[E]], ABC):
+class SQLDataBackend(BaseBackend, ABC):
     session_factory: (
         Callable[[], AbstractAsyncContextManager[AsyncSession]] | None
     ) = None
@@ -24,6 +22,7 @@ class SQLBackend[E: SQLEntity[Any]](BaseBackend[E, SQLQuery[E]], ABC):
         *,
         session: AsyncSession | None = None,
     ) -> None:
+        super().__init__()
         self._async_session: AsyncSession | None = session
 
     def _get_session_factory(self) -> AbstractAsyncContextManager[AsyncSession]:
@@ -60,7 +59,3 @@ class SQLBackend[E: SQLEntity[Any]](BaseBackend[E, SQLQuery[E]], ABC):
         raise NoSessionError(
             "No async session or factory provided for the sql a."
         )
-
-    @property
-    def default_query(self) -> SQLQuery[E]:
-        return SQLQuery[E](entity=self.entity)

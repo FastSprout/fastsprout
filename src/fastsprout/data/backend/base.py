@@ -6,7 +6,7 @@ __all__ = ["BaseDataBackend"]
 class BaseDataBackend(ABC):  # noqa: B024
     """Base class for data backends.
 
-    Class hierarchy may be abstract (framework machinery like SQLBackend
+    Class hierarchy may be abstract (framework machinery like SQLDataBackend
     and capability mixins), but only concrete classes — all type
     parameters bound, no abstract methods left — can be instantiated.
     """
