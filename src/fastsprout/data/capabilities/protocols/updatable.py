@@ -22,19 +22,6 @@ class Updatable[E: Entitieable](Protocol):
         /,
     ) -> AsyncIterator[E]: ...
 
-    async def _handle_before_start(
-        self,
-        entities: AnyIterable[E],
-    ) -> AnyIterable[E]: ...
-
-    async def _handle_before_update(
-        self, entities: Sequence[E]
-    ) -> Sequence[E]: ...
-
-    async def _handle_after_update(self, entities: Sequence[E]) -> None: ...
-
-    async def _handle_after_complete(self) -> None: ...
-
 
 @runtime_checkable
 class UpdatableByQuery[E: Entitieable, Q: BaseQuery](Protocol):
@@ -44,16 +31,3 @@ class UpdatableByQuery[E: Entitieable, Q: BaseQuery](Protocol):
         /,
         *assignments: FieldAssignment[Any],
     ) -> int: ...
-
-    async def _handle_before_start(
-        self,
-        entities: AnyIterable[E],
-    ) -> AnyIterable[E]: ...
-
-    async def _handle_before_update_by_query(
-        self, entities: Sequence[E]
-    ) -> Sequence[E]: ...
-
-    async def _handle_after_update(self, entities: Sequence[E]) -> None: ...
-
-    async def _handle_after_complete(self) -> None: ...

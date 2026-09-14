@@ -19,16 +19,3 @@ class Creatable[E: Entitieable[Any]](Protocol):
         entities: AnyIterable[E],
         /,
     ) -> AsyncIterator[E]: ...
-
-    async def _handle_before_start(
-        self,
-        entities: AnyIterable[E],
-    ) -> AnyIterable[E]: ...
-
-    async def _handle_before_add(
-        self, entities: Sequence[E]
-    ) -> Sequence[E]: ...
-
-    async def _handle_after_add(self, entities: Sequence[E]) -> None: ...
-
-    async def _handle_after_complete(self) -> None: ...
