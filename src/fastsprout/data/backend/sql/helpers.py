@@ -23,27 +23,20 @@ def get_primary_key(
     """Get the primary key Python attribute names of a SQLModel model.
 
     Returns the **attribute** names (e.g. ``"id"``), not the SQL
-    column names (e.g. ``"material_profile_id"``).  This is important
+    column names (e.g. ``"material_profile_id"``). This is important
     when the model declares ``id: ... = PrimaryKey("custom_col")``.
     """
-
     if not hasattr(entity, "__table__"):
         raise ValueError(f"{entity.__name__} is not a valid SQLModel model.")
 
-    if not entity.__table__.primary_key.columns:  # pyright: ignore[reportAttributeAccessIssue]
+    mapper = sa_inspect(entity)
+
+    if not mapper.primary_key:
         raise NoPrimaryKeyError(
             f"{entity.__name__} has no primary key defined."
         )
 
-    mapper = sa_inspect(entity)
-    col_name_to_attr: dict[str, str] = {
-        prop.columns[0].name: prop.key for prop in mapper.column_attrs
-    }
-
-    return tuple(
-        col_name_to_attr[col.name]
-        for col in entity.__table__.primary_key.columns  # pyright: ignore[reportAttributeAccessIssue]
-    )
+    return tuple(col.key for col in mapper.primary_key)
 
 
 def TableName(table_name: str):  # noqa: N802
