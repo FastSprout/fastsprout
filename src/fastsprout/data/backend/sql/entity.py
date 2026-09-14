@@ -1,10 +1,18 @@
-from typing import Any, Generic, Protocol, TypeVar, dataclass_transform
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    Protocol,
+    TypeVar,
+    dataclass_transform,
+)
 
 from sqlalchemy import MetaData
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import registry as sa_registry
 from sqlmodel import Field as SQLPydField
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, Table
 from sqlmodel.main import SQLModelMetaclass
 
 from fastsprout.core import Field
@@ -71,11 +79,15 @@ class TypedSQLMeta(SQLModelMetaclass, type(Protocol)):
         if hasattr(cls, "__table__"):
             model_fields = getattr(cls, "model_fields", {})
             targets = [n for n in _mro_field_names(cls) if n in model_fields]
+            mapper_attrs = sa_inspect(cls).attrs
         else:
             targets = cls.__dict__.get("__fastsprout_fields__", [])
+            mapper_attrs = {}
         for fname in targets:
             orm_attr = (
-                getattr(cls, fname, None) if hasattr(cls, "__table__") else None
+                mapper_attrs[fname].class_attribute
+                if fname in mapper_attrs
+                else None
             )
             descriptor: Field[Any] = Field(fname, orm=orm_attr)
             descriptor.__set_name__(cls, fname)
@@ -90,6 +102,9 @@ class SQLEntity(
     metaclass=TypedSQLMeta,
     registry=SQL_ENTITY_REGISTRY,
 ):
+    if TYPE_CHECKING:
+        __table__: Table
+
     id: Field[IDT]
 
 
