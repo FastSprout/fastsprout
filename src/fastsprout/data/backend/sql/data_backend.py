@@ -4,9 +4,9 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from fastsprout.data.backend.implementation.data_backend import BaseDataBackend
 from fastsprout.data.exceptions import NoSessionError
 
-from ..base import BaseDataBackend
 from .session import SessionFactory as SessionFactory
 
 __all__ = ["SQLDataBackend", "SessionFactory"]

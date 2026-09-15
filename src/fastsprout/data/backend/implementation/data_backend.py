@@ -1,15 +1,22 @@
 from abc import ABC
+from typing import Annotated
+
+from annotated_types import Ge
+
+from ..protocols import Backendable
 
 __all__ = ["BaseDataBackend"]
 
 
-class BaseDataBackend(ABC):  # noqa: B024
+class BaseDataBackend(Backendable, ABC):
     """Base class for data backends.
 
     Class hierarchy may be abstract (framework machinery like SQLDataBackend
     and capability mixins), but only concrete classes — all type
     parameters bound, no abstract methods left — can be instantiated.
     """
+
+    priority: Annotated[int, Ge(0)] = 0
 
     def __init__(self) -> None:
         cls = type(self)
