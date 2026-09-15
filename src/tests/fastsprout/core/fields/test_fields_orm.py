@@ -36,7 +36,7 @@ class TypedSQLMeta(SQLModelMetaclass):
             return
         for fname in getattr(cls, "__fastsprout_fields__", []):
             orm_attr = getattr(cls, fname, None)
-            descriptor: Field[Any] = Field(fname, orm=orm_attr)
+            descriptor: Field[Any] = Field._descriptor(fname, orm_attr)
             descriptor.__set_name__(cls, fname)
             setattr(cls, fname, descriptor)
 

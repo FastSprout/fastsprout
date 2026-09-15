@@ -1,7 +1,10 @@
 import contextvars
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, overload
 
 from sqlalchemy.orm import Mapped
+
+from fastsprout.core.types.undefined import Undefined, UndefinedType
 
 from .field_assigment import FieldAssignment
 from .field_ref import FieldRef
@@ -25,15 +28,43 @@ class Field[T]:
         `.orm` to `OrmCtor[T]` at access sites)
       - On instance: `hero.is_active` → bool (the value)
 
+    Defaults are declared through the specifier, not raw assignment —
+    this keeps both the type checker and the runtime model build happy:
+
+        class Hero(BaseSchema):
+            age: Field[int] = Field(default=0)
+            uid: Field[UUID] = Field(default_factory=uuid4)
+
     Use `.set(value)` for partial-update assignment objects:
-        Field("is_active").set(True)
+        Hero.is_active.set(True)        # FieldAssignment[bool]
     """
 
-    __slots__ = ("_orm", "name")
+    __slots__ = ("_orm", "default", "default_factory", "name")
 
-    def __init__(self, name: str = "", orm: Any = None) -> None:
+    def __init__(
+        self,
+        *,
+        default: UndefinedType = Undefined,
+        default_factory: Callable[[], Any] | None = None,
+    ) -> None:
+        self.name = ""
+        self._orm = None
+        self.default = default
+        self.default_factory = default_factory
+
+    @classmethod
+    def _descriptor(cls, name: str, orm: Any = None) -> "Field[Any]":
+        """Internal: build the descriptor installed on model classes.
+
+        Bypasses the public specifier constructor — framework use only
+        (metaclasses), never part of the user-facing API.
+        """
+        self = cls.__new__(cls)
         self.name = name
         self._orm = orm
+        self.default = Undefined
+        self.default_factory = None
+        return self
 
     def __set_name__(self, owner: type, name: str) -> None:
         self.name = name

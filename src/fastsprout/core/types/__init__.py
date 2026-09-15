@@ -7,6 +7,7 @@ from .identificable import (
 from .iterable import AnyIterable
 from .lazy_await import LazyAwait
 from .protocols import ables, identificable
+from .undefined import Undefined, UndefinedType
 
 __all__ = [
     "AnyCallable",
@@ -16,6 +17,8 @@ __all__ = [
     "IdentificatorType",
     "LazyAwait",
     "PublicIDType",
+    "Undefined",
+    "UndefinedType",
     "ables",
     "identificable",
 ]

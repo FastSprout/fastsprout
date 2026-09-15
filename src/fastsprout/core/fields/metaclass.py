@@ -1,6 +1,9 @@
 from typing import Any, dataclass_transform
 
+from pydantic import Field as PydField
 from pydantic._internal._model_construction import ModelMetaclass
+
+from fastsprout.core.types.undefined import Undefined
 
 from .field import Field, model_building_context_var
 
@@ -8,6 +11,7 @@ __all__ = [
     "TypedModelMeta",
     "collect_field_descriptors",
     "collect_field_names",
+    "convert_field_specifiers",
     "install_descriptors",
     "is_field_annotation",
     "read_annotations",
@@ -81,6 +85,29 @@ def _unwrap_annotation(annotation: Any) -> Any:
     return args[0] if args else annotation
 
 
+def convert_field_specifiers(
+    namespace: dict[str, Any], field_names: list[str]
+) -> None:
+    """Turn `Field(...)` specifiers in the class body into defaults.
+
+    `age: Field[int] = Field(default=0)` is valid for the type checker
+    (Field[int] on both sides); the metaclass unwraps the annotation to
+    `int`, and this step hands the declared default to the model
+    builder — raw value for `default=`, a pydantic FieldInfo for
+    `default_factory=`.
+    """
+    for name in field_names:
+        value = namespace.get(name)
+        if not isinstance(value, Field):
+            continue
+        if value.default_factory is not None:
+            namespace[name] = PydField(default_factory=value.default_factory)
+        elif value.default is not Undefined:
+            namespace[name] = value.default
+        else:
+            namespace[name] = PydField()
+
+
 def unwrap_field_annotations(
     annotations: dict[str, Any],
     namespace: dict[str, Any] | None = None,
@@ -122,7 +149,7 @@ def install_descriptors(
         existing = cls.__dict__.get(name)
         if isinstance(existing, brick_cls):
             continue
-        descriptor: Field[Any] = brick_cls(name)
+        descriptor: Field[Any] = brick_cls._descriptor(name)
         descriptor.__set_name__(cls, name)
         setattr(cls, name, descriptor)
 
@@ -142,7 +169,8 @@ class TypedModelMeta(ModelMetaclass):
     ) -> type:
         annotations = read_annotations(namespace)
         field_descriptors = collect_field_descriptors(annotations)
-        unwrap_field_annotations(annotations, namespace)
+        field_names = unwrap_field_annotations(annotations, namespace)
+        convert_field_specifiers(namespace, field_names)
         token = model_building_context_var.set(True)
         try:
             cls = super().__new__(mcs, name, bases, namespace, **kwargs)

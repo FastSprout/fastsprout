@@ -20,6 +20,7 @@ from fastsprout.core.fields.field import model_building_context_var
 from fastsprout.core.fields.has_orm import HasOrm
 from fastsprout.core.fields.metaclass import (
     collect_field_names,
+    convert_field_specifiers,
     read_annotations,
     unwrap_field_annotations,
 )
@@ -63,6 +64,7 @@ class TypedSQLMeta(SQLModelMetaclass, type(Protocol)):
         annotations = read_annotations(namespace)
         field_names = collect_field_names(annotations)
         unwrap_field_annotations(annotations, namespace)
+        convert_field_specifiers(namespace, field_names)
 
         for fname in field_names:
             if isinstance(annotations.get(fname), TypeVar):
@@ -89,7 +91,7 @@ class TypedSQLMeta(SQLModelMetaclass, type(Protocol)):
                 if fname in mapper_attrs
                 else None
             )
-            descriptor: Field[Any] = Field(fname, orm=orm_attr)
+            descriptor: Field[Any] = Field._descriptor(fname, orm_attr)
             descriptor.__set_name__(cls, fname)
             setattr(cls, fname, descriptor)
 

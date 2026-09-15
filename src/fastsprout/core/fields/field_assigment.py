@@ -7,8 +7,8 @@ class FieldAssignment[T]:
     Two FieldAssignments are equal when both name AND value match.
 
     Usage:
-        Field("is_active").set(True)         # FieldAssignment[bool]
-        repo.update(hero_id, [Field("name").set("Spider")])
+        Hero.is_active.set(True)             # FieldAssignment[bool]
+        repo.update(hero_id, [Hero.name.set("Spider")])
     """
 
     __slots__ = ("name", "value")

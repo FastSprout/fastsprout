@@ -15,6 +15,7 @@ from .types.identificable import (
     IDType,
     PublicIDType,
 )
+from .types.undefined import Undefined, UndefinedType
 
 __all__ = [
     "BaseAction",
@@ -28,6 +29,8 @@ __all__ = [
     "IDType",
     "IdentificatorType",
     "PublicIDType",
+    "Undefined",
+    "UndefinedType",
     "hidden_lazy_await",
     "lazy_await",
     "typed_dataclass",
