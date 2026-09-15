@@ -6,7 +6,7 @@ from sqlalchemy.sql import Delete, Insert, Update
 from sqlalchemy.sql.selectable import Select
 
 from fastsprout.data.backend.sql.entity import SQLEntity
-from fastsprout.data.capabilities import BaseQuery
+from fastsprout.data.capabilities.query import BaseQuery
 
 __all__ = ["SQLQuery"]
 

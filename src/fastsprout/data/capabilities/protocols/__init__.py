@@ -1,3 +1,4 @@
+from .abilitable import Abilitable
 from .creatable import Creatable
 from .deletable import Deletable
 from .findable import Findable
@@ -8,6 +9,7 @@ from .updatable import Updatable, UpdatableByQuery
 from .upsertable import Upsertable
 
 __all__ = [
+    "Abilitable",
     "Creatable",
     "Deletable",
     "Findable",

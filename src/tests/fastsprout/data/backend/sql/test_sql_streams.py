@@ -1,31 +1,28 @@
+from random import randint
+
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import Field as SQLPydField
 
 from fastsprout.core import Field
-from fastsprout.data.backend.sql.capabilities.implementation.creatable import (
-    SQLDataCreatable,
-)
-from fastsprout.data.backend.sql.capabilities.implementation.deletable import (
+from fastsprout.data.backend.sql import SoftDeletableSQLEntity, SQLQuery
+from fastsprout.data.backend.sql.capabilities import (
+    SQLCreatable,
     SQLDeletable,
-)
-from fastsprout.data.backend.sql.capabilities.implementation.findable import (
     SQLFindable,
-)
-from fastsprout.data.backend.sql.capabilities.implementation.streamable import (
     SQLStreamable,
 )
-from fastsprout.data.backend.sql.entity import SoftDeletableSQLEntity
-from fastsprout.data.backend.sql.query import SQLQuery
 
 
 class Hero(SoftDeletableSQLEntity[int]):
-    id: Field[int | None] = SQLPydField(default=None, primary_key=True)
-    name: Field[str] = ""
-    age: Field[int] = 0
+    id: Field[int] = SQLPydField(
+        default_factory=lambda: randint(-10000, 10000), primary_key=True
+    )
+    name: Field[str] = Field(default="")
+    age: Field[int] = Field(default=0)
 
 
-class HeroRepo(SQLDataCreatable, SQLDeletable, SQLFindable, SQLStreamable):
+class HeroRepo(SQLCreatable, SQLDeletable, SQLFindable, SQLStreamable):
     @property
     def default_query(self) -> SQLQuery[Hero]:
         return SQLQuery(entity=Hero)
@@ -36,8 +33,10 @@ async def repo():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
         await conn.run_sync(Hero.metadata.create_all)
-    HeroRepo.session_factory = async_sessionmaker(
-        engine, expire_on_commit=False
+    setattr(  # noqa: B010 — pyright binds class callables as methods
+        HeroRepo,
+        "session_factory",
+        async_sessionmaker(engine, expire_on_commit=False),
     )
     repo = HeroRepo()
     await repo.bulk_create([Hero(name=f"h{i}", age=i) for i in range(10)])
@@ -82,7 +81,12 @@ async def test_value_stream_aggregates(repo, query) -> None:
 
 
 async def test_python_predicate_falls_back(repo, query) -> None:
-    evens = await repo.stream(query).filter(lambda h: h.age % 2 == 0).to_list()
+    evens = await (
+        repo.stream(query)
+        .sort(Hero.age)
+        .filter(lambda h: h.age % 2 == 0)
+        .to_list()
+    )
     assert [h.age for h in evens] == [0, 2, 4, 6, 8]
 
 

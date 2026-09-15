@@ -3,7 +3,7 @@ from typing import Annotated, Any, Protocol, runtime_checkable
 
 from annotated_types import Ge
 
-from fastsprout.data.capabilities import BaseQuery
+from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
 
 __all__ = ["Backendable"]

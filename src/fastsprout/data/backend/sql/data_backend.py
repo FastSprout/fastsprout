@@ -1,21 +1,25 @@
 from abc import ABC
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from typing import Any, ClassVar, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastsprout.data.backend.implementation.data_backend import BaseDataBackend
+from fastsprout.data.capabilities.query import BaseQuery
+from fastsprout.data.entity import Entitieable
 from fastsprout.data.exceptions import NoSessionError
 
+from .query import SQLQuery
 from .session import SessionFactory as SessionFactory
 
 __all__ = ["SQLDataBackend", "SessionFactory"]
 
 
 class SQLDataBackend(BaseDataBackend, ABC):
-    session_factory: (
+    session_factory: ClassVar[
         Callable[[], AbstractAsyncContextManager[AsyncSession]] | None
-    ) = None
+    ] = None
 
     def __init__(
         self,
@@ -24,6 +28,16 @@ class SQLDataBackend(BaseDataBackend, ABC):
     ) -> None:
         super().__init__()
         self._async_session: AsyncSession | None = session
+
+    @asynccontextmanager
+    async def bind(self) -> AsyncIterator["SQLDataBackend"]:
+        """Signpost side of the backend: open a session for the context
+        and yield a clone bound to it."""
+        async with self._get_session_factory() as session:
+            yield type(self)(session=session)
+
+    def query_for[E: Entitieable[Any]](self, entity: type[E]) -> BaseQuery:
+        return SQLQuery(entity=entity)  # pyright: ignore[reportArgumentType]
 
     def _get_session_factory(self) -> AbstractAsyncContextManager[AsyncSession]:
         """
@@ -52,8 +66,13 @@ class SQLDataBackend(BaseDataBackend, ABC):
         if self._async_session is not None:
             yield self._async_session
             return
-        if self.session_factory is not None:
-            async with self.session_factory() as session:
+        # getattr: pyright binds class-level callables as methods
+        session_factory = cast(
+            SessionFactory | None,
+            getattr(type(self), "session_factory", None),
+        )
+        if session_factory is not None:
+            async with session_factory() as session:
                 yield session
             return
         raise NoSessionError(
