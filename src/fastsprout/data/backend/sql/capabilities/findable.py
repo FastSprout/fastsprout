@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import Any, cast
 
-from fastsprout.data.backend.sql.base import SQLDataBackend
+from fastsprout.data.backend.sql.data_backend import SQLDataBackend
 from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.capabilities.protocols import Findable

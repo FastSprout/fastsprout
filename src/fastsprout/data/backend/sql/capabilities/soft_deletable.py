@@ -4,7 +4,7 @@ from typing import Any, cast
 from sqlalchemy import CursorResult, update
 
 from fastsprout.core.types import AnyIterable
-from fastsprout.data.backend.sql.base import SQLDataBackend
+from fastsprout.data.backend.sql.data_backend import SQLDataBackend
 from fastsprout.data.backend.sql.entity import SoftDeletableSQLEntity
 from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.capabilities.protocols import SoftDeletable

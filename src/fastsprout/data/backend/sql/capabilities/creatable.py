@@ -5,16 +5,16 @@ from collections.abc import (
 from typing import Any
 
 from fastsprout.core.types import AnyIterable
-from fastsprout.data.backend.sql.base import SQLDataBackend
+from fastsprout.data.backend.sql.data_backend import SQLDataBackend
 from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.capabilities.protocols import Creatable
 from fastsprout.data.streams.implementation import SimpleAsyncEntityStream
 from fastsprout.data.utils.collect import collect
 
-__all__ = ["SQLDataCreatable"]
+__all__ = ["SQLCreatable"]
 
 
-class SQLDataCreatable[E: SQLEntity[Any]](Creatable[E], SQLDataBackend):
+class SQLCreatable[E: SQLEntity[Any]](Creatable[E], SQLDataBackend):
     async def create(self, entity: E, /) -> E:
         return (await self.bulk_create([entity]))[0]
 

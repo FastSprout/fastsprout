@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastsprout.data.backend.sql.base import SQLDataBackend
+from fastsprout.data.backend.sql.data_backend import SQLDataBackend
 from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.backend.sql.streams.entity_stream import SQLEntityStream

@@ -3,7 +3,7 @@ from typing import Any
 
 from sqlalchemy.sql.selectable import Select
 
-from fastsprout.data.backend.sql.base import SQLDataBackend
+from fastsprout.data.backend.sql.data_backend import SQLDataBackend
 from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.capabilities.protocols import Iterable
