@@ -36,7 +36,7 @@ repos:
         types: [python]
         args:
           - --disable=all
-          - --enable=C0302
+          - --enable=C0302,C0415
           - --max-module-lines=300
           - --ignore-paths=src/tests
 

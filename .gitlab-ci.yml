@@ -12,7 +12,7 @@ include:
       checks:
         - uv run --all-extras --all-groups --all-packages ruff check
         - uv run --all-extras --all-groups --all-packages basedpyright --pythonversion $UV_PYTHON src
-        - uv run  --all-extras --all-groups --all-packages pylint --disable=all --enable=C0302 --max-module-lines=300 --ignore-paths=src/tests ./src
+        - uv run  --all-extras --all-groups --all-packages pylint --disable=all --enable=C0302,C0415 --max-module-lines=300 --ignore-paths=src/tests ./src
 
   - component: $CI_SERVER_FQDN/opensource/templates/pytest@0.1.10
     inputs:
