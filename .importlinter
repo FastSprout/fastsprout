@@ -16,3 +16,19 @@ containers =
 layers =
     data
     core
+
+; === FastSprout-data-level layers ===
+[importlinter:contract:FastSprout-data-layers-architecture]
+name = FastSprout Data Layers Architecture
+type = layers
+containers =
+    fastsprout.data
+    tests.fastsprout.data
+layers =
+    router
+    backend
+    capabilities
+    streams
+    entity
+    utils
+    exceptions | types | consts
