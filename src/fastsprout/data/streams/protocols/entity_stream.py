@@ -41,6 +41,15 @@ class AsyncEntityStream[E: Entitieable](Protocol):
     def filter(
         self, predicate: PredicateCallable[E]
     ) -> "AsyncEntityStream[E]": ...
+    def only_of[R: Entitieable[Any]](
+        self, entity: type[R]
+    ) -> "AsyncEntityStream[R]":
+        """Narrow to one entity type — pull subtypes out of a mixed
+        stream. One pass per consumption: to take several views without
+        re-reading the source, materialize first (`to_list`), then
+        split the list."""
+        ...
+
     def distinct(self) -> "AsyncEntityStream[E]": ...
     def peek(self, consumer: ConsumerCallable[E]) -> "AsyncEntityStream[E]": ...
 

@@ -1,6 +1,8 @@
+from contextlib import AbstractAsyncContextManager
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Generic,
     Protocol,
     TypeVar,
@@ -9,6 +11,7 @@ from typing import (
 
 from sqlalchemy import MetaData
 from sqlalchemy import inspect as sa_inspect
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import registry as sa_registry
 from sqlmodel import Field as SQLPydField
@@ -25,9 +28,15 @@ from fastsprout.core.fields.metaclass import (
     unwrap_field_annotations,
 )
 from fastsprout.core.types import IdentificatorType
+from fastsprout.data.backend.implementation import Signpost
 from fastsprout.data.entity import Entitieable
 
-__all__ = ["SQL_ENTITY_REGISTRY", "SQLEntity", "SoftDeletableSQLEntity"]
+__all__ = [
+    "SQL_ENTITY_REGISTRY",
+    "SQLEntity",
+    "SQLSignpost",
+    "SoftDeletableSQLEntity",
+]
 
 IDT = TypeVar("IDT", bound=IdentificatorType)
 
@@ -96,6 +105,9 @@ class TypedSQLMeta(SQLModelMetaclass, type(Protocol)):
             setattr(cls, fname, descriptor)
 
 
+class SQLSignpost(Signpost[AbstractAsyncContextManager[AsyncSession]]): ...
+
+
 class SQLEntity(
     SQLModel,
     HasOrm[Mapped[Any]],
@@ -105,7 +117,9 @@ class SQLEntity(
     registry=SQL_ENTITY_REGISTRY,
 ):
     if TYPE_CHECKING:
-        __table__: Table
+        __table__: ClassVar[Table]
+
+    __signpost__: ClassVar[SQLSignpost]  # pyright: ignore[reportIncompatibleVariableOverride]
 
     id: Field[IDT]
 

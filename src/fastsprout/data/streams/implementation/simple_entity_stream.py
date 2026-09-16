@@ -70,6 +70,20 @@ class SimpleAsyncEntityStream[E: Entitieable](
         return SimpleAsyncEntityStream[E](gen())
 
     @hidden_lazy_await
+    async def only_of[R: Entitieable[Any]](  # pyright: ignore[reportIncompatibleMethodOverride]
+        self,
+        entity: type[R],
+    ):
+        target: type = entity  # pyright narrows TypeVar for isinstance
+
+        async def gen():
+            async for item in self:
+                if isinstance(item, target):
+                    yield cast(R, item)
+
+        return SimpleAsyncEntityStream[R](gen())
+
+    @hidden_lazy_await
     async def distinct(self):
         async def gen():
             seen = []

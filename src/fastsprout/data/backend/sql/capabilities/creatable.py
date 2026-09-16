@@ -26,11 +26,10 @@ class SQLCreatable[E: SQLEntity[Any]](Creatable[E], SQLDataBackend):
         entities: AnyIterable[E],
         /,
     ) -> AsyncIterator[E]:
-        async with self._get_session_factory() as session:
+        async with self.transaction() as session:
             stream = SimpleAsyncEntityStream(entities)
-            async with self._session_transaction(session):
-                async for chunk in stream.chunked():
-                    session.add_all(chunk)
-                    await session.flush()
-                    async for item in SimpleAsyncEntityStream(chunk):
-                        yield item
+            async for chunk in stream.chunked():
+                session.add_all(chunk)
+                await session.flush()
+                async for item in SimpleAsyncEntityStream(chunk):
+                    yield item

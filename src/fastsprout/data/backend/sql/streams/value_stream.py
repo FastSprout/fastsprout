@@ -1,12 +1,17 @@
 from collections.abc import AsyncIterator
+from contextlib import AbstractAsyncContextManager
 from typing import Any, cast
 
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
 from fastsprout.core import lazy_await
 from fastsprout.core.types.protocols.ables import RichComparisonable
-from fastsprout.data.backend.sql.session import SessionFactory
+from fastsprout.data.backend.implementation import BaseDataBackend
+from fastsprout.data.backend.sql.data_backend import SQLDataBackend
+from fastsprout.data.backend.sql.entity import SQLSignpost
+from fastsprout.data.entity import Signpostable
 from fastsprout.data.streams.implementation import SimpleAsyncValueStream
 from fastsprout.data.streams.implementation.base_common_stream import (
     BaseCommonStream,
@@ -21,7 +26,7 @@ __all__ = ["SQLValueStream"]
 
 
 class SQLValueStream[T: Valuable](
-    SimpleAsyncValueStream[T], AsyncValueStream[T]
+    SimpleAsyncValueStream[T], AsyncValueStream[T], SQLDataBackend
 ):
     """Single-column stream backed by a SQLAlchemy `Select`.
 
@@ -31,17 +36,23 @@ class SQLValueStream[T: Valuable](
     """
 
     def __init__(
-        self, stmt: Select[tuple[T]], session_factory: SessionFactory
+        self,
+        stmt: Select[tuple[T]],
+        signpost: (
+            SQLSignpost
+            | Signpostable[AbstractAsyncContextManager[AsyncSession]]
+        ),
+        /,
     ) -> None:
+        BaseDataBackend.__init__(self, signpost)
         self._stmt = stmt
-        self._session_factory = session_factory
 
     def _clone(self, stmt: Select[tuple[T]]) -> "SQLValueStream[T]":
-        return SQLValueStream(stmt, self._session_factory)
+        return SQLValueStream(stmt, self._signpost)
 
     def __aiter__(self) -> AsyncIterator[T]:
         async def gen() -> AsyncIterator[T]:
-            async with self._session_factory() as session:
+            async with self.session() as session:
                 result = await session.stream(self._stmt)
                 async for item in result.scalars():
                     yield item
@@ -51,7 +62,7 @@ class SQLValueStream[T: Valuable](
     async def _aggregate(self, fn: Any) -> Any:
         sub = self._stmt.subquery()
         column = next(iter(sub.c))
-        async with self._session_factory() as session:
+        async with self.session() as session:
             result = await session.execute(select(fn(column)))
             return result.scalar_one()
 
@@ -82,7 +93,7 @@ class SQLValueStream[T: Valuable](
     @lazy_await
     async def count(self) -> int:
         sub = self._stmt.subquery()
-        async with self._session_factory() as session:
+        async with self.session() as session:
             result = await session.execute(
                 select(func.count()).select_from(sub)
             )

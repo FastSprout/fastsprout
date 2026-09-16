@@ -1,33 +1,43 @@
-from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import Annotated, ClassVar, Protocol, runtime_checkable
+
+from annotated_types import Ge
 
 from fastsprout.core.fields.field import Field
 from fastsprout.core.schema import BaseSchema
 from fastsprout.core.types.identificable import IdentificatableType
 
-if TYPE_CHECKING:
-    from fastsprout.data.backend.protocols import Backendable
-else:
-    Backendable = object
+__all__ = ["BaseEntity", "Entitieable", "Signpostable"]
 
-__all__ = ["BaseEntity", "Entitieable"]
+
+@runtime_checkable
+class Signpostable[T](Protocol):
+    def __init__(
+        self, factory: Callable[[], T], *, priority: Annotated[int, Ge(0)] = 0
+    ) -> None: ...
+
+    priority: Annotated[int, Ge(0)] = 0
+
+    def factory(self) -> T: ...
 
 
 @runtime_checkable
 class Entitieable[ID: IdentificatableType](Protocol):
     """Anything with an identity.
 
-    Note: the signpost (`__backend__`) is intentionally NOT required
+    Note: the signpost (`__signpost__`) is intentionally NOT required
     here — streams and capabilities must work with backend-less
     entities; only the router looks it up.
     """
+
+    __signpost__: ClassVar[Signpostable]
 
     id: Field[ID]
 
 
 class BaseEntity[ID: IdentificatableType](BaseSchema):
-    if TYPE_CHECKING:
-        # The signpost: any Backendable — resolved by the router only,
-        # invisible to pydantic (TYPE_CHECKING) and not a model field.
-        __backend__: ClassVar[Backendable]
+    # The signpost: any Signpostable — resolved by the router only,
+    # invisible to pydantic (TYPE_CHECKING) and not a model field.
+    __signpost__: ClassVar[Signpostable]
 
     id: Field[ID]

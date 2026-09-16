@@ -1,15 +1,16 @@
 from types import TracebackType
 from typing import Any, Protocol, Self, runtime_checkable
 
-from fastsprout.data.capabilities.protocols import Abilitable
-from fastsprout.data.capabilities.query import BaseQuery
+from fastsprout.data.backend.protocols import DataAbilitable, Finalizable
+from fastsprout.data.capabilities import BaseQuery
 from fastsprout.data.entity import Entitieable
+from fastsprout.data.streams.protocols import AsyncEntityStream
 
 __all__ = ["Routerable"]
 
 
 @runtime_checkable
-class Routerable(Protocol):
+class Routerable(Finalizable, Protocol):
     def __init__(self) -> None: ...
 
     async def __aenter__(self) -> Self: ...
@@ -21,13 +22,13 @@ class Routerable(Protocol):
         traceback: TracebackType | None,
     ) -> None: ...
 
-    def _stage[E: Entitieable[Any]](self, entity: E) -> None:  # pyright: ignore[reportInvalidTypeVarUse]
-        """Register an intent to persist — pure bookkeeping, no I/O."""
-        ...
-
     def ability[E: Entitieable[Any]](
-        self, source: type[E] | BaseQuery[E, Any]
-    ) -> Abilitable[E, BaseQuery[E, Any]]: ...  # pyright: ignore[reportInvalidTypeArguments]
+        self, entity: type[E]
+    ) -> DataAbilitable[E, Any, BaseQuery[E, Any], Finalizable]: ...
+
+    def stream[E: Entitieable[Any]](
+        self, q: BaseQuery[E, Any]
+    ) -> AsyncEntityStream[E]: ...
 
     async def finalize(self) -> None:
         """Flush staged intents, then finalize bound backends —

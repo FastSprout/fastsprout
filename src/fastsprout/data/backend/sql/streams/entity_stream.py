@@ -1,16 +1,20 @@
 from collections.abc import AsyncIterator
+from contextlib import AbstractAsyncContextManager
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 from sqlmodel import Column
 
 from fastsprout.core import lazy_await
 from fastsprout.core.fields.field_ref import FieldRef
 from fastsprout.core.types.protocols.ables import RichComparisonable
-from fastsprout.data.backend.sql.entity import SQLEntity
-from fastsprout.data.backend.sql.session import SessionFactory
+from fastsprout.data.backend.implementation import BaseDataBackend
+from fastsprout.data.backend.sql.data_backend import SQLDataBackend
+from fastsprout.data.backend.sql.entity import SQLEntity, SQLSignpost
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
+from fastsprout.data.entity import Signpostable
 from fastsprout.data.streams.implementation import (
     SimpleAsyncEntityStream,
 )
@@ -41,7 +45,7 @@ def _orm_of[T: HashableAndValuable](
 
 
 class SQLEntityStream[E: SQLEntity[Any]](
-    SimpleAsyncEntityStream[E], AsyncEntityStream[E]
+    SimpleAsyncEntityStream[E], AsyncEntityStream[E], SQLDataBackend
 ):
     """Entity stream backed by a SQLAlchemy `Select`.
 
@@ -53,17 +57,23 @@ class SQLEntityStream[E: SQLEntity[Any]](
     """
 
     def __init__(
-        self, stmt: Select[tuple[E]], session_factory: SessionFactory
+        self,
+        stmt: Select[tuple[E]],
+        signpost: (
+            SQLSignpost
+            | Signpostable[AbstractAsyncContextManager[AsyncSession]]
+        ),
+        /,
     ) -> None:
+        BaseDataBackend.__init__(self, signpost)
         self._stmt = stmt
-        self._session_factory = session_factory
 
     def _clone(self, stmt: Select[tuple[E]]) -> "SQLEntityStream[E]":
-        return SQLEntityStream(stmt, self._session_factory)
+        return SQLEntityStream(stmt, self._signpost)
 
     def __aiter__(self) -> AsyncIterator[E]:
         async def gen() -> AsyncIterator[E]:
-            async with self._session_factory() as session:
+            async with self.session() as session:
                 result = await session.stream(
                     self._stmt,
                     execution_options={
@@ -99,7 +109,7 @@ class SQLEntityStream[E: SQLEntity[Any]](
     @lazy_await
     async def count(self) -> int:
         sub = self._stmt.subquery()
-        async with self._session_factory() as session:
+        async with self.session() as session:
             result = await session.execute(
                 select(func.count()).select_from(sub)
             )
@@ -119,5 +129,5 @@ class SQLEntityStream[E: SQLEntity[Any]](
             return SimpleAsyncEntityStream(self).to_values(mapper)
         sub = self._stmt.subquery()
         return SQLValueStream(
-            select(sub.c[orm.key]).select_from(sub), self._session_factory
+            select(sub.c[orm.key]).select_from(sub), self._signpost
         )

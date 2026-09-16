@@ -13,7 +13,7 @@ class DataRError(FastSproutError):
 
 
 class NoBackendError(DataRError):
-    """Entity class carries no `__backend__` signpost."""
+    """Entity class carries no `__signpost__` signpost."""
 
 
 class NoActiveFlowError(DataRError):

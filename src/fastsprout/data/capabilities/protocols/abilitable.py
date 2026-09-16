@@ -16,7 +16,7 @@ __all__ = ["Abilitable"]
 
 
 @runtime_checkable
-class Abilitable[E: Entitieable[Any], Q: BaseQuery[Entitieable[Any], Any]](
+class Abilitable[E: Entitieable[Any], Q: BaseQuery](
     Creatable[E],
     Deletable[E, Q],
     Findable[E, Q],

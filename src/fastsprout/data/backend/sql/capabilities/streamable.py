@@ -13,4 +13,4 @@ class SQLStreamable[E: SQLEntity[Any], Q: SQLQuery](
     Streamable[E, Q], SQLDataBackend
 ):
     def stream(self, query: SQLQuery[E], /):
-        return SQLEntityStream(query._built_query, self._get_session_factory)
+        return SQLEntityStream(query._built_query, self._signpost)

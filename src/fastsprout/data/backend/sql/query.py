@@ -1,12 +1,14 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.sql import Delete, Insert, Update
 from sqlalchemy.sql.selectable import Select
 
-from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.capabilities.query import BaseQuery
+
+if TYPE_CHECKING:
+    from fastsprout.data.backend.sql.entity import SQLEntity
 
 __all__ = ["SQLQuery"]
 

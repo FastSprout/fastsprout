@@ -17,7 +17,7 @@ class SQLIterable[E: SQLEntity[Any], Q: SQLQuery](
 ):
     async def iter(self, query: SQLQuery[E], /) -> AsyncIterator[E]:  # pyright: ignore[reportIncompatibleMethodOverride]
         built_q: Select[tuple[E]] = query._built_query
-        async with self._get_session_factory() as session:
+        async with self.session() as session:
             result = await session.stream(
                 built_q,
                 execution_options={"yield_per": DEFAULT_ITERATION_CHUNK_SIZE},
@@ -33,7 +33,7 @@ class SQLIterable[E: SQLEntity[Any], Q: SQLQuery](
         chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,
     ) -> AsyncIterator[Sequence[E]]:
         built_q: Select[tuple[E]] = query._built_query
-        async with self._get_session_factory() as session:
+        async with self.session() as session:
             for chunk in (
                 (await session.execute(built_q))
                 .scalars()

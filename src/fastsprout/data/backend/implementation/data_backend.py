@@ -1,14 +1,13 @@
 from abc import ABC
-from typing import Annotated
 
-from annotated_types import Ge
+from fastsprout.data.entity import Signpostable
 
-from ..protocols import Backendable
+from ..protocols import Backendable, Finalizable
 
 __all__ = ["BaseDataBackend"]
 
 
-class BaseDataBackend(Backendable, ABC):
+class BaseDataBackend[T, F: Finalizable](Backendable[T, F], ABC):
     """Base class for data backends.
 
     Class hierarchy may be abstract (framework machinery like SQLDataBackend
@@ -16,11 +15,8 @@ class BaseDataBackend(Backendable, ABC):
     parameters bound, no abstract methods left — can be instantiated.
     """
 
-    priority: Annotated[int, Ge(0)] = 0
-
-    def __init__(self) -> None:
+    def __init__(self, /, signpost: Signpostable[T]) -> None:
         cls = type(self)
-        if getattr(cls, "__abstractmethods__", None) or getattr(
-            cls, "__parameters__", None
-        ):
+        if getattr(cls, "__abstractmethods__", None):
             raise TypeError(f"{cls.__name__} is an abstract backend")
+        self._signpost = signpost

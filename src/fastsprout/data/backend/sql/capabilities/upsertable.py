@@ -27,41 +27,40 @@ class SQLUpsertable[E: SQLEntity[Any]](Upsertable[E], SQLDataBackend):
         entities: AnyIterable[E],
         /,
     ) -> AsyncIterator[E]:
-        async with self._get_session_factory() as session:
+        async with self.transaction() as session:
             stream = SimpleAsyncEntityStream(entities)
-            async with self._session_transaction(session):
-                async for chunk in stream.chunked():
-                    entity_cls = type(chunk[0])
-                    mapper = inspect(entity_cls)
-                    pk_keys = get_primary_key(entity_cls)
+            async for chunk in stream.chunked():
+                entity_cls = type(chunk[0])
+                mapper = inspect(entity_cls)
+                pk_keys = get_primary_key(entity_cls)
 
-                    mappings = [
-                        {
-                            col.key: getattr(item, col.key)
-                            for col in mapper.column_attrs
-                        }
-                        for item in chunk
-                    ]
-
-                    if not mappings:
-                        continue
-
-                    stmt = insert(entity_cls).values(mappings)
-
-                    update_cols = {
-                        col.key: stmt.excluded[col.key]
+                mappings = [
+                    {
+                        col.key: getattr(item, col.key)
                         for col in mapper.column_attrs
-                        if col.key not in pk_keys
                     }
+                    for item in chunk
+                ]
 
-                    upsert_stmt = stmt.on_conflict_do_update(
-                        index_elements=list(mapper.primary_key),
-                        set_=update_cols,
-                    ).returning(entity_cls)
+                if not mappings:
+                    continue
 
-                    result = await session.stream(
-                        upsert_stmt,
-                        execution_options={"populate_existing": True},
-                    )
-                    async for item in result.scalars():
-                        yield item
+                stmt = insert(entity_cls).values(mappings)
+
+                update_cols = {
+                    col.key: stmt.excluded[col.key]
+                    for col in mapper.column_attrs
+                    if col.key not in pk_keys
+                }
+
+                upsert_stmt = stmt.on_conflict_do_update(
+                    index_elements=list(mapper.primary_key),
+                    set_=update_cols,
+                ).returning(entity_cls)
+
+                result = await session.stream(
+                    upsert_stmt,
+                    execution_options={"populate_existing": True},
+                )
+                async for item in result.scalars():
+                    yield item

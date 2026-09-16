@@ -1,22 +1,24 @@
 from contextlib import AbstractAsyncContextManager
-from typing import Annotated, Any, Protocol, runtime_checkable
-
-from annotated_types import Ge
+from typing import Protocol, runtime_checkable
 
 from fastsprout.data.capabilities.query import BaseQuery
-from fastsprout.data.entity import Entitieable
+from fastsprout.data.entity import Entitieable, Signpostable
+
+from .finalizable import Finalizable
 
 __all__ = ["Backendable"]
 
 
 @runtime_checkable
-class Backendable(Protocol):
-    priority: Annotated[int, Ge(0)] = 0
+class Backendable[T, F: Finalizable](Protocol):
+    def __init__(self, /, signpost: Signpostable[T]) -> None: ...
 
-    def bind(self) -> AbstractAsyncContextManager[Any]:
+    def bind(self) -> AbstractAsyncContextManager[F]:
         """Open this backend for the current context; exit releases it."""
         ...
 
     def query_for[E: Entitieable](self, entity: type[E]) -> BaseQuery:
         """A base (unfiltered) read query in this backend's dialect."""
         ...
+
+    def transaction(self) -> AbstractAsyncContextManager[T]: ...

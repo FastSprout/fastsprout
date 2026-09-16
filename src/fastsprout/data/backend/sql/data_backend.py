@@ -1,80 +1,40 @@
 from abc import ABC
-from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from typing import Any, ClassVar, cast
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastsprout.data.backend.implementation.data_backend import BaseDataBackend
-from fastsprout.data.capabilities.query import BaseQuery
-from fastsprout.data.entity import Entitieable
-from fastsprout.data.exceptions import NoSessionError
+from fastsprout.data.backend.sql.entity import SQLEntity
+from fastsprout.data.backend.sql.finalizer import SQLFinalizable
 
 from .query import SQLQuery
-from .session import SessionFactory as SessionFactory
 
-__all__ = ["SQLDataBackend", "SessionFactory"]
+__all__ = ["SQLDataBackend"]
 
 
-class SQLDataBackend(BaseDataBackend, ABC):
-    session_factory: ClassVar[
-        Callable[[], AbstractAsyncContextManager[AsyncSession]] | None
-    ] = None
-
-    def __init__(
-        self,
-        *,
-        session: AsyncSession | None = None,
-    ) -> None:
-        super().__init__()
-        self._async_session: AsyncSession | None = session
-
+class SQLDataBackend(
+    BaseDataBackend[AbstractAsyncContextManager[AsyncSession], SQLFinalizable],
+    ABC,
+):
     @asynccontextmanager
-    async def bind(self) -> AsyncIterator["SQLDataBackend"]:
+    async def bind(self):
         """Signpost side of the backend: open a session for the context
         and yield a clone bound to it."""
-        async with self._get_session_factory() as session:
-            yield type(self)(session=session)
-
-    def query_for[E: Entitieable[Any]](self, entity: type[E]) -> BaseQuery:
-        return SQLQuery(entity=entity)  # pyright: ignore[reportArgumentType]
-
-    def _get_session_factory(self) -> AbstractAsyncContextManager[AsyncSession]:
-        """
-        Returns an async session factory for the repository.
-        If an async session is provided, it uses that;
-        otherwise, it uses the factory.
-        """
-        return self.__make_session_factory()
+        async with self._signpost.factory() as session:
+            yield SQLFinalizable(session)
 
     @asynccontextmanager
-    async def _session_transaction(
-        self,
-        session: AsyncSession,
-    ) -> AsyncIterator[AsyncSession]:
-        if session.in_transaction():
-            async with session.begin_nested():
-                yield session
-        else:
-            async with session.begin():
+    async def session(self):
+        async with self.bind() as flow:
+            async with flow.session() as session:
                 yield session
 
     @asynccontextmanager
-    async def __make_session_factory(
-        self,
-    ) -> AsyncIterator[AsyncSession]:
-        if self._async_session is not None:
-            yield self._async_session
-            return
-        # getattr: pyright binds class-level callables as methods
-        session_factory = cast(
-            SessionFactory | None,
-            getattr(type(self), "session_factory", None),
-        )
-        if session_factory is not None:
-            async with session_factory() as session:
-                yield session
-            return
-        raise NoSessionError(
-            "No async session or factory provided for the sql a."
-        )
+    async def transaction(self):
+        async with self.bind() as flow:
+            async with flow.transaction() as transaction:
+                yield transaction
+
+    def query_for[E: SQLEntity[Any]](self, entity: type[E]) -> SQLQuery[E]:  # pyright: ignore[reportIncompatibleMethodOverride]
+        return SQLQuery[E](entity=entity)
