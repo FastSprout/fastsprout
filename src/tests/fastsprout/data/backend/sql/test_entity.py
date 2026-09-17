@@ -1,36 +1,80 @@
 import subprocess
 import sys
-from uuid import UUID, uuid4
+from datetime import datetime
+from typing import Any, ClassVar
 
-from sqlalchemy.orm.attributes import InstrumentedAttribute
-from sqlmodel import Field as SQLField
-from sqlmodel import Session, create_engine
+import pytest
 
-from fastsprout.core import Field
-from fastsprout.data.backend.sql import SQLEntity
+from fastsprout.core import Field, InternalField, ReadField, WriteField
 
-
-class SearchField[T](Field[T]): ...
-
-
-class SortField[T](Field[T]): ...
-
-
-class CustomSQLBase(SQLEntity[UUID], table=False):
-    id: Field[UUID] = SQLField(default_factory=uuid4, primary_key=True)
-    code: SearchField[str]
-    inherited: SearchField[str]
+from .base_test_sql_entity import BaseTestSQLEntity
+from .conftest import (
+    CustomSQLBase,
+    CustomSQLMiddle,
+    CustomSQLRecord,
+    SearchField,
+    SortField,
+    VisibilitySQLUser,
+)
 
 
-class CustomSQLMiddle(CustomSQLBase, table=False):
-    sort_key: SortField[str]
+class TestCustomSQLFields(BaseTestSQLEntity[CustomSQLRecord]):
+    _entity_type = CustomSQLRecord
+    _data: ClassVar[dict[str, Any]] = {
+        "code": "a",
+        "sort_key": "01",
+        "inherited": "base",
+        "name": "first",
+    }
+    _updated_data: ClassVar[dict[str, Any]] = {"code": "updated"}
+    _field_types: ClassVar[dict[str, type[Field[Any, Any]]]] = {
+        "id": Field,
+        "code": SearchField,
+        "sort_key": SortField,
+        "inherited": SearchField,
+        "name": SearchField,
+    }
+
+    @pytest.mark.parametrize(
+        "entity_type, name, field_type",
+        [
+            (CustomSQLBase, "code", SearchField),
+            (CustomSQLMiddle, "sort_key", SortField),
+        ],
+    )
+    def test_unmapped_bases_preserve_descriptors(
+        self, entity_type, name, field_type
+    ):
+        # when
+        descriptor = vars(entity_type)[name]
+        # then
+        assert type(descriptor) is field_type
 
 
-class CustomSQLRecord(CustomSQLMiddle):
-    name: SearchField[str]
+class TestSQLVisibilityFields(BaseTestSQLEntity[VisibilitySQLUser]):
+    _entity_type = VisibilitySQLUser
+    _data: ClassVar[dict[str, Any]] = {
+        "email": "a@b.c",
+        "password": "secret",
+        "password_hash": "hash",
+        "created_at": datetime(2026, 9, 17),
+    }
+    _updated_data: ClassVar[dict[str, Any]] = {"password_hash": "updated-hash"}
+    _field_types: ClassVar[dict[str, type[Field[Any, Any]]]] = {
+        "id": Field,
+        "email": Field,
+        "password": WriteField,
+        "password_hash": InternalField,
+        "created_at": ReadField,
+        "last_login": InternalField,
+    }
+
+    def test_inherited_internal_default(self, entity: VisibilitySQLUser):
+        assert entity.last_login is None
 
 
 def test_sql_can_be_imported_in_a_fresh_interpreter() -> None:
+    # when
     result = subprocess.run(
         [
             sys.executable,
@@ -41,47 +85,5 @@ def test_sql_can_be_imported_in_a_fresh_interpreter() -> None:
         text=True,
         check=False,
     )
+    # then
     assert result.returncode == 0, result.stdout + result.stderr
-
-
-def test_sql_preserves_local_and_inherited_field_subclasses() -> None:
-    assert type(vars(CustomSQLBase)["code"]) is SearchField
-    assert type(vars(CustomSQLMiddle)["sort_key"]) is SortField
-    assert type(vars(CustomSQLRecord)["code"]) is SearchField
-    assert type(vars(CustomSQLRecord)["sort_key"]) is SortField
-    assert type(vars(CustomSQLRecord)["inherited"]) is SearchField
-    assert type(vars(CustomSQLRecord)["name"]) is SearchField
-    for name in ("id", "code", "sort_key", "inherited", "name"):
-        reference = getattr(CustomSQLRecord, name)
-        assert reference.entity_cls is CustomSQLRecord
-        assert isinstance(reference.orm, InstrumentedAttribute)
-        assert reference.orm.key == name
-
-
-def test_custom_sql_fields_preserve_defaults_and_persistence() -> None:
-    record = CustomSQLRecord(
-        code="a", sort_key="01", inherited="base", name="first"
-    )
-    identifier = record.id
-    assert isinstance(identifier, UUID)
-    engine = create_engine("sqlite://")
-    CustomSQLRecord.__table__.create(engine)
-    try:
-        with Session(engine) as session:
-            session.add(record)
-            session.commit()
-        with Session(engine) as session:
-            loaded = session.get(CustomSQLRecord, identifier)
-            assert loaded is not None
-            assert loaded.code == "a"
-            assert loaded.sort_key == "01"
-            assert loaded.inherited == "base"
-            assert loaded.name == "first"
-            loaded.code = "updated"
-            session.commit()
-        with Session(engine) as session:
-            updated = session.get(CustomSQLRecord, identifier)
-            assert updated is not None
-            assert updated.code == "updated"
-    finally:
-        engine.dispose()
