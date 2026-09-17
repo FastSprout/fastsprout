@@ -17,7 +17,11 @@ __all__ = ["SQLQuery"]
 class SQLQuery[E: SQLEntity[Any]](BaseQuery[E, Select[tuple[E]]]):
     def _build(self) -> Select[tuple[E]]:
         return (
-            (self.statement or self._built_select)
+            (
+                self.statement
+                if self.statement is not None
+                else self._built_select
+            )
             .limit(
                 getattr(self, "_limit_value", None),
             )
