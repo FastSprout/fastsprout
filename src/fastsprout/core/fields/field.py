@@ -1,8 +1,9 @@
 import contextvars
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Self, overload
 
 from sqlalchemy.orm import Mapped
+from typing_extensions import TypeVar
 
 from fastsprout.core.types.undefined import Undefined, UndefinedType
 
@@ -17,7 +18,19 @@ model_building_context_var: contextvars.ContextVar[bool] = (
 )
 
 
-class Field[T]:
+def check_field_visibility(owner: type, name: str) -> None:
+    if name in vars(owner).get("__fastsprout_forbidden__", ()):
+        operations = sorted(owner.__fastsprout_operations__)
+        raise AttributeError(
+            f"Field {name!r} not accessible in DTO (operations: {operations})"
+        )
+
+
+T = TypeVar("T")
+FieldOwner = TypeVar("FieldOwner", default=object)
+
+
+class Field(Generic[T, FieldOwner]):  # default type parameter on Python 3.12
     """Typed field descriptor.
 
     Annotation form: `is_active: Field[bool]`
@@ -40,12 +53,13 @@ class Field[T]:
     """
 
     __slots__ = ("_orm", "default", "default_factory", "name")
+    __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"read", "write"})
 
     def __init__(
         self,
         *,
-        default: UndefinedType = Undefined,
-        default_factory: Callable[[], Any] | None = None,
+        default: T | UndefinedType = Undefined,
+        default_factory: Callable[[], T] | None = None,
     ) -> None:
         self.name = ""
         self._orm = None
@@ -53,7 +67,7 @@ class Field[T]:
         self.default_factory = default_factory
 
     @classmethod
-    def _descriptor(cls, name: str, orm: Any = None) -> "Field[Any]":
+    def _descriptor(cls, name: str, orm: Any = None) -> Self:
         """Internal: build the descriptor installed on model classes.
 
         Bypasses the public specifier constructor — framework use only
@@ -76,25 +90,32 @@ class Field[T]:
 
         @overload
         def __get__(
-            self, instance: None, owner: type[HasOrm[Mapped[Any]]]
+            self: "Field[T, object]",
+            instance: None,
+            owner: type[HasOrm[Mapped[Any]]],
         ) -> FieldRef[Any, T, Mapped[T]]: ...
 
     @overload
     def __get__[OrmCtor](
-        self, instance: None, owner: type[HasOrm[OrmCtor]]
+        self: "Field[T, object]", instance: None, owner: type[HasOrm[OrmCtor]]
     ) -> FieldRef[Any, T, OrmCtor]: ...
     @overload
     def __get__[E](
-        self, instance: None, owner: type[E]
+        self: "Field[T, object]", instance: None, owner: type[E]
     ) -> FieldRef[E, T, None]: ...
     @overload
-    def __get__(self, instance: object, owner: type) -> T: ...
+    def __get__(
+        self, instance: None, owner: type[FieldOwner]
+    ) -> FieldRef[FieldOwner, T, Any]: ...
+    @overload
+    def __get__(self, instance: FieldOwner, owner: type[FieldOwner]) -> T: ...
     def __get__(
         self, instance: object | None, owner: type
     ) -> FieldRef[Any, T, Any] | T:
+        if model_building_context_var.get() and instance is None:
+            raise AttributeError(self.name)
+        self._check_visibility(owner)
         if instance is None:
-            if model_building_context_var.get():
-                raise AttributeError(self.name)
             return FieldRef(self.name, owner, self._orm)
         try:
             return instance.__dict__[self.name]  # type: ignore[no-any-return]
@@ -104,7 +125,11 @@ class Field[T]:
                 f"{self.name!r}"
             ) from e
 
-    def __set__(self, instance: object, value: T) -> None:
+    def _check_visibility(self, owner: type) -> None:
+        check_field_visibility(owner, self.name)
+
+    def __set__(self, instance: FieldOwner, value: T) -> None:
+        self._check_visibility(type(instance))
         instance.__dict__[self.name] = value
 
     def __repr__(self) -> str:

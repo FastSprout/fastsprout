@@ -280,6 +280,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
+    { name = "typing-extensions" },
 ]
 
 [package.optional-dependencies]
@@ -313,6 +314,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.13.5" },
     { name = "sqlalchemy", marker = "extra == 'data-sql'" },
     { name = "sqlmodel", marker = "extra == 'data-sql'", specifier = "==0.0.42" },
+    { name = "typing-extensions", specifier = ">=4.14" },
 ]
 provides-extras = ["data-sql", "standard"]
 

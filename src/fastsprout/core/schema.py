@@ -2,11 +2,12 @@ from pydantic import AliasGenerator, BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel, to_snake
 
 from fastsprout.core.fields.metaclass import TypedModelMeta
+from fastsprout.core.fields.visibility import EntityVisibility
 
 __all__ = ["BaseSchema"]
 
 
-class BaseSchema(BaseModel, metaclass=TypedModelMeta):
+class BaseSchema(EntityVisibility, BaseModel, metaclass=TypedModelMeta):
     """Base schema with type-safe field descriptors.
 
     Subclasses declare fields with Field[T] annotations:

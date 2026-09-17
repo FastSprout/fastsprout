@@ -19,7 +19,11 @@ from sqlmodel import SQLModel, Table
 from sqlmodel.main import SQLModelMetaclass
 
 from fastsprout.core import Field
-from fastsprout.core.fields.field import model_building_context_var
+from fastsprout.core.dto import is_dto_base
+from fastsprout.core.fields.field import (
+    check_field_visibility,
+    model_building_context_var,
+)
 from fastsprout.core.fields.has_orm import HasOrm
 from fastsprout.core.fields.metaclass import (
     collect_field_descriptors,
@@ -27,6 +31,7 @@ from fastsprout.core.fields.metaclass import (
     read_annotations,
     unwrap_field_annotations,
 )
+from fastsprout.core.fields.visibility import EntityVisibility
 from fastsprout.core.types import IdentificatorType
 from fastsprout.data.backend.implementation import Signpost
 from fastsprout.data.entity import Entitieable
@@ -65,7 +70,17 @@ class TypedSQLMeta(SQLModelMetaclass, type(Protocol)):
     2. __init__: capture SA InstrumentedAttribute and install Field carrying it
     """
 
+    if not TYPE_CHECKING:
+
+        def __getattr__(cls, name: str) -> Any:
+            check_field_visibility(cls, name)
+            return super().__getattr__(name)
+
     def __new__(mcs, name, bases, namespace, **kwargs):
+        if any(is_dto_base(base) for base in bases):
+            return type.__new__(
+                mcs, name, bases, namespace, init=kwargs.get("init", False)
+            )
         if (
             "table" not in kwargs
             and "__pydantic_generic_metadata__" not in kwargs
@@ -90,6 +105,8 @@ class TypedSQLMeta(SQLModelMetaclass, type(Protocol)):
             model_building_context_var.reset(token)
 
     def __init__(cls, name, bases, namespace, **kwargs):
+        if any(is_dto_base(base) for base in bases):
+            return
         super().__init__(name, bases, namespace, **kwargs)
         if hasattr(cls, "__table__"):
             model_fields = getattr(cls, "model_fields", {})
@@ -122,6 +139,7 @@ class SQLSignpost(Signpost[AbstractAsyncContextManager[AsyncSession]]): ...
 
 
 class SQLEntity(
+    EntityVisibility,
     SQLModel,
     HasOrm[Mapped[Any]],
     Entitieable[IDT],
