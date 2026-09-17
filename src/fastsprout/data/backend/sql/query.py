@@ -16,10 +16,14 @@ __all__ = ["SQLQuery"]
 @dataclass
 class SQLQuery[E: SQLEntity[Any]](BaseQuery[E, Select[tuple[E]]]):
     def _build(self) -> Select[tuple[E]]:
-        return self._built_select.limit(
-            getattr(self, "_limit_value", None),
-        ).offset(
-            getattr(self, "_offset_value", None),
+        return (
+            (self.statement or self._built_select)
+            .limit(
+                getattr(self, "_limit_value", None),
+            )
+            .offset(
+                getattr(self, "_offset_value", None),
+            )
         )
 
     @property
