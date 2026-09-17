@@ -163,7 +163,7 @@ class TypedModelMeta(ModelMetaclass):
 
     if not TYPE_CHECKING:
 
-        def __getattr__(cls, name: str) -> Any:  # noqa: N805
+        def __getattr__(cls, name: str) -> Any:  # noqa: N805, RUF100
             check_field_visibility(cls, name)
             return super().__getattr__(name)
 
