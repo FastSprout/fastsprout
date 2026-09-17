@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-_CODE = """from sqlmodel import Field as SQLField
+_CODE = """from typing import assert_type
+from sqlmodel import Field as SQLField
 from fastsprout.core import Field
 from fastsprout.data.backend.sql import SQLEntity
 
@@ -15,6 +16,11 @@ class SQLUser(SQLEntity[int]):
 
 SQLUser(id=1, name="a")
 SQLUser(1, "a")
+
+def entities[T](source: type[T] | list[T]) -> list[T]:
+    return []
+
+assert_type(entities(SQLUser), list[SQLUser])
 """
 
 
@@ -22,14 +28,16 @@ SQLUser(1, "a")
     "checker,rule",
     [("mypy", "call-arg"), ("basedpyright", "reportCallIssue")],
 )
-def test_sql_constructor_requires_keyword_arguments(
-    tmp_path: Path, checker: str, rule: str
+def test_sql_entity_typing_contract(
+    tmp_path: Path, checker: str, rule: str, checker_python_version: str
 ) -> None:
     case = tmp_path / "case.py"
     case.write_text(_CODE)
     if checker == "mypy":
         config = tmp_path / "mypy.ini"
-        config.write_text("[mypy]\n")
+        config.write_text(
+            f"[mypy]\npython_version = {checker_python_version}\n"
+        )
         args = [
             "--config-file",
             str(config),
@@ -41,7 +49,13 @@ def test_sql_constructor_requires_keyword_arguments(
     else:
         config = tmp_path / "pyrightconfig.json"
         config.write_text(
-            json.dumps({"typeCheckingMode": "standard", "include": [case.name]})
+            json.dumps(
+                {
+                    "typeCheckingMode": "standard",
+                    "pythonVersion": checker_python_version,
+                    "include": [case.name],
+                }
+            )
         )
         args = [
             "--project",
@@ -71,4 +85,4 @@ def test_sql_constructor_requires_keyword_arguments(
             for item in diagnostics
             if item["severity"] == "error"
         ]
-    assert actual == [(10, rule)], diagnostics
+    assert actual == [(11, rule)], diagnostics
