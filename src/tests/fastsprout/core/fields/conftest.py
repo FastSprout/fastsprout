@@ -24,7 +24,7 @@ def _write_tmp(code: str, suffix: str) -> Path:
     return Path(f.name)
 
 
-def _run_mypy(code: str) -> list[str]:
+def _run_mypy(code: str, python_version: str) -> list[str]:
     code_path = _write_tmp(code, ".py")
     cfg_path = _write_tmp(_MYPY_CONFIG, ".ini")
     try:
@@ -35,6 +35,8 @@ def _run_mypy(code: str) -> list[str]:
                 "mypy",
                 "--config-file",
                 str(cfg_path),
+                "--python-version",
+                python_version,
                 "--no-incremental",
                 str(code_path),
             ],
@@ -53,7 +55,7 @@ def _run_mypy(code: str) -> list[str]:
     ]
 
 
-def _run_pyright(code: str) -> list[str]:
+def _run_pyright(code: str, python_version: str) -> list[str]:
     code_path = _write_tmp(code, ".py")
     try:
         result = subprocess.run(
@@ -62,6 +64,10 @@ def _run_pyright(code: str) -> list[str]:
                 "-m",
                 "basedpyright",
                 "--outputjson",
+                "--pythonversion",
+                python_version,
+                "--pythonpath",
+                sys.executable,
                 str(code_path),
             ],
             check=False,
@@ -79,20 +85,22 @@ def _run_pyright(code: str) -> list[str]:
     ]
 
 
-_RUNNERS: dict[str, Callable[[str], list[str]]] = {
+_RUNNERS: dict[str, Callable[[str, str], list[str]]] = {
     "mypy": _run_mypy,
     "pyright": _run_pyright,
 }
 
 
 @pytest.fixture
-def reveal_types() -> Callable[[str, str], list[str]]:
+def reveal_types(
+    checker_python_version: str,
+) -> Callable[[str, str], list[str]]:
     """Return revealed types from `reveal_type(...)` calls in `code`.
 
     Usage: reveal_types("mypy", code) or reveal_types("pyright", code).
     """
 
     def _reveal(tool: str, code: str) -> list[str]:
-        return _RUNNERS[tool](code)
+        return _RUNNERS[tool](code, checker_python_version)
 
     return _reveal

@@ -24,13 +24,15 @@ def _expected_errors(case: Path, marker: str) -> Counter[tuple[int, str]]:
     )
 
 
-def test_stock_checker_dto_contract(tmp_path: Path, dto_case: Path) -> None:
+def test_stock_checker_dto_contract(
+    tmp_path: Path, dto_case: Path, checker_python_version: str
+) -> None:
     config = tmp_path / "pyrightconfig.json"
     config.write_text(
         json.dumps(
             {
                 "typeCheckingMode": "standard",
-                "pythonVersion": "3.12",
+                "pythonVersion": checker_python_version,
                 "include": [dto_case.name],
             }
         )
@@ -60,9 +62,11 @@ def test_stock_checker_dto_contract(tmp_path: Path, dto_case: Path) -> None:
     assert actual == _expected_errors(dto_case, "# error: "), diagnostics
 
 
-def test_mypy_dto_contract(tmp_path: Path, dto_case: Path) -> None:
+def test_mypy_dto_contract(
+    tmp_path: Path, dto_case: Path, checker_python_version: str
+) -> None:
     config = tmp_path / "mypy.ini"
-    config.write_text("[mypy]\npython_version = 3.12\n")
+    config.write_text(f"[mypy]\npython_version = {checker_python_version}\n")
     result = subprocess.run(
         [
             sys.executable,
