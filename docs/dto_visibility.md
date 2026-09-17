@@ -1,6 +1,6 @@
 # DTO visibility
 
-Declare fields once on a `BaseEntity`, `BaseSchema`, or `SQLEntity`. Derive DTOs
+Declare fields once on a `BaseSchema` or `SQLEntity`. Derive DTOs
 using a visibility base:
 
 ```python
@@ -28,6 +28,8 @@ read.password      # checker error; AttributeError at runtime
 
 The full runnable SQL example, including the UUID base, is
 [dto_visibility.py](dto_visibility.py).
+The numbered examples cover [read/write visibility](../examples/core/10_dto_visibility.py)
+and [SQL entities with DTO inheritance](../examples/core/11_dto_sql.py).
 
 | Field | Entity | ReadDTO | WriteDTO | ReadWriteDTO |
 | --- | --- | --- | --- | --- |
