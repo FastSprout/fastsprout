@@ -22,7 +22,7 @@ from fastsprout.core import Field
 from fastsprout.core.fields.field import model_building_context_var
 from fastsprout.core.fields.has_orm import HasOrm
 from fastsprout.core.fields.metaclass import (
-    collect_field_names,
+    collect_field_descriptors,
     convert_field_specifiers,
     read_annotations,
     unwrap_field_annotations,
@@ -55,7 +55,9 @@ def _mro_field_names(cls: type) -> list[str]:
     return out
 
 
-@dataclass_transform(field_specifiers=(Field, SQLPydField))
+@dataclass_transform(
+    kw_only_default=True, field_specifiers=(Field, SQLPydField)
+)
 class TypedSQLMeta(SQLModelMetaclass, type(Protocol)):
     """SQLModel metaclass + fastsprout Field installation.
 
@@ -71,7 +73,8 @@ class TypedSQLMeta(SQLModelMetaclass, type(Protocol)):
         ):
             kwargs["table"] = True
         annotations = read_annotations(namespace)
-        field_names = collect_field_names(annotations)
+        field_descriptors = collect_field_descriptors(annotations)
+        field_names = list(field_descriptors)
         unwrap_field_annotations(annotations, namespace)
         convert_field_specifiers(namespace, field_names)
 
@@ -79,6 +82,7 @@ class TypedSQLMeta(SQLModelMetaclass, type(Protocol)):
             if isinstance(annotations.get(fname), TypeVar):
                 annotations[fname] = Any
         namespace["__fastsprout_fields__"] = field_names
+        namespace["__fastsprout_descriptors__"] = field_descriptors
         token = model_building_context_var.set(True)
         try:
             return super().__new__(mcs, name, bases, namespace, **kwargs)
@@ -94,13 +98,22 @@ class TypedSQLMeta(SQLModelMetaclass, type(Protocol)):
         else:
             targets = cls.__dict__.get("__fastsprout_fields__", [])
             mapper_attrs = {}
+        descriptors = {
+            name: descriptor
+            for base in reversed(cls.__mro__)
+            for name, descriptor in vars(base)
+            .get("__fastsprout_descriptors__", {})
+            .items()
+        }
         for fname in targets:
             orm_attr = (
                 mapper_attrs[fname].class_attribute
                 if fname in mapper_attrs
                 else None
             )
-            descriptor: Field[Any] = Field._descriptor(fname, orm_attr)
+            descriptor: Field[Any] = descriptors.get(fname, Field)._descriptor(
+                fname, orm_attr
+            )
             descriptor.__set_name__(cls, fname)
             setattr(cls, fname, descriptor)
 
