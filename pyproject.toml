@@ -84,9 +84,6 @@ max-complexity = 5
 [tool.ruff.lint.flake8-annotations]
 mypy-init-return = true
 
-[tool.mypy]
-plugins = ["fastsprout.core.mypy_plugin"]
-
 [tool.basedpyright]
 include = ["src", "examples"]
 typeCheckingMode = "standard"
@@ -107,6 +104,3 @@ markers = [
     "integration: Integration tests - testcontainers or in-memory mocks",
     "slow: Tests taking more than 5 seconds",
 ]
-
-[tool.coverage.run]
-omit = ["src/fastsprout/core/mypy_plugin.py"]

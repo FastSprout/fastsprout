@@ -56,6 +56,18 @@ reveal_type(Hero.id.orm)
 reveal_type(Hero.name.orm)
 """
 
+SQL_ENTITY = """
+from fastsprout.core import Field
+from fastsprout.data.backend.sql import SQLEntity
+
+class Hero(SQLEntity[int]):
+    id: Field[int]
+    name: Field[str]
+
+reveal_type(Hero.id.orm)
+reveal_type(Hero.name.orm)
+"""
+
 INSTANCE = """
 from typing import Any, Generic, TypeVar
 from fastsprout.core import Field
@@ -98,10 +110,18 @@ reveal_type(Hero(id=1).id)
         pytest.param(
             ENTITY,
             {
-                "mypy": ["FakeOrm[int]", "FakeOrm[str]"],
+                "mypy": ["FakeOrm[Any]", "FakeOrm[Any]"],
                 "pyright": ["FakeOrm[Any]", "FakeOrm[Any]"],
             },
             id="entity-orm",
+        ),
+        pytest.param(
+            SQL_ENTITY,
+            {
+                "mypy": ["Mapped[int]", "Mapped[str]"],
+                "pyright": ["Mapped[int]", "Mapped[str]"],
+            },
+            id="sql-entity-orm",
         ),
         pytest.param(
             INSTANCE,

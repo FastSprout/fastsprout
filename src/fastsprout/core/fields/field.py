@@ -24,8 +24,8 @@ class Field[T]:
 
     Behavior:
       - On class:    `Hero.is_active` → FieldRef[Hero, bool, OrmCtor]
-        (carries entity binding for repository.select; mypy plugin refines
-        `.orm` to `OrmCtor[T]` at access sites)
+        (carries entity binding for repository.select; the SQLAlchemy
+        overload types `.orm` as `Mapped[T]`)
       - On instance: `hero.is_active` → bool (the value)
 
     Defaults are declared through the specifier, not raw assignment —

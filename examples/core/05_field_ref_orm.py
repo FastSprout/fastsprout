@@ -3,8 +3,9 @@
 Requires `sqlmodel` (already in the dev extras).
 
 `Hero.id.orm` returns the SQLAlchemy `InstrumentedAttribute` at runtime.
-With the mypy plugin enabled (`fastsprout.core.mypy_plugin`), it is typed
-as `Mapped[int]` instead of `Mapped[Any]`.
+The Field overload types it as `Mapped[int]` in stock mypy and pyright.
+Custom wrappers retain the type arguments declared in HasOrm; for example,
+HasOrm[CustomOrm[Any]] exposes CustomOrm[Any] for every field.
 """
 
 from typing import Any, dataclass_transform

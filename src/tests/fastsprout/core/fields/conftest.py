@@ -10,7 +10,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
-_MYPY_CONFIG = "[mypy]\nplugins = fastsprout.core.mypy_plugin\n"
+_MYPY_CONFIG = "[mypy]\n"
 _MYPY_REVEAL = re.compile(r'Revealed type is "(?P<type>.+)"')
 _PYRIGHT_REVEAL = re.compile(r'^Type of "(?P<expr>.+)" is "(?P<type>.+)"$')
 

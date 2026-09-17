@@ -48,8 +48,7 @@ class BaseSQLEntity(
 ):
     """SQL entity base. `.orm` exposes SQLAlchemy InstrumentedAttribute.
 
-    With the fastsprout mypy plugin, `Hero.id.orm` is typed as Mapped[int]
-    (or whatever T the Field is parametrized with).
+    The Field overload types `Hero.id.orm` as Mapped[int] in stock checkers.
     """
 
 
