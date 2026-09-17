@@ -9,9 +9,9 @@ class FieldRef[E, T, OrmCtor]:
     Carries entity class and field name. Value type T is static-only.
     Supports `.set(value)` like Field, mirroring API.
 
-    ORM typeparam is filled by backend type aliases:
-        type Field[T] = CoreField[T, Mapped[T]]   # fastsprout-data-sql
-        type Field[T] = CoreField[T, MongoExpr[T]] # fastsprout-data-mongo
+    Field.__get__ determines OrmCtor from the entity's HasOrm binding.
+    SQLAlchemy fields use Mapped[T]; other wrappers retain their declared
+    type arguments. Fields without an ORM binding use None.
     """
 
     __slots__ = ("entity_cls", "name", "orm")

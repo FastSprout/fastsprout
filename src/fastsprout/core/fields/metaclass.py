@@ -1,11 +1,12 @@
-from typing import Any, dataclass_transform
+from typing import TYPE_CHECKING, Any, dataclass_transform
 
 from pydantic import Field as PydField
 from pydantic._internal._model_construction import ModelMetaclass
 
+from fastsprout.core.dto import is_dto_base
 from fastsprout.core.types.undefined import Undefined
 
-from .field import Field, model_building_context_var
+from .field import Field, check_field_visibility, model_building_context_var
 
 __all__ = [
     "TypedModelMeta",
@@ -160,6 +161,12 @@ class TypedModelMeta(ModelMetaclass):
     install concrete Field subclass after.
     """
 
+    if not TYPE_CHECKING:
+
+        def __getattr__(cls, name: str) -> Any:  # noqa: N805, RUF100
+            check_field_visibility(cls, name)
+            return super().__getattr__(name)
+
     def __new__(
         mcs,
         name: str,
@@ -167,6 +174,10 @@ class TypedModelMeta(ModelMetaclass):
         namespace: dict[str, Any],
         **kwargs: Any,
     ) -> type:
+        if any(is_dto_base(base) for base in bases):
+            return type.__new__(
+                mcs, name, bases, namespace, init=kwargs.get("init", False)
+            )
         annotations = read_annotations(namespace)
         field_descriptors = collect_field_descriptors(annotations)
         field_names = unwrap_field_annotations(annotations, namespace)
