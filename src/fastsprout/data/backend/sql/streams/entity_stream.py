@@ -81,6 +81,7 @@ class SQLEntityStream[E: SQLEntity[Any]](
                     },
                 )
                 async for item in result.scalars():
+                    self._check_stream_context()
                     yield item
 
         return gen()

@@ -3,6 +3,7 @@ from abc import ABC
 from fastsprout.data.entity import Signpostable
 
 from ..protocols import Backendable, Finalizable
+from .bound_signpost import BoundSignpost
 
 __all__ = ["BaseDataBackend"]
 
@@ -20,3 +21,7 @@ class BaseDataBackend[T, F: Finalizable](Backendable[T, F], ABC):
         if getattr(cls, "__abstractmethods__", None):
             raise TypeError(f"{cls.__name__} is an abstract backend")
         self._signpost = signpost
+
+    def _check_stream_context(self) -> None:
+        if isinstance(self._signpost, BoundSignpost):
+            self._signpost.context.check()

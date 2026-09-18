@@ -3,6 +3,7 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import TracebackType
 from typing import Any, Self
 
+from fastsprout.data.backend.implementation.bound_signpost import BoundSignpost
 from fastsprout.data.backend.protocols import (
     Backendable,
     DataAbilitable,
@@ -15,7 +16,11 @@ from fastsprout.data.capabilities import BaseQuery
 from fastsprout.data.entity import Entitieable, Signpostable
 from fastsprout.data.router.exceptions import DataRError, NoBackendError
 from fastsprout.data.router.protocols import Routerable
+from fastsprout.data.streams.context import StreamContext
+from fastsprout.data.streams.implementation import JoinedStream
 from fastsprout.data.streams.protocols import AsyncEntityStream
+
+from .routed_join import RoutedJoin
 
 __all__ = ["DataR"]
 
@@ -44,7 +49,7 @@ class Bindinger(Finalizable):
     """Per-context signpost registry.
 
     Every signpost touched in a DataR context is registered once, its
-    factory wrapped so that all binds in the context share ONE opened
+    private factory wrapped so that all binds in the context share ONE opened
     product (e.g. one AsyncSession per signpost). Finalize/abort walk
     registered signposts in priority order and settle the shared
     products through their backends.
@@ -53,26 +58,28 @@ class Bindinger(Finalizable):
     def __init__(self) -> None:
         self.__signposts: dict[int, Signpostable[Any]] = {}
         self.__entities: dict[int, type[Entitieable[Any]]] = {}
-        self.__factories: dict[int, Callable[[], Any]] = {}
         self.__opened: dict[int, tuple[Any, Any]] = {}
+        self.__context = StreamContext()
 
     def add[E: Entitieable[Any]](self, entity: type[E]) -> Signpostable[Any]:
         signpost = entity.__signpost__
         signpost_id = id(signpost)
         if signpost_id not in self.__signposts:
-            self.__signposts[signpost_id] = signpost
-            self.__entities[signpost_id] = entity
-            self.__factories[signpost_id] = signpost.factory
-            signpost.factory = self.__shared_factory(signpost_id)
-        return signpost
+            bound = BoundSignpost(
+                self.__shared_factory(signpost_id, signpost.factory),
+                self.__context,
+                priority=signpost.priority,
+            )
+            self.__signposts[signpost_id] = bound
+            self.__entities[id(bound)] = entity
+        return self.__signposts[signpost_id]
 
     def __shared_factory(
-        self, signpost_id: int
+        self, signpost_id: int, original: Callable[[], Any]
     ) -> Callable[[], AbstractAsyncContextManager[Any]]:
-        original = self.__factories[signpost_id]
-
         @asynccontextmanager
         async def shared() -> AsyncIterator[Any]:
+            self.__context.check()
             if signpost_id not in self.__opened:
                 manager = original()
                 product = await manager.__aenter__()
@@ -82,9 +89,8 @@ class Bindinger(Finalizable):
         return shared
 
     async def close(self) -> None:
-        """Restore original factories and release opened products."""
-        for signpost_id, signpost in self.__signposts.items():
-            signpost.factory = self.__factories[signpost_id]
+        """Invalidate streams and release this context's opened products."""
+        self.__context.close()
         for manager, _ in self.__opened.values():
             await manager.__aexit__(None, None, None)
         self.__opened.clear()
@@ -160,6 +166,12 @@ class DataR(Routerable):
             ability = self.ability(q.entity)
             return ability.stream(q)
         raise DataRError(f"Not supported source: {q}")
+
+    def join[E: Entitieable[Any], StatementT](
+        self, q: BaseQuery[E, StatementT]
+    ) -> RoutedJoin[E]:
+        """Start a lazy inner join; consume it inside this DataR context."""
+        return RoutedJoin(self, JoinedStream(self.stream(q)))
 
     async def finalize(self) -> None:
         """Flush staged intents, then finalize bound backends —

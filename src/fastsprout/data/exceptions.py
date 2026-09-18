@@ -2,6 +2,7 @@ from fastsprout.core.exceptions import FastSproutError
 
 __all__ = [
     "FSDataError",
+    "MixedStreamContextsError",
     "NoPrimaryKeyError",
     "NoSessionError",
     "NotFoundError",
@@ -19,6 +20,10 @@ class NotFoundError(FSDataError):
 
 class NoSessionError(FSDataError):
     """Raised when no session is available."""
+
+
+class MixedStreamContextsError(FSDataError):
+    """Raised when joined streams belong to different DataR contexts."""
 
 
 class NoPrimaryKeyError(FSDataError):

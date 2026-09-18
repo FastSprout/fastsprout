@@ -55,6 +55,7 @@ class SQLValueStream[T: Valuable](
             async with self.session() as session:
                 result = await session.stream(self._stmt)
                 async for item in result.scalars():
+                    self._check_stream_context()
                     yield item
 
         return gen()
