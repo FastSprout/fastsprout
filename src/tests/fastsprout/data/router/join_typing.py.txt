@@ -1,0 +1,72 @@
+from collections.abc import AsyncIterable
+from typing import assert_type
+
+from sqlmodel import Field as SQLField
+
+from fastsprout.core import Field
+from fastsprout.data import DataR, JoinedStream
+from fastsprout.data.backend.sql import SQLEntity, SQLQuery
+from fastsprout.data.router.protocols import Routerable
+
+
+class Order(SQLEntity[int]):
+    id: Field[int] = SQLField(primary_key=True)
+    customer_id: Field[int]
+
+
+class Customer(SQLEntity[int]):
+    id: Field[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+
+async def check_streams(numbers: AsyncIterable[int], words: AsyncIterable[str], decimals: AsyncIterable[float]) -> None:
+    first = JoinedStream(numbers)
+    assert_type(first, JoinedStream[int])
+    pair = first.join(words, on=(lambda row: row[0], len))
+    assert_type(pair, JoinedStream[int, str])
+    triple = pair.join(decimals, on=(lambda row: len(row[1]), lambda item: int(item)))
+    assert_type(triple, JoinedStream[int, str, float])
+    assert_type(await triple.to_list(), list[tuple[int, str, float]])
+    async for row in triple:
+        assert_type(row, tuple[int, str, float])
+        assert_type(row[0], int)
+        assert_type(row[1], str)
+        assert_type(row[2], float)
+
+    async def left(row: tuple[int]) -> int:
+        return row[0]
+
+    async def right(word: str) -> int:
+        return len(word)
+
+    assert_type(first.join(words, on=(left, right)), JoinedStream[int, str])
+    pair.join(decimals, on=(lambda row: row[1].missing, int))  # error: reportAttributeAccessIssue; mypy: attr-defined
+    first.join(words, on=(lambda row: row[0], lambda word: word.missing))  # error: reportAttributeAccessIssue; mypy: attr-defined
+    pair.join(decimals, on=(lambda row: row[2], int))  # error: reportGeneralTypeIssues; mypy: misc
+    first.join(words, on=(lambda row: [], lambda word: []))  # error: reportArgumentType; mypy: arg-type, return-value
+
+
+async def check_router(data: DataR, protocol: Routerable, other: DataR) -> None:
+    first = data.join(SQLQuery(entity=Order))
+    assert_type(await first.to_list(), list[tuple[Order]])
+    assert_type(await protocol.join(SQLQuery(entity=Order)).to_list(), list[tuple[Order]])
+    pair = first.join(SQLQuery(entity=Customer), on=(lambda row: row[0].customer_id, lambda customer: customer.id))
+    assert_type(await pair.to_list(), list[tuple[Order, Customer]])
+    triple = pair.join(SQLQuery(entity=Customer), on=(lambda row: row[1].id, lambda customer: customer.id))
+    assert_type(await triple.to_list(), list[tuple[Order, Customer, Customer]])
+    async for order, customer in pair:
+        assert_type(order, Order)
+        assert_type(customer.name, str)
+
+    pair.join(SQLQuery(entity=Order), on=(lambda row: row[1].missing, lambda order: order.id))  # error: reportAttributeAccessIssue; mypy: attr-defined
+
+    def customer_id(customer: Customer) -> int:
+        return customer.id
+
+    data.join(Order)  # error: reportArgumentType; mypy: arg-type
+    protocol.join(Order)  # error: reportArgumentType; mypy: arg-type
+    first.join(Customer, on=(lambda row: row[0].customer_id, customer_id))  # error: reportArgumentType; mypy: arg-type
+
+    foreign = other.stream(SQLQuery(entity=Customer))
+    data.join(foreign)  # error: reportArgumentType; mypy: arg-type
+    first.join(foreign, on=(lambda row: row[0].customer_id, customer_id))  # error: reportArgumentType; mypy: arg-type
