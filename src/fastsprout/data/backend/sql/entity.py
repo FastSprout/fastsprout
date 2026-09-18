@@ -4,8 +4,8 @@ from typing import (
     Any,
     ClassVar,
     Generic,
-    Protocol,
     TypeVar,
+    _ProtocolMeta,
     dataclass_transform,
 )
 
@@ -63,7 +63,7 @@ def _mro_field_names(cls: type) -> list[str]:
 @dataclass_transform(
     kw_only_default=True, field_specifiers=(Field, SQLPydField)
 )
-class TypedSQLMeta(SQLModelMetaclass, type(Protocol)):
+class TypedSQLMeta(SQLModelMetaclass, _ProtocolMeta):
     """SQLModel metaclass + fastsprout Field installation.
 
     1. __new__: unwrap Field[T] → T for Pydantic/SQLModel
@@ -72,7 +72,7 @@ class TypedSQLMeta(SQLModelMetaclass, type(Protocol)):
 
     if not TYPE_CHECKING:
 
-        def __getattr__(cls, name: str) -> Any:
+        def __getattr__(cls, name: str) -> Any:  # noqa: N805  # metaclass
             check_field_visibility(cls, name)
             return super().__getattr__(name)
 
@@ -104,7 +104,7 @@ class TypedSQLMeta(SQLModelMetaclass, type(Protocol)):
         finally:
             model_building_context_var.reset(token)
 
-    def __init__(cls, name, bases, namespace, **kwargs):
+    def __init__(cls, name, bases, namespace, **kwargs):  # noqa: N805  # metaclass
         if any(is_dto_base(base) for base in bases):
             return
         super().__init__(name, bases, namespace, **kwargs)
