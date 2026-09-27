@@ -4,7 +4,8 @@ import asyncio
 from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlmodel import col, select
+from sqlmodel import Field as SQLField
+from sqlmodel import select
 
 from fastsprout.core import Field
 from fastsprout.data import DataR
@@ -22,13 +23,13 @@ HERO_ID = uuid4()
 class HeroEntity(SQLEntity[UUID]):
     __signpost__ = sqlite_backend
 
-    id: Field[UUID] = Field(default_factory=uuid4)
+    id: Field[UUID] = SQLField(default_factory=uuid4, primary_key=True)
     name: Field[str]
 
 
 FIND_HERO_WITH_ID = SQLQuery(
     entity=HeroEntity,
-    statement=select(HeroEntity).where(col(HeroEntity) == HERO_ID),
+    statement=select(HeroEntity).where(HeroEntity.id.orm == HERO_ID),
 )
 
 
