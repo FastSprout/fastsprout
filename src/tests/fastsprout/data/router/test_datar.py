@@ -9,7 +9,7 @@ from fastsprout.data.backend.sql.entity import (
     SQLSignpost,
 )
 from fastsprout.data.backend.sql.query import SQLQuery
-from fastsprout.data.events import CreateEvent
+from fastsprout.data.events import CreateEvent, DeleteEvent, UpdateEvent
 from fastsprout.data.router import DataR
 from fastsprout.events import EventBus, sub
 
@@ -88,7 +88,54 @@ async def test_create_event_uses_concrete_entity_type(signpost) -> None:
     async with DataR(bus=bus) as data:
         await data.ability(Item).create(Item(name="created"))
 
-    states = await bus.get(CreateEvent[Item])
-    state = await anext(states)
-    await state.wait()
+    states = [state async for state in await bus.get(CreateEvent[Item])]
+    assert len(states) == 1
+    await states[0].wait()
+    assert states[0].result._error_events == []
     assert [item.name for item in received] == ["created"]
+
+
+async def test_update_event_reaches_subscriber_through_datar(signpost) -> None:
+    async with DataR() as data:
+        await data.ability(Item).create(Item(name="before"))
+
+    bus = EventBus()
+    received: list[Item] = []
+
+    @sub(UpdateEvent[Item], bus=bus)
+    async def handler(event: UpdateEvent[Item]) -> None:
+        received.append(event.entity)
+
+    async with DataR(bus=bus) as data:
+        count = await data.ability(Item).update_by_query(
+            SQLQuery(entity=Item), Item.name.set("after")
+        )
+
+    states = [state async for state in await bus.get(UpdateEvent[Item])]
+    assert len(states) == 1
+    await states[0].wait()
+    assert states[0].result._error_events == []
+    assert count == 1
+    assert [item.name for item in received] == ["after"]
+
+
+async def test_delete_event_reaches_subscriber_through_datar(signpost) -> None:
+    async with DataR() as data:
+        item = await data.ability(Item).create(Item(name="to delete"))
+
+    bus = EventBus()
+    received: list[int] = []
+
+    @sub(DeleteEvent[int], bus=bus)
+    async def handler(event: DeleteEvent[int]) -> None:
+        received.append(event.id)
+
+    async with DataR(bus=bus) as data:
+        count = await data.ability(Item).delete(item)
+
+    states = [state async for state in await bus.get(DeleteEvent[int])]
+    assert len(states) == 1
+    await states[0].wait()
+    assert states[0].result._error_events == []
+    assert count == 1
+    assert received == [item.id]
