@@ -18,8 +18,8 @@ class Hero(BaseSchema):
 
 
 def main() -> None:
-    # From an unbound Field instance.
-    assignment = Field[str]("name").set("Spider")
+    # From a field bound to the entity class.
+    assignment = Hero.name.set("Spider")
     assert isinstance(assignment, FieldAssignment)
     assert assignment.name == "name"
     assert assignment.value == "Spider"
