@@ -19,6 +19,7 @@ from fastsprout.data.router.protocols import Routerable
 from fastsprout.data.streams.context import StreamContext
 from fastsprout.data.streams.implementation import JoinedStream
 from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.events import EventBus
 
 from .routed_join import RoutedJoin
 
@@ -59,7 +60,7 @@ class Bindinger(Finalizable):
         self.__signposts: dict[int, Signpostable[Any]] = {}
         self.__entities: dict[int, type[Entitieable[Any]]] = {}
         self.__opened: dict[int, tuple[Any, Any]] = {}
-        self.__context = StreamContext()
+        self.__context: StreamContext = StreamContext()
 
     def add[E: Entitieable[Any]](self, entity: type[E]) -> Signpostable[Any]:
         signpost = entity.__signpost__
@@ -122,8 +123,9 @@ class Bindinger(Finalizable):
 
 
 class DataR(Routerable):
-    def __init__(self) -> None:
+    def __init__(self, *, bus: EventBus | None = None) -> None:
         self.__bindings: Bindinger | None = None
+        self.__bus: EventBus | None = bus
 
     async def __aenter__(self) -> Self:
         self.__bindings = Bindinger()
@@ -156,7 +158,7 @@ class DataR(Routerable):
         self, entity: type[E]
     ) -> DataAbilitable[E, Any, BaseQuery[E, Any], Finalizable]:
         signpost = self.__init_bindings__.add(entity)
-        return ability_of(entity)(signpost)
+        return ability_of(entity)(signpost, bus=self.__bus)
 
     def stream[E: Entitieable[Any]](
         self, q: BaseQuery[E, Any]

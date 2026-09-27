@@ -1,6 +1,8 @@
 # CORE Examples
 
-Runnable snippets. Each file is self-contained. Run from the repository root with the SQL extra used by these examples:
+The core layer defines typed schemas, fields, actions, and DTO
+visibility shared by the other layers. Run from the repository root; the SQL
+entity examples need the data-sql extra:
 
 ```bash
 uv run --extra data-sql python examples/core/01_base_schema.py

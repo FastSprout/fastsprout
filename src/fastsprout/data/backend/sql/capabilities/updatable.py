@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator, Sequence
 from typing import Any, cast
 from uuid import uuid4
 
-from sqlalchemy import CursorResult, and_, column, inspect, update, values
+from sqlalchemy import and_, column, inspect, update, values
 from sqlalchemy.orm.base import Mapped
 
 from fastsprout.core.fields.field_assigment import FieldAssignment
@@ -15,6 +15,8 @@ from fastsprout.data.capabilities.protocols import (
     Updatable,
     UpdatableByQuery,
 )
+from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
+from fastsprout.data.events import UpdateEvent
 from fastsprout.data.streams.implementation import SimpleAsyncEntityStream
 from fastsprout.data.utils.collect import collect
 
@@ -79,13 +81,18 @@ class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLDataBackend):
 
                 result = await session.execute(update_stmt)
                 for row in result.mappings():
-                    yield entity_cls.model_validate(
+                    item = entity_cls.model_validate(
                         {
                             key: value
                             for key, value in row.items()
                             if isinstance(key, str)
                         }
                     )
+                    if self.with_events:
+                        await self._publish_to_bus(
+                            UpdateEvent[type(item)](entity=item)  # type: ignore[misc,operator]
+                        )
+                    yield item
 
 
 class SQLUpdatableByQuery[E: SQLEntity[Any], Q: SQLQuery[SQLEntity[Any]]](
@@ -106,8 +113,9 @@ class SQLUpdatableByQuery[E: SQLEntity[Any], Q: SQLQuery[SQLEntity[Any]]](
         built_q_id = built_q.with_only_columns(pk).order_by(None)
 
         async with self.transaction() as session:
-            raw_result = await session.execute(
-                query._built_update.where(pk.in_(built_q_id)).values(
+            result = await session.stream(
+                query._built_update.where(pk.in_(built_q_id))
+                .values(
                     {
                         cast(
                             Mapped[Any], getattr(entity, field.name).orm
@@ -115,5 +123,23 @@ class SQLUpdatableByQuery[E: SQLEntity[Any], Q: SQLQuery[SQLEntity[Any]]](
                         for field in assignments
                     }
                 )
+                .returning(entity.__table__),
+                execution_options={"yield_per": DEFAULT_ITERATION_CHUNK_SIZE},
             )
-            return cast(CursorResult[Any], raw_result).rowcount
+            rowcount = 0
+            async for chunk in result.mappings().partitions():
+                for row in chunk:
+                    item = entity.model_validate(
+                        {
+                            key: value
+                            for key, value in row.items()
+                            if isinstance(key, str)
+                        }
+                    )
+                    if self.with_events:
+                        await self._publish_to_bus(
+                            UpdateEvent[type(item)](entity=item)  # type: ignore[misc,operator]
+                        )
+                rowcount += len(chunk)
+
+            return rowcount

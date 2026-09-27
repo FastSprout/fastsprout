@@ -5,6 +5,7 @@ from fastsprout.data.backend.protocols import DataAbilitable, Finalizable
 from fastsprout.data.capabilities import BaseQuery
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.events import EventBus
 
 if TYPE_CHECKING:
     from fastsprout.data.router.implementation.routed_join import RoutedJoin
@@ -14,7 +15,7 @@ __all__ = ["Routerable"]
 
 @runtime_checkable
 class Routerable(Finalizable, Protocol):
-    def __init__(self) -> None: ...
+    def __init__(self, *, bus: EventBus | None = None) -> None: ...
 
     async def __aenter__(self) -> Self: ...
 

@@ -9,7 +9,9 @@ from fastsprout.data.backend.sql.entity import (
     SQLSignpost,
 )
 from fastsprout.data.backend.sql.query import SQLQuery
+from fastsprout.data.events import CreateEvent
 from fastsprout.data.router import DataR
+from fastsprout.events import EventBus, sub
 
 
 class Item(SQLEntity[int]):
@@ -73,3 +75,20 @@ async def test_repeated_stream_shares_session(signpost) -> None:
         await data.stream(SQLQuery(entity=Item)).to_list()
         await data.stream(SQLQuery(entity=Item)).to_list()
     # one signpost registration, factory wrapped once — no errors
+
+
+async def test_create_event_uses_concrete_entity_type(signpost) -> None:
+    bus = EventBus()
+    received: list[Item] = []
+
+    @sub(CreateEvent[Item], bus=bus)
+    async def handler(event: CreateEvent[Item]) -> None:
+        received.append(event.entity)
+
+    async with DataR(bus=bus) as data:
+        await data.ability(Item).create(Item(name="created"))
+
+    states = await bus.get(CreateEvent[Item])
+    state = await anext(states)
+    await state.wait()
+    assert [item.name for item in received] == ["created"]

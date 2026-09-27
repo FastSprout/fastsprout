@@ -12,17 +12,29 @@ EXAMPLES_DIR = ROOT / "examples"
 
 
 LAYER_DESCIPTION = {
-    "data": """Run from the repository root. The second example uses the development
-dependency `aiosqlite` and creates two temporary in-memory databases.
+    "data": """The data layer routes entities to persistence backends through DataR.
+It provides CRUD capabilities, streams, joins, and data events. The SQL
+examples use in-memory SQLite and the development dependency `aiosqlite`.
+Run from the repository root:
+
+```bash
+uv run --extra data-sql --extra events python {example}
+```
+""",
+    "core": """The core layer defines typed schemas, fields, actions, and DTO
+visibility shared by the other layers. Run from the repository root; the SQL
+entity examples need the data-sql extra:
 
 ```bash
 uv run --extra data-sql python {example}
 ```
 """,
-    "core": """Runnable snippets. Each file is self-contained. Run from the repository root with the SQL extra used by these examples:
+    "events": """The events layer publishes events through EventBus, delivers them
+to subscribers, tracks results, and runs scheduled publishers and middleware.
+Run from the repository root with the events extra:
 
 ```bash
-uv run --extra data-sql python {example}
+uv run --extra events python {example}
 ```
 """,
 }
@@ -31,7 +43,7 @@ uv run --extra data-sql python {example}
 for layer_path in EXAMPLES_DIR.iterdir():
     layer_name = layer_path.name
     if layer_name not in LAYER_DESCIPTION:
-        print(f"{layer_name.upper()} Layer skipped for docs generation")
+        print(f"{layer_name.upper()} Layer skipped for docs generation")  # noqa: T201
         continue
 
     readme_file = layer_path / "README.md"
