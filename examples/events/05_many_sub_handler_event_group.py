@@ -61,6 +61,7 @@ async def sub_handler(
 
 
 async def main():
+    completed = []
     async with bus(
         HeroEventA(name="Spider-Man", power="spider"),
         HeroEventB(name="Batman", power="money"),
@@ -78,7 +79,8 @@ async def main():
                 | HeroEventE
                 | HeroEventF
             ] = await event_state.wait()
-            print("Event Result:", event_result)
+            completed.append(type(event_result.state.event).__name__)
+    print("Event Results:", sorted(completed))
 
 
 asyncio.run(main())

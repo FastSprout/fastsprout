@@ -31,7 +31,7 @@ class HeroEntity(SQLEntity[UUID]):
 
 @sub(CreateEvent[HeroEntity], bus=bus)
 async def listen_creating_hero(e: CreateEvent[HeroEntity]):
-    print("Create Event:", e)
+    print("Create Event:", e.entity.name)
 
 
 async def main():

@@ -41,7 +41,8 @@ async def main():
         hero_ability = datar.ability(HeroEntity)
         await hero_ability.create(HeroEntity(id=HERO_ID, name="Batman"))
         await datar.finalize()
-        print(await hero_ability.find_exactly_one(FIND_HERO_WITH_ID))
+        found = await hero_ability.find_exactly_one(FIND_HERO_WITH_ID)
+        print(found.name, found.id == HERO_ID)
 
 
 asyncio.run(main())

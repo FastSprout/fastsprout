@@ -44,7 +44,7 @@ dev = [
     "basedpyright>=1.39.3",
     "import-linter[ui]>=2.3",
     "ipython>=9.4.0",
-    "pre-commit>=4.2.0",
+    "prek>=0.5.3",
     "pylint>=4.0.5",
     "ruff>=0.12.1",
     "basedpyright>=1.39.3",
@@ -56,6 +56,12 @@ dev = [
     "aiosqlite>=0.22.1",
     "bubus>=1.5.6",
     "faststream[kafka]>=0.7.5",
+]
+docs = [
+    "mkdocs-material[imaging]>=9,<10",
+    "mkdocstrings[python]>=0.30,<1",
+    "packaging>=24",
+    "ruff>=0.12.1",
 ]
 
 

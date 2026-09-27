@@ -24,8 +24,7 @@ def main() -> None:
     try:
         User(field_int="not an int", field_str="bob")  # type: ignore[arg-type]
     except ValidationError as e:
-        print("Validation rejected bad payload as expected:")
-        print(e)
+        print("Validation rejected bad payload:", e.errors()[0]["loc"])
     else:
         raise AssertionError("expected ValidationError")
 

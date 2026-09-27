@@ -24,7 +24,7 @@ async def main():
     )
 
     event_result = await event_state.wait()
-    print("Event Result:", event_result)
+    print("Event Result:", tuple(event_result))
 
 
 asyncio.run(main())

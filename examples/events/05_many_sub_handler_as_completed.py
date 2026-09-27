@@ -76,6 +76,7 @@ async def run_example_as_completed():
         HeroEventE(name="Batman", power="money"),
         HeroEventF(name="SuperMan", power="sun"),
     )
+    completed = []
     async for event_state in bus.as_completed(event_states_group):
         event_result: EventResult[
             HeroEventA
@@ -85,7 +86,8 @@ async def run_example_as_completed():
             | HeroEventE
             | HeroEventF
         ] = await event_state.wait()
-        print("Event Result:", event_result)
+        completed.append(type(event_result.state.event).__name__)
+    print("Event Results:", sorted(completed))
 
 
 async def main():
