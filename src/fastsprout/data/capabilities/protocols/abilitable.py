@@ -7,7 +7,6 @@ from .creatable import Creatable
 from .deletable import Deletable
 from .findable import Findable
 from .iterable import Iterable
-from .soft_deletable import SoftDeletable
 from .streamable import Streamable
 from .updatable import Updatable, UpdatableByQuery
 from .upsertable import Upsertable
@@ -21,7 +20,6 @@ class Abilitable[E: Entitieable[Any], Q: BaseQuery](
     Deletable[E, Q],
     Findable[E, Q],
     Iterable[E, Q],
-    SoftDeletable[E, Q],
     Streamable[E, Q],
     Updatable[E],
     Upsertable[E],

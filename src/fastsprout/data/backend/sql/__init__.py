@@ -1,5 +1,5 @@
 from . import helpers
-from .entity import SoftDeletableSQLEntity, SQLEntity
+from .entity import SQLEntity
 from .query import SQLQuery
 from .streams import SQLEntityStream, SQLValueStream
 
@@ -8,6 +8,5 @@ __all__ = [
     "SQLEntityStream",
     "SQLQuery",
     "SQLValueStream",
-    "SoftDeletableSQLEntity",
     "helpers",
 ]

@@ -3,16 +3,16 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import Field as SQLPydField
 
 from fastsprout.core import Field
+from fastsprout.data.backend.sql import SQLEntity
 from fastsprout.data.backend.sql.entity import (
     SQL_ENTITY_REGISTRY,
-    SoftDeletableSQLEntity,
     SQLSignpost,
 )
 from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.router import DataR
 
 
-class Item(SoftDeletableSQLEntity[int]):
+class Item(SQLEntity[int]):
     id: Field[int | None] = SQLPydField(  # pyright: ignore[reportIncompatibleVariableOverride, reportAssignmentType]
         default=None, primary_key=True
     )

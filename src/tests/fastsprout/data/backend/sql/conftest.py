@@ -12,7 +12,6 @@ from sqlmodel import Session, create_engine
 
 from fastsprout.core import Field, InternalField, ReadField, WriteField
 from fastsprout.data.backend.sql import (
-    SoftDeletableSQLEntity,
     SQLEntity,
     SQLQuery,
 )
@@ -55,7 +54,7 @@ class VisibilitySQLUser(DefaultSQLEntity):
     created_at: ReadField[datetime]
 
 
-class Hero(SoftDeletableSQLEntity[int]):
+class Hero(SQLEntity[int]):
     id: Field[int] = SQLField(primary_key=True)
     name: Field[str] = Field(default="")
     age: Field[int] = Field(default=0)
