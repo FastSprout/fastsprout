@@ -11,7 +11,6 @@ from .creatable import SQLCreatable
 from .deletable import SQLDeletable
 from .findable import SQLFindable
 from .iterable import SQLIterable
-from .soft_deletable import SQLSoftDeletable
 from .streamable import SQLStreamable
 from .updatable import SQLUpdatable, SQLUpdatableByQuery
 from .upsertable import SQLUpsertable
@@ -25,7 +24,6 @@ class SQLAbilitable[E: SQLEntity[Any], Q: SQLQuery[SQLEntity[Any]]](  # pyright:
     SQLDeletable[E, Q],
     SQLFindable[E, Q],
     SQLIterable[E, Q],
-    SQLSoftDeletable[E, Q],  # pyright: ignore[reportInvalidTypeArguments]
     SQLStreamable[E, Q],
     SQLUpdatable[E],
     SQLUpsertable[E],

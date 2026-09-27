@@ -8,6 +8,7 @@ from fastsprout.core.types import AnyIterable
 from fastsprout.data.backend.sql.data_backend import SQLDataBackend
 from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.capabilities.protocols import Creatable
+from fastsprout.data.events import CreateEvent
 from fastsprout.data.streams.implementation import SimpleAsyncEntityStream
 from fastsprout.data.utils.collect import collect
 
@@ -33,3 +34,10 @@ class SQLCreatable[E: SQLEntity[Any]](Creatable[E], SQLDataBackend):
                 await session.flush()
                 async for item in SimpleAsyncEntityStream(chunk):
                     yield item
+                if self.with_events:
+                    await self._publish_to_bus(
+                        *(
+                            CreateEvent[type(x)](entity=x)  # type: ignore[misc,operator]
+                            for x in chunk
+                        )
+                    )

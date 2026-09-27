@@ -40,7 +40,6 @@ __all__ = [
     "SQL_ENTITY_REGISTRY",
     "SQLEntity",
     "SQLSignpost",
-    "SoftDeletableSQLEntity",
 ]
 
 IDT = TypeVar("IDT", bound=IdentificatorType)
@@ -153,7 +152,3 @@ class SQLEntity(
     __signpost__: ClassVar[SQLSignpost]  # pyright: ignore[reportIncompatibleVariableOverride]
 
     id: Field[IDT]
-
-
-class SoftDeletableSQLEntity(SQLEntity[IDT], Generic[IDT], table=False):  # noqa: UP046
-    remove: Field[bool] = SQLPydField(default=False)

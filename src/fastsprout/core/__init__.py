@@ -6,7 +6,7 @@ from .decorators import (
     typed_fields,
     typed_pyd_dataclass,
 )
-from .depends import Depends
+from .depends import DependencyInjector, Depends, inject_depends
 from .dto import ReadDTO, ReadWriteDTO, WriteDTO, dto
 from .exceptions import BaseFastSproutError, FastSproutError
 from .fields import (
@@ -30,6 +30,7 @@ __all__ = [
     "BaseFastSproutError",
     "BaseSchema",
     "BaseTriggerAction",
+    "DependencyInjector",
     "Depends",
     "EntityVisibility",
     "FastSproutError",
@@ -47,6 +48,7 @@ __all__ = [
     "WriteField",
     "dto",
     "hidden_lazy_await",
+    "inject_depends",
     "lazy_await",
     "typed_dataclass",
     "typed_fields",

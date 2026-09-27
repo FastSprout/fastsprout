@@ -58,6 +58,13 @@ repos:
         language: system
         types: [ python ]
 
+      - id: generate-example-readme
+        name: Generate Example README.md
+        entry: uv run --system-certs scripts/generate_readme_docs.py
+        language: system
+        types: [python]
+
+
   - repo: https://github.com/astral-sh/uv-pre-commit
     # uv version.
     rev: 0.8.10

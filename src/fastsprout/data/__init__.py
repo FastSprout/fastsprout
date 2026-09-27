@@ -1,4 +1,4 @@
-from . import consts, entity, exceptions, types, utils
+from . import consts, entity, events, exceptions, types, utils
 from .backend import sql
 from .router import DataR
 from .streams.implementation import (
@@ -14,6 +14,7 @@ __all__ = [
     "SimpleAsyncValueStream",
     "consts",
     "entity",
+    "events",
     "exceptions",
     "sql",
     "types",

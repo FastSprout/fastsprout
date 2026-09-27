@@ -10,6 +10,7 @@ __all__ = [
     "BaseIterableTriggerAction",
     "BaseIteratorAction",
     "BaseIteratorTriggerAction",
+    "BaseNullableAction",
     "BaseSequenceAction",
     "BaseSequenceTriggerAction",
     "BaseTriggerAction",
@@ -26,6 +27,18 @@ class BaseAction[I: BaseSchema, O: BaseSchema](Protocol):
     """
 
     async def __call__(self, payload: I, /) -> O: ...
+
+
+@runtime_checkable
+class BaseNullableAction[I: BaseSchema, O: BaseSchema | None](Protocol):
+    """Atomic unit of work in fastsprout.
+
+    Actions take a single typed payload and return a typed result or nullable value.
+    Exposed through channels (REST, CLI, task, event) via decorators
+    from interface layers.
+    """
+
+    async def __call__(self, payload: I, /) -> O | None: ...
 
 
 @runtime_checkable

@@ -32,7 +32,11 @@ dependencies = ["pydantic>=2.13.5", "typing-extensions>=4.14"]
 
 [project.optional-dependencies]
 data-sql = ["sqlmodel==0.0.42", 'sqlalchemy']
-standard = ["fastsprout[data-sql]"]
+events = [
+    "bubus>=1.5.6",
+    "croniter>=6.2.4",
+]
+standard = ["fastsprout[data-sql,events]"]
 
 
 [dependency-groups]
@@ -50,6 +54,8 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "mypy>=2.3.1",
     "aiosqlite>=0.22.1",
+    "bubus>=1.5.6",
+    "faststream[kafka]>=0.7.5",
 ]
 
 
