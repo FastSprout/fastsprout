@@ -213,7 +213,7 @@ def write_index(output: Path, releases: list[tuple[Version, str, str]]) -> None:
         json.dumps(versions, indent=2) + "\n", encoding="utf-8"
     )
     write_landing(output)
-    for verification in ROOT.glob("google*.html"):
+    for verification in (ROOT / "assets").glob("google*.html"):
         expected = f"google-site-verification: {verification.name}"
         if verification.read_text(encoding="utf-8").strip() != expected:
             raise ValueError(
