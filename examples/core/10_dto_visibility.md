@@ -11,6 +11,8 @@ Declare visibility on the entity's fields, then derive each DTO with a short cla
 
 The script prints the updated email, then five `AttributeError` messages for forbidden fields:
 
+The errors cover read, write, and internal field restrictions, including a forbidden constructor argument.
+
 ```text
 new@example.com
 Field 'password' not accessible in DTO (operations: ['read'])
@@ -19,5 +21,3 @@ Field 'created_at' not accessible in DTO (operations: ['write'])
 Field 'password_hash' not accessible in DTO (operations: ['read', 'write'])
 Field 'password' not accessible in DTO (operations: ['read'])
 ```
-
-The errors cover read, write, and internal field restrictions, including a forbidden constructor argument.

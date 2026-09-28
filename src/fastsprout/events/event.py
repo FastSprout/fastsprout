@@ -53,6 +53,10 @@ class EventStatesGroup[*ETs]:
     def __iter__(self):
         return iter(self.__event_states)
 
+    def __repr__(self) -> str:
+        states = ", ".join(repr(state) for state in self.__event_states)
+        return f"{type(self).__name__}({states})"
+
 
 class EventState[E: Eventable]:
     def __init__(self, /, event: E) -> None:
@@ -68,6 +72,9 @@ class EventState[E: Eventable]:
     @property
     def result(self) -> "EventResult[E]":
         return self.__result
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(event={self.__event!r})"
 
     async def wait(
         self,
@@ -101,6 +108,14 @@ class EventResult[E: Eventable]:
         self._pedding_events: list[Any] = []
         self._error_events: list[BaseException] = []
         self._completion_count = 0
+
+    def __repr__(self) -> str:
+        return (
+            f"{type(self).__name__}(state={self.state!r}, "
+            f"values={self._success_events!r}, "
+            f"pending={len(self._pedding_events)}, "
+            f"errors={self._error_events!r})"
+        )
 
     def add_pending(self, future: asyncio.Future[Any]) -> None:
         self._pedding_events.append(future)

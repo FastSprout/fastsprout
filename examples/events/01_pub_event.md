@@ -5,5 +5,5 @@
 `bus.get(e)` finds a state whose event is Spider-Man:
 
 ```text
-Event State: Spider-Man
+Event State: EventState(event=HeroEvent(name='Spider-Man', power='spider'))
 ```

@@ -22,7 +22,7 @@ async def main():
 
     event_state: EventState[HeroEvent] | None = await bus.get(e)
 
-    print("Event State:", event_state.event.name if event_state else None)
+    print("Event State:", event_state)
 
 
 asyncio.run(main())

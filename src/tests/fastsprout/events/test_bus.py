@@ -38,6 +38,31 @@ async def test_event_ids_separate_events_of_the_same_type():
     assert await bus.get(second) is second_state
 
 
+async def test_event_wrapper_reprs_show_events_and_results():
+    bus = EventBus()
+
+    @sub(Message, bus=bus)
+    async def next_message(event: Message) -> Message:
+        return Message(value=event.value + 1)
+
+    first = Message(value=1)
+    second = Message(value=2)
+    first_state = await bus.publish(first)
+    await bus.publish(second)
+    group = await bus.get(first, second)
+    result = await first_state.wait()
+
+    assert repr(first_state) == "EventState(event=Message(value=1))"
+    assert repr(group) == (
+        "EventStatesGroup(EventState(event=Message(value=1)), "
+        "EventState(event=Message(value=2)))"
+    )
+    assert repr(result) == (
+        "EventResult(state=EventState(event=Message(value=1)), "
+        "values=[Message(value=2)], pending=0, errors=[])"
+    )
+
+
 async def test_wait_collects_results_from_multiple_subscribers():
     bus = EventBus()
 

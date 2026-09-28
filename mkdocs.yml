@@ -35,7 +35,10 @@ theme:
 
 plugins:
   - search
-  - privacy
+  - privacy:
+      assets_exclude:
+        - gitlab.3dcra.eu/opensource/fastsprout/fastsprout/badges/*
+        - img.shields.io/badge/*
   - social:
       cards_layout_options:
         background_color: "#1f222b"
@@ -93,6 +96,7 @@ nav:
   - FastSprout: index.md
   - Features: features.md
   - Getting Started: getting-started.md
+  - Events: guide/events.md
   - Learn: learn/examples/index.md
   - Reference: reference.md
   - API Reference:
@@ -102,4 +106,5 @@ nav:
       - SQL: api/sql.md
       - Events: api/events.md
   - About: about.md
+  - Security: security.md
   - Release Notes: release-notes.md

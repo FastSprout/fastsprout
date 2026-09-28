@@ -1,6 +1,7 @@
 # Examples
 
 Runnable examples from this version of FastSprout. Each example has its own page.
+Each Result block is generated from the Python file and checked during the docs build.
 
 ## Core
 

@@ -5,6 +5,6 @@ A handler can both subscribe and publish. Here receiving `SubHeroEvent` runs `pu
 The first handler returns one event, and the bus contains the published second event:
 
 ```text
-Event Result: 1
-Event State: Batman
+Event Result: EventResult(state=EventState(event=SubHeroEvent(name='Batman', power='money')), values=[PubHeroEvent(name='Batman', power='money', sub=SubHeroEvent(name='Batman', power='money'))], pending=0, errors=[])
+Event State: EventState(event=PubHeroEvent(name='Batman', power='money', sub=SubHeroEvent(name='Batman', power='money')))
 ```

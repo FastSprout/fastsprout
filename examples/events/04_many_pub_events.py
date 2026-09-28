@@ -28,7 +28,7 @@ async def main():
 
     event_states: EventStatesGroup[*tuple[HeroEvent, ...]] = await bus.get(*e)
 
-    print("Event States:", len(tuple(event_states)))
+    print("Event States:", event_states)
 
 
 asyncio.run(main())

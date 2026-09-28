@@ -2,9 +2,29 @@ import ast
 from itertools import groupby
 from pathlib import Path
 
+if __package__:
+    from .docs_nav import (
+        render_example_output,
+        replace_result_block,
+        run_python_example,
+    )
+else:
+    from docs_nav import (
+        render_example_output,
+        replace_result_block,
+        run_python_example,
+    )
+
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES_DIR = ROOT / "examples"
 LEARN_DIR = ROOT / "docs/learn/examples"
+
+(ROOT / "docs/index.md").write_text(
+    (ROOT / "README.md").read_text(encoding="utf-8"), encoding="utf-8"
+)
+(ROOT / "docs/security.md").write_text(
+    (ROOT / "SECURITY.md").read_text(encoding="utf-8"), encoding="utf-8"
+)
 
 LAYER_DESCRIPTION = {
     "core": """The core layer defines typed schemas, fields, actions, and DTO
@@ -76,6 +96,7 @@ learn = [
     "# Examples",
     "",
     "Runnable examples from this version of FastSprout. Each example has its own page.",
+    "Each Result block is generated from the Python file and checked during the docs build.",
     "",
 ]
 
@@ -116,7 +137,10 @@ for layer, description in LAYER_DESCRIPTION.items():
         page = layer_docs / f"{slug}.md"
         number, _, name = title.partition(". ")
         entries.append((int(number), name, f"{layer}/{page.name}"))
-        notes = example.with_suffix(".md").read_text(encoding="utf-8")
+        notes_path = example.with_suffix(".md")
+        notes = notes_path.read_text(encoding="utf-8")
+        notes = replace_result_block(notes, run_python_example(example, ROOT))
+        notes_path.write_text(notes, encoding="utf-8")
         explanation, separator, result = notes.partition("\n## Result\n")
         if not separator:
             raise ValueError(
@@ -127,6 +151,8 @@ for layer, description in LAYER_DESCRIPTION.items():
         )
         page_parts = [
             f"# {title}",
+            "",
+            f"<!-- example-source: {source} -->",
             "",
             explanation.strip(),
             "",
@@ -139,7 +165,7 @@ for layer, description in LAYER_DESCRIPTION.items():
             "## Source",
             "",
             "```python",
-            f'--8<-- "{source}"',
+            example.read_text(encoding="utf-8").rstrip(),
             "```",
             "",
         ]
@@ -168,3 +194,10 @@ LEARN_DIR.mkdir(parents=True, exist_ok=True)
 (LEARN_DIR / "index.md").write_text(
     "\n".join(learn).rstrip() + "\n", encoding="utf-8"
 )
+
+for page in sorted((ROOT / "docs").rglob("*.md")):
+    if page.is_relative_to(LEARN_DIR):
+        continue
+    content = page.read_text(encoding="utf-8")
+    if "<!-- example-source:" in content:
+        page.write_text(render_example_output(content, ROOT), encoding="utf-8")

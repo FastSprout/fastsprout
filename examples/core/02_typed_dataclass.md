@@ -2,6 +2,7 @@
 
 ## Result
 
+
 ```text
 Point(x=1, y=2, label='origin-ish')
 ```

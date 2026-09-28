@@ -4,8 +4,8 @@
 
 Only orders with matching customer and product rows appear:
 
+Order 3 has no matching customer and is omitted.
+
 ```text
 [(1, 'Ada', 'Tea'), (2, 'Ada', 'Coffee')]
 ```
-
-Order 3 has no matching customer and is omitted.

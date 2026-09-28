@@ -17,6 +17,11 @@ from mkdocs.commands.build import build as mkdocs_build
 from mkdocs.config import load_config
 from packaging.version import Version
 
+if __package__:
+    from .docs_nav import render_example_output
+else:
+    from docs_nav import render_example_output
+
 ROOT = Path(__file__).resolve().parents[1]
 SITE_URL = "https://fastsprout.dev"
 SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
@@ -85,7 +90,9 @@ def copy_markdown(source: Path, destination: Path) -> list[tuple[Path, str]]:
     pages = []
     for markdown in sorted((source / "docs").rglob("*.md")):
         relative = markdown.relative_to(source / "docs")
-        content = markdown.read_text(encoding="utf-8")
+        content = render_example_output(
+            markdown.read_text(encoding="utf-8"), source
+        )
 
         def include_source(match: re.Match[str]) -> str:
             snippet = (source / match.group(1)).resolve()

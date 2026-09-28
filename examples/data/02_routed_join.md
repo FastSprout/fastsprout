@@ -8,9 +8,9 @@
 
 ## Result
 
+The first line comes from the filtered branch; the second comes from the original plan.
+
 ```text
 [(1, 'Ada')]
 [(1, 'Ada'), (2, 'Lin')]
 ```
-
-The first line comes from the filtered branch; the second comes from the original plan.

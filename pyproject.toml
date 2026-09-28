@@ -58,6 +58,7 @@ dev = [
     "faststream[kafka]>=0.7.5",
 ]
 docs = [
+    "aiosqlite>=0.22.1",
     "mkdocs-material[imaging]>=9,<10",
     "mkdocstrings[python]>=0.30,<1",
     "packaging>=24",
@@ -90,6 +91,7 @@ line-length = 80
 
 [tool.ruff.lint.per-file-ignores]
 "examples/*.py" = ["T201"]
+"docs_src/*.py" = ["T201"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 5

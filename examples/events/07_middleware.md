@@ -7,11 +7,10 @@
 
 ## Result
 
-The middleware prints:
+The middleware prints the event state and its result. The result has no returned
+values or pending handlers because the subscriber returns `None`.
 
 ```text
-Event State: FirstEvent
-EventResult[FirstEvent]: ([], [])
+Event State: EventState(event=FirstEvent())
+EventResult[FirstEvent]: EventResult(state=EventState(event=FirstEvent()), values=[], pending=0, errors=[])
 ```
-
-The result has no returned values or pending handlers because the subscriber returns `None`.

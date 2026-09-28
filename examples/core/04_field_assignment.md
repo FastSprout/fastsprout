@@ -2,6 +2,7 @@ Call `.set(value)` on a class-level field reference to build a `FieldAssignment`
 
 ## Result
 
+
 ```text
 FieldAssignment(name='name', value='Spider')
 FieldAssignment(name='is_active', value=False)

@@ -21,9 +21,9 @@ class SimpleMiddlewareForFirstEvent:
 
     async def __call__(self, event_state: EventState[FirstEvent]) -> None:
         assert_type(event_state.event, FirstEvent)
-        print("Event State:", type(event_state.event).__name__)
+        print("Event State:", event_state)
         result: EventResult[FirstEvent] = await event_state.wait()  # (1)!
-        print("EventResult[FirstEvent]:", tuple(result))
+        print("EventResult[FirstEvent]:", result)
 
 
 bus = EventBus(

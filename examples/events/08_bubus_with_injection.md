@@ -2,6 +2,7 @@ Wrap a native Bubus bus with `InMemoryBroker`, then register that `EventBus` as 
 
 ## Result
 
+
 ```text
 Hello, FastSprout!
 ```

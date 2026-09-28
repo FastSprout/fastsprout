@@ -11,7 +11,7 @@ include:
       extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
       checks:
         - uv run --all-extras --all-groups --all-packages ruff check
-        - uv run --all-extras --all-groups --all-packages basedpyright --pythonversion $UV_PYTHON src
+        - uv run --all-extras --all-groups --all-packages basedpyright --pythonversion $UV_PYTHON src docs_src
         - uv run  --all-extras --all-groups --all-packages pylint --disable=all --enable=C0302,C0415 --max-module-lines=300 --ignore-paths=src/tests ./src
 
   - component: $CI_SERVER_FQDN/opensource/templates/pytest@0.1.10
@@ -57,6 +57,7 @@ include:
       cert: ""
 
 pytest:
+  coverage: '/TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   parallel:
     matrix:
       - UV_PYTHON: ["3.12", "3.13", "3.14"]
@@ -77,10 +78,10 @@ docs-check:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends git libcairo2
   script:
     - git fetch origin --tags
-    - uv run --locked --only-group docs python scripts/generate_readme_docs.py
-    - git diff --exit-code -- docs/learn examples/core/README.md examples/data/README.md examples/events/README.md
+    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/generate_readme_docs.py
+    - git diff --exit-code -- docs examples
     - test -z "$(git ls-files --others --exclude-standard docs/learn)"
-    - uv run --locked --only-group docs python scripts/build_docs.py --dev-ref HEAD --output public
+    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/build_docs.py --dev-ref HEAD --output public
   artifacts:
     paths:
       - public
@@ -88,7 +89,10 @@ docs-check:
   rules:
     - changes:
         - docs/**/*
+        - docs_src/**/*
         - examples/**/*
+        - README.md
+        - SECURITY.md
         - mkdocs.yml
         - scripts/build_docs.py
         - scripts/docs_nav.py
@@ -106,7 +110,7 @@ pages:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends git libcairo2
   script:
     - git fetch origin +refs/heads/development:refs/remotes/origin/development --tags
-    - uv run --locked --only-group docs python scripts/build_docs.py --dev-ref origin/development --output public
+    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/build_docs.py --dev-ref origin/development --output public
   artifacts:
     paths:
       - public

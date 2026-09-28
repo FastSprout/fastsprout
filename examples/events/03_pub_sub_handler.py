@@ -29,14 +29,13 @@ async def main():
     )
 
     event_result: EventResult[SubHeroEvent] = await first_event_state.wait()
-    successful, _ = event_result
-    print("Event Result:", len(successful))
+    print("Event Result:", event_result)
 
     second_event_state: AsyncIterator[EventState[PubHeroEvent]] = await bus.get(
         PubHeroEvent
     )
 
-    print("Event State:", (await anext(second_event_state)).event.name)
+    print("Event State:", await anext(second_event_state))
 
 
 asyncio.run(main())

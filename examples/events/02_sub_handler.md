@@ -2,11 +2,10 @@
 
 ## Result
 
-The handler prints:
+The handler prints the event and its result. The result contains no returned
+values or pending handlers because the subscriber returns `None`.
 
 ```text
 HeroEvent: name='Batman' power='money'
-Event Result: ([], [])
+Event Result: EventResult(state=EventState(event=HeroEvent(name='Batman', power='money')), values=[], pending=0, errors=[])
 ```
-
-The result contains no returned values or pending handlers because the subscriber returns `None`.
