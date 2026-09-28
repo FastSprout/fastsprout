@@ -1,0 +1,16 @@
+from typing import assert_type
+from sqlmodel import Field as SQLField
+from fastsprout.core import Field
+from fastsprout.data.backend.sql import SQLEntity
+
+class SQLUser(SQLEntity[int]):
+    id: Field[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+SQLUser(id=1, name="a")
+SQLUser(1, "a")  # error: reportCallIssue; mypy: call-arg
+
+def entities[T](source: type[T] | list[T]) -> list[T]:
+    return []
+
+assert_type(entities(SQLUser), list[SQLUser])

@@ -1,0 +1,35 @@
+[importlinter]
+root_packages =
+    fastsprout
+    tests
+exclude_type_checking_imports = True
+
+
+
+; === FastSprout-level layers ===
+[importlinter:contract:FastSprout-layers-architecture]
+name = FastSprout Layers Architecture
+type = layers
+containers =
+    fastsprout
+    tests.fastsprout
+layers =
+    data
+    events
+    core
+
+; === FastSprout-data-level layers ===
+[importlinter:contract:FastSprout-data-layers-architecture]
+name = FastSprout Data Layers Architecture
+type = layers
+containers =
+    fastsprout.data
+    tests.fastsprout.data
+layers =
+    router
+    backend
+    capabilities
+    streams
+    entity
+    utils
+    exceptions | types | consts

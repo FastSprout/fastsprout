@@ -1,0 +1,134 @@
+# .gitlab-ci.yml — fastsprout-data (public library)
+# Public pull: pypi-proxy (public PyPI) + pypi-hosted-public (our pkgs), anon on nexus.3dcra.eu.
+# Release on tag, ordered by stage: Nexus -> TestPyPI -> PyPI.
+stages: [static-analysis, test, release-nexus, release-testpypi, release-pypi, docs]
+
+default:
+  retry:
+    max: 2
+    when: runner_system_failure
+
+include:
+  - component: $CI_SERVER_FQDN/opensource/templates/python-quality@0.1.10
+    inputs:
+      internal_ca: false
+      index_url: https://nexus.3dcra.eu/repository/pypi-proxy/simple
+      extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
+      checks:
+        - uv run --all-extras --all-groups --all-packages ruff check
+        - uv run --all-extras --all-groups --all-packages basedpyright --pythonversion $UV_PYTHON src docs_src
+        - uv run  --all-extras --all-groups --all-packages pylint --disable=all --enable=C0302,C0415 --max-module-lines=300 --ignore-paths=src/tests ./src
+
+  - component: $CI_SERVER_FQDN/opensource/templates/pytest@0.1.10
+    inputs:
+      internal_ca: false
+      index_url: https://nexus.3dcra.eu/repository/pypi-proxy/simple
+      extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
+
+  # -> Nexus pypi-hosted-public
+  - component: $CI_SERVER_FQDN/opensource/templates/pypi-publish@0.1.10
+    inputs:
+      job_name: nexus-release
+      stage: release-nexus
+      internal_ca: false
+      index_url: https://nexus.3dcra.eu/repository/pypi-proxy/simple
+      extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
+      repository_url: https://nexus.3dcra.net/repository/pypi-hosted-public/
+
+  # -> TestPyPI
+  - component: $CI_SERVER_FQDN/opensource/templates/pypi-publish@0.1.10
+    inputs:
+      job_name: testpypi-release
+      stage: release-testpypi
+      internal_ca: false
+      index_url: https://nexus.3dcra.eu/repository/pypi-proxy/simple
+      extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
+      repository_url: https://test.pypi.org/legacy/
+      username: __token__
+      password: $TEST_PYPI_TOKEN
+      cert: ""
+
+  # -> public PyPI
+  - component: $CI_SERVER_FQDN/opensource/templates/pypi-publish@0.1.10
+    inputs:
+      job_name: pypi-release
+      stage: release-pypi
+      internal_ca: false
+      index_url: https://nexus.3dcra.eu/repository/pypi-proxy/simple
+      extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
+      repository_url: https://upload.pypi.org/legacy/
+      username: __token__
+      password: $OFFICIAL_PYPI_PUSH
+      cert: ""
+
+pytest:
+  retry: &retry_nonrelease_job
+    max: 2
+    when:
+      - runner_system_failure
+      - script_failure
+  coverage: '/TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  parallel:
+    matrix:
+      - UV_PYTHON: ["3.12", "3.13", "3.14"]
+  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
+
+python-quality:
+  retry: *retry_nonrelease_job
+  parallel:
+    matrix:
+      - UV_PYTHON: ["3.12", "3.13", "3.14"]
+  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
+
+docs-check:
+  stage: static-analysis
+  retry: *retry_nonrelease_job
+  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python3.12-bookworm-slim
+  variables:
+    GIT_DEPTH: "0"
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
+  script:
+    - git fetch origin --tags
+    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/generate_readme_docs.py
+    - git diff --exit-code -- docs examples
+    - test -z "$(git ls-files --others --exclude-standard docs/learn)"
+    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/build_docs.py --dev-ref HEAD --output public
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 week
+  rules:
+    - changes:
+        - docs/**/*
+        - docs_src/**/*
+        - examples/**/*
+        - README.md
+        - SECURITY.md
+        - assets/**/*
+        - overrides/**/*
+        - mkdocs.yml
+        - scripts/build_docs.py
+        - scripts/docs_nav.py
+        - scripts/generate_readme_docs.py
+        - pyproject.toml
+        - uv.lock
+
+pages:
+  stage: docs
+  retry: *retry_nonrelease_job
+  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python3.12-bookworm-slim
+  variables:
+    GIT_DEPTH: "0"
+  dependencies: []
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
+  script:
+    - git fetch origin +refs/heads/development:refs/remotes/origin/development --tags
+    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/build_docs.py --dev-ref origin/development --output public
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "development"'
+    - if: '$CI_COMMIT_TAG'
