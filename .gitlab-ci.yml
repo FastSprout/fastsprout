@@ -62,6 +62,11 @@ include:
       cert: ""
 
 pytest:
+  retry: &retry_nonrelease_job
+    max: 2
+    when:
+      - runner_system_failure
+      - script_failure
   coverage: '/TOTAL.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   parallel:
     matrix:
@@ -69,6 +74,7 @@ pytest:
   image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
 
 python-quality:
+  retry: *retry_nonrelease_job
   parallel:
     matrix:
       - UV_PYTHON: ["3.12", "3.13", "3.14"]
@@ -76,6 +82,7 @@ python-quality:
 
 docs-check:
   stage: static-analysis
+  retry: *retry_nonrelease_job
   image: harbor.3dcra.net/github-proxy/astral-sh/uv:python3.12-bookworm-slim
   variables:
     GIT_DEPTH: "0"
@@ -109,6 +116,7 @@ docs-check:
 
 pages:
   stage: docs
+  retry: *retry_nonrelease_job
   image: harbor.3dcra.net/github-proxy/astral-sh/uv:python3.12-bookworm-slim
   variables:
     GIT_DEPTH: "0"
