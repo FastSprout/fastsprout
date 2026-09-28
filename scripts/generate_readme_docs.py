@@ -21,7 +21,7 @@ LEARN_DIR = ROOT / "docs/learn/examples"
 
 README_BRAND = (
     "# FastSprout\n\n"
-    '<img src="assets/fastsprout-mark.svg" alt="FastSprout logo" width="100" height="100">\n\n'
+    '<img src="https://raw.githubusercontent.com/FastSprout/fastsprout/development/assets/fastsprout-mark.svg" alt="FastSprout logo" width="100" height="100">\n\n'
     "**Typed building blocks for Python backends.**\n\n"
 )
 DOCS_BRAND = (

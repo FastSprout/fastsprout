@@ -67,9 +67,10 @@ docs = [
 
 
 [project.urls]
-Homepage = "https://fastsprout.dev"
-Repository = "https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout"
-Issues = "https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/issues"
+Homepage = "https://github.com/FastSprout/fastsprout"
+Documentation = "https://github.com/FastSprout/fastsprout/tree/development/docs"
+Repository = "https://github.com/FastSprout/fastsprout"
+Issues = "https://github.com/FastSprout/fastsprout/issues"
 
 [build-system]
 requires = ["hatchling"]
