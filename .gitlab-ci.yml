@@ -3,6 +3,11 @@
 # Release on tag, ordered by stage: Nexus -> TestPyPI -> PyPI.
 stages: [static-analysis, test, release-nexus, release-testpypi, release-pypi, docs]
 
+default:
+  retry:
+    max: 2
+    when: runner_system_failure
+
 include:
   - component: $CI_SERVER_FQDN/opensource/templates/python-quality@0.1.10
     inputs:
@@ -75,7 +80,7 @@ docs-check:
   variables:
     GIT_DEPTH: "0"
   before_script:
-    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git libcairo2
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
   script:
     - git fetch origin --tags
     - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/generate_readme_docs.py
@@ -93,6 +98,8 @@ docs-check:
         - examples/**/*
         - README.md
         - SECURITY.md
+        - google*.html
+        - overrides/**/*
         - mkdocs.yml
         - scripts/build_docs.py
         - scripts/docs_nav.py
@@ -107,7 +114,7 @@ pages:
     GIT_DEPTH: "0"
   dependencies: []
   before_script:
-    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git libcairo2
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
   script:
     - git fetch origin +refs/heads/development:refs/remotes/origin/development --tags
     - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/build_docs.py --dev-ref origin/development --output public

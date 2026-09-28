@@ -11,6 +11,8 @@ strict: true
 theme:
   name: material
   language: en
+  custom_dir: overrides
+  font: false
   logo: assets/fastsprout-mark.svg
   favicon: assets/fastsprout-mark.svg
   icon:
@@ -35,14 +37,6 @@ theme:
 
 plugins:
   - search
-  - privacy:
-      assets_exclude:
-        - gitlab.3dcra.eu/opensource/fastsprout/fastsprout/badges/*
-        - img.shields.io/badge/*
-  - social:
-      cards_layout_options:
-        background_color: "#1f222b"
-        color: "#ffffff"
   - mkdocstrings:
       handlers:
         python:

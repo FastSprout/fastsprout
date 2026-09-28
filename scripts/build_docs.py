@@ -211,6 +211,14 @@ def write_index(output: Path, releases: list[tuple[Version, str, str]]) -> None:
         "</body></html>\n",
         encoding="utf-8",
     )
+    for verification in ROOT.glob("google*.html"):
+        expected = f"google-site-verification: {verification.name}"
+        if verification.read_text(encoding="utf-8").strip() != expected:
+            raise ValueError(
+                f"Invalid Google verification file: {verification}"
+            )
+        shutil.copyfile(verification, output / verification.name)
+
     llms = [
         "# FastSprout",
         "",
