@@ -54,16 +54,21 @@ async def main() -> None:
         DataR() as data,
     ):
         # Join accepts the same queries as DataR.stream.
-        orders = data.join(SQLQuery(entity=Order))
+        orders = data.join(SQLQuery(entity=Order))  # (1)!
         everyone = orders.join(
             SQLQuery(entity=Customer),
-            on=(lambda row: row[0].customer_id, lambda customer: customer.id),
+            on=(
+                lambda row: row[0].customer_id,  # (2)!
+                lambda customer: customer.id,
+            ),
         )
         # A query can restrict one source before the in-memory join.
         only_ada = orders.join(
             SQLQuery(
                 entity=Customer,
-                statement=select(Customer).where(Customer.name.orm == "Ada"),
+                statement=select(Customer).where(
+                    Customer.name.orm == "Ada"  # (3)!
+                ),
             ),
             on=(lambda row: row[0].customer_id, lambda customer: customer.id),
         )

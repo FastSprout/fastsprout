@@ -24,14 +24,14 @@ from fastsprout.core import (
 
 class User(BaseSchema):
     email: Field[str]  # read and write
-    password: WriteField[str]  # input only
-    password_hash: InternalField[str]  # entity only
+    password: WriteField[str]  # (1)!
+    password_hash: InternalField[str]  # (2)!
     created_at: ReadField[datetime] = ReadField(
         default_factory=lambda: datetime.now(UTC)
     )
 
 
-class UserRead(ReadDTO, User): ...
+class UserRead(ReadDTO, User): ...  # (3)!
 
 
 class UserCreate(WriteDTO, User): ...
@@ -44,7 +44,7 @@ def show_forbidden_access(value: object, name: str) -> None:
     # Dynamic access demonstrates the runtime guard. Direct attribute access
     # to these fields also produces a checker error (see the comments below).
     try:
-        getattr(value, name)
+        getattr(value, name)  # (4)!
     except AttributeError as error:
         print(error)
     else:
@@ -70,7 +70,7 @@ def main() -> None:
     # _ = create.created_at
     # read.email = 123
 
-    print(read)
+    print(read.email)
     show_forbidden_access(read, "password")
     show_forbidden_access(UserRead, "password_hash")
     show_forbidden_access(create, "created_at")

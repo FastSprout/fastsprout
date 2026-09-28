@@ -1,0 +1,105 @@
+# yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
+site_name: FastSprout
+site_description: Typed building blocks for Python backends.
+site_url: https://fastsprout.dev/dev/
+repo_url: https://github.com/FastSprout/fastsprout
+repo_name: FastSprout/fastsprout
+docs_dir: docs
+site_dir: site
+strict: true
+
+theme:
+  name: material
+  language: en
+  logo: assets/fastsprout-mark.svg
+  favicon: assets/fastsprout-mark.svg
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.path
+    - navigation.top
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+  palette:
+    scheme: slate
+    primary: custom
+    accent: custom
+
+plugins:
+  - search
+  - privacy
+  - social:
+      cards_layout_options:
+        background_color: "#1f222b"
+        color: "#ffffff"
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            line_length: 79
+            members_order: source
+            separate_signature: true
+            show_if_no_docstring: true
+            show_signature_annotations: true
+            show_signature_type_parameters: true
+            show_source: false
+
+hooks:
+  - scripts/docs_nav.py
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.snippets:
+      base_path: .
+      check_paths: true
+
+extra_css:
+  - stylesheets/extra.css
+
+copyright: FastSprout · Apache-2.0
+
+extra:
+  generator: false
+  package_version: 0.1.0
+  version:
+    provider: mike
+    default: latest
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/FastSprout/fastsprout
+    - icon: fontawesome/brands/gitlab
+      link: https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout
+
+nav:
+  - FastSprout: index.md
+  - Features: features.md
+  - Getting Started: getting-started.md
+  - Learn: learn/examples/index.md
+  - Reference: reference.md
+  - API Reference:
+      - Overview: api/index.md
+      - Core: api/core.md
+      - Data: api/data.md
+      - SQL: api/sql.md
+      - Events: api/events.md
+  - About: about.md
+  - Release Notes: release-notes.md

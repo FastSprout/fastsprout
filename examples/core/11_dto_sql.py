@@ -63,7 +63,7 @@ def main() -> None:
 
     print(display(read))
     print(display(summary))
-    print(summary.label())
+    print(summary.label().endswith(": grace@example.com"))
 
     # Both checkers reject direct access, including on the subclass:
     # _ = summary.last_login

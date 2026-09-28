@@ -1,0 +1,37 @@
+/* One dark palette, based on MkDocs Material's slate. */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #009485;
+  --md-primary-fg-color--light: #00a795;
+  --md-primary-fg-color--dark: #007d72;
+  --md-accent-fg-color: #00ccb8;
+  --md-typeset-a-color: #00ccb8;
+}
+
+.md-header, .md-tabs { background: #009485; }
+.md-header { box-shadow: none; }
+.md-tabs__link { color: #e5f7f3; opacity: 0.82; }
+.md-tabs__link--active, .md-tabs__link:hover { color: #fff; opacity: 1; }
+.md-header__button.md-logo img { height: 2.1rem; width: 2.1rem; }
+.md-header__title { margin-left: 0.25rem; }
+.md-search__form { background: #007b70; }
+.md-search__form:hover, .md-search__form:focus-within { background: #006f65; }
+.md-footer, .md-footer-meta { background: #171a20; }
+.md-footer-meta__inner { color: var(--md-default-fg-color--light); }
+
+.fs-visually-hidden {
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+.fs-brand { align-items: center; color: var(--md-typeset-a-color); display: flex; font-size: clamp(2.5rem, 5vw, 4.2rem); font-weight: 650; gap: 1rem; justify-content: center; letter-spacing: -0.055em; line-height: 1.1; margin: 1.8rem auto 0.8rem; }
+.fs-brand img { height: clamp(3.5rem, 6vw, 5rem); width: clamp(3.5rem, 6vw, 5rem); }
+.md-typeset .fs-lead { color: var(--md-default-fg-color); font-size: 1rem; font-style: italic; margin: 0 auto 0.7rem; text-align: center; }
+
+@media (max-width: 45rem) {
+  .fs-brand { font-size: 2.5rem; gap: 0.5rem; margin-top: 1rem; }
+  .fs-brand img { height: 3.3rem; width: 3.3rem; }
+}

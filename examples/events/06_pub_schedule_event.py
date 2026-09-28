@@ -7,6 +7,7 @@ from fastsprout.events import EventBus, ScheduleEvent, pub, sub
 from fastsprout.events.event import EventState
 
 bus = EventBus()
+triggered = asyncio.Event()
 
 
 class HeroEvent(ScheduleEvent):
@@ -22,16 +23,18 @@ async def pub_hero_event() -> HeroEvent:
 @sub(HeroEvent, bus=bus)
 async def sub_hero_event(e: HeroEvent) -> None:
     print("HeroEvent:", e)
+    triggered.set()
     return None
 
 
 async def main() -> None:
     async with bus.scheduler():
-        await asyncio.sleep(1.2)
+        await triggered.wait()
         event_state: AsyncIterator[EventState[HeroEvent]] = await bus.get(
             HeroEvent
         )
-        print("Event Result:", await (await anext(event_state)).wait())
+        result = await (await anext(event_state)).wait()
+        print("Event Result:", result.state.event.name)
 
 
 asyncio.run(main())
