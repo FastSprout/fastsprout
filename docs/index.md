@@ -51,10 +51,10 @@ under Apache-2.0; see [LICENSE](https://github.com/FastSprout/fastsprout/blob/de
 [pipeline-badge]: https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/badges/development/pipeline.svg
 [coverage-badge]: https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/badges/development/coverage.svg
 [pipeline-link]: https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/pipelines?ref=development
-[version-badge]: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FFastSprout%2Ffastsprout%2Fdevelopment%2Fpyproject.toml&query=%24.project.version&label=version
-[python-badge]: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FFastSprout%2Ffastsprout%2Fdevelopment%2Fpyproject.toml&query=%24.project.requires-python&label=python
+[version-badge]: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fgitlab.3dcra.eu%2Fopensource%2Ffastsprout%2Ffastsprout%2F-%2Fraw%2Fdevelopment%2Fpyproject.toml&query=%24.project.version&label=version
+[python-badge]: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fgitlab.3dcra.eu%2Fopensource%2Ffastsprout%2Ffastsprout%2F-%2Fraw%2Fdevelopment%2Fpyproject.toml&query=%24.project.requires-python&label=python
 [typing-badge]: https://img.shields.io/badge/typing-typed-blue
-[license-badge]: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FFastSprout%2Ffastsprout%2Fdevelopment%2Fpyproject.toml&query=%24.project.license&label=license
-[project-metadata]: https://github.com/FastSprout/fastsprout/blob/development/pyproject.toml
+[license-badge]: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fgitlab.3dcra.eu%2Fopensource%2Ffastsprout%2Ffastsprout%2F-%2Fraw%2Fdevelopment%2Fpyproject.toml&query=%24.project.license&label=license
+[project-metadata]: https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/blob/development/pyproject.toml
 [typed-marker]: https://github.com/FastSprout/fastsprout/blob/development/src/fastsprout/py.typed
 [license-file]: https://github.com/FastSprout/fastsprout/blob/development/LICENSE
