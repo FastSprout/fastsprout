@@ -105,7 +105,7 @@ docs-check:
         - examples/**/*
         - README.md
         - SECURITY.md
-        - google*.html
+        - assets/**/*
         - overrides/**/*
         - mkdocs.yml
         - scripts/build_docs.py
