@@ -33,3 +33,18 @@ layers =
     entity
     utils
     exceptions | types | consts
+
+
+; === FastSprout-events-level layers ===
+[importlinter:contract:FastSprout-events-layers-architecture]
+name = FastSprout Events Layers Architecture
+type = layers
+containers =
+    fastsprout.events
+    tests.fastsprout.events
+layers =
+    decorators | middleware
+    bus
+    backend
+    event
+    exceptions | types | consts
