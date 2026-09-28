@@ -19,11 +19,12 @@ from packaging.version import Version
 
 if __package__:
     from .docs_nav import render_example_output
+    from .llms_full import SITE_URL, page_url, write_full
 else:
     from docs_nav import render_example_output
+    from llms_full import SITE_URL, page_url, write_full
 
 ROOT = Path(__file__).resolve().parents[1]
-SITE_URL = "https://fastsprout.dev"
 SITEMAP_NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
 
 
@@ -134,15 +135,7 @@ def write_llms(
             relative.parts[:2] != ("learn", "examples")
             or relative.name == "index.md"
         ):
-            if relative.parts[0] == "api":
-                target = (
-                    relative.parent
-                    if relative.stem == "index"
-                    else relative.with_suffix("")
-                ).as_posix() + "/"
-            else:
-                target = relative.as_posix()
-            lines.append(f"- [{title}]({SITE_URL}/{slug}/{target})")
+            lines.append(f"- [{title}]({page_url(relative, slug)})")
     examples = [
         (relative, title)
         for relative, title in pages
@@ -172,6 +165,13 @@ def write_markdown_and_llms(
 ) -> None:
     pages = copy_markdown(source, destination)
     write_llms(destination, slug, config, pages)
+    write_full(
+        destination,
+        slug,
+        config["site_name"],
+        config["site_description"],
+        pages,
+    )
 
 
 def write_index(output: Path, releases: list[tuple[Version, str, str]]) -> None:
@@ -199,6 +199,14 @@ def write_index(output: Path, releases: list[tuple[Version, str, str]]) -> None:
         ),
         encoding="utf-8",
     )
+    latest_full = output / "latest" / "llms-full.txt"
+    latest_full.write_text(
+        latest_full.read_text(encoding="utf-8").replace(
+            f"{SITE_URL}/{latest}/", f"{SITE_URL}/latest/"
+        ),
+        encoding="utf-8",
+    )
+    shutil.copyfile(latest_full, output / "llms-full.txt")
     (output / "versions.json").write_text(
         json.dumps(versions, indent=2) + "\n", encoding="utf-8"
     )
