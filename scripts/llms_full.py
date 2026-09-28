@@ -3,6 +3,7 @@
 import re
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urljoin
 
 SITE_URL = "https://fastsprout.dev"
 
@@ -73,6 +74,14 @@ def page_url(relative: Path, slug: str) -> str:
     return f"{SITE_URL}/{slug}/{relative.as_posix()}"
 
 
+def absolute_links(content: str, base_url: str) -> str:
+    return re.sub(
+        r"\]\(([^)]+)\)",
+        lambda match: f"]({urljoin(base_url, match.group(1))})",
+        content,
+    )
+
+
 def write_full(
     destination: Path,
     slug: str,
@@ -83,6 +92,7 @@ def write_full(
     """Write the complete Markdown and rendered API docs for one version."""
     full = [f"# {site_name}", "", f"> {site_description}"]
     for relative, title in pages:
+        url = page_url(relative, slug)
         content = (destination / relative).read_text(encoding="utf-8").rstrip()
         if re.search(r"^::: ", content, flags=re.M):
             rendered = destination / relative.with_suffix("") / "index.html"
@@ -91,12 +101,13 @@ def write_full(
             if not article.blocks:
                 raise ValueError(f"No rendered API content in {rendered}")
             content = article.markdown().rstrip()
+        content = absolute_links(content, url)
         full.extend(
             (
                 "",
                 "---",
                 "",
-                f"[Source: {title}]({page_url(relative, slug)})",
+                f"[Source: {title}]({url})",
                 "",
                 content,
             )

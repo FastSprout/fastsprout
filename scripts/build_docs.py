@@ -18,9 +18,11 @@ from mkdocs.config import load_config
 from packaging.version import Version
 
 if __package__:
+    from .docs_landing import write_landing
     from .docs_nav import render_example_output
     from .llms_full import SITE_URL, page_url, write_full
 else:
+    from docs_landing import write_landing
     from docs_nav import render_example_output
     from llms_full import SITE_URL, page_url, write_full
 
@@ -210,15 +212,7 @@ def write_index(output: Path, releases: list[tuple[Version, str, str]]) -> None:
     (output / "versions.json").write_text(
         json.dumps(versions, indent=2) + "\n", encoding="utf-8"
     )
-    (output / "index.html").write_text(
-        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
-        '<meta http-equiv="refresh" content="0; url=latest/">'
-        '<link rel="canonical" href="https://fastsprout.dev/latest/">'
-        "<title>FastSprout documentation</title></head><body>"
-        '<a href="latest/">Open FastSprout documentation</a>'
-        "</body></html>\n",
-        encoding="utf-8",
-    )
+    write_landing(output)
     for verification in ROOT.glob("google*.html"):
         expected = f"google-site-verification: {verification.name}"
         if verification.read_text(encoding="utf-8").strip() != expected:
