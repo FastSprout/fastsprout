@@ -1,11 +1,8 @@
-# FastSprout { .fs-visually-hidden }
+# FastSprout
 
-<div class="fs-brand" aria-label="FastSprout">
-  <img src="assets/fastsprout-mark.svg" alt="" width="100" height="100">
-  <span>FastSprout</span>
-</div>
+<img src="assets/fastsprout-mark.svg" alt="FastSprout logo" width="100" height="100">
 
-<p class="fs-lead">Typed building blocks for Python backends.</p>
+**Typed building blocks for Python backends.**
 
 [![Pipeline][pipeline-badge]][pipeline-link]
 [![Coverage][coverage-badge]][pipeline-link]
@@ -51,10 +48,10 @@ under Apache-2.0; see [LICENSE](https://github.com/FastSprout/fastsprout/blob/de
 [pipeline-badge]: https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/badges/development/pipeline.svg
 [coverage-badge]: https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/badges/development/coverage.svg
 [pipeline-link]: https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/pipelines?ref=development
-[version-badge]: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FFastSprout%2Ffastsprout%2Fdevelopment%2Fpyproject.toml&query=%24.project.version&label=version
-[python-badge]: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FFastSprout%2Ffastsprout%2Fdevelopment%2Fpyproject.toml&query=%24.project.requires-python&label=python
+[version-badge]: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fgitlab.3dcra.eu%2Fopensource%2Ffastsprout%2Ffastsprout%2F-%2Fraw%2Fdevelopment%2Fpyproject.toml&query=%24.project.version&label=version
+[python-badge]: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fgitlab.3dcra.eu%2Fopensource%2Ffastsprout%2Ffastsprout%2F-%2Fraw%2Fdevelopment%2Fpyproject.toml&query=%24.project.requires-python&label=python
 [typing-badge]: https://img.shields.io/badge/typing-typed-blue
-[license-badge]: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FFastSprout%2Ffastsprout%2Fdevelopment%2Fpyproject.toml&query=%24.project.license&label=license
-[project-metadata]: https://github.com/FastSprout/fastsprout/blob/development/pyproject.toml
+[license-badge]: https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fgitlab.3dcra.eu%2Fopensource%2Ffastsprout%2Ffastsprout%2F-%2Fraw%2Fdevelopment%2Fpyproject.toml&query=%24.project.license&label=license
+[project-metadata]: https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/blob/development/pyproject.toml
 [typed-marker]: https://github.com/FastSprout/fastsprout/blob/development/src/fastsprout/py.typed
 [license-file]: https://github.com/FastSprout/fastsprout/blob/development/LICENSE
