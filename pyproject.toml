@@ -1,6 +1,6 @@
 [project]
 name = "fastsprout"
-version = "0.1.0"
+version = "0.1.1"
 description = "FastSprout - Python backend framework that grows from a seed. Modular monolith first. Async-native. Built on FastAPI."
 readme = "README.md"
 license = "Apache-2.0"
