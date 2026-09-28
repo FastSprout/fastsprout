@@ -19,8 +19,24 @@ ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES_DIR = ROOT / "examples"
 LEARN_DIR = ROOT / "docs/learn/examples"
 
+README_BRAND = (
+    "# FastSprout\n\n"
+    '<img src="assets/fastsprout-mark.svg" alt="FastSprout logo" width="100" height="100">\n\n'
+    "**Typed building blocks for Python backends.**\n\n"
+)
+DOCS_BRAND = (
+    "# FastSprout { .fs-visually-hidden }\n\n"
+    '<div class="fs-brand" aria-label="FastSprout">\n'
+    '  <img src="assets/fastsprout-mark.svg" alt="" width="100" height="100">\n'
+    "  <span>FastSprout</span>\n"
+    "</div>\n\n"
+    '<p class="fs-lead">Typed building blocks for Python backends.</p>\n\n'
+)
+readme = (ROOT / "README.md").read_text(encoding="utf-8")
+if not readme.startswith(README_BRAND):
+    raise ValueError("README.md brand header changed")
 (ROOT / "docs/index.md").write_text(
-    (ROOT / "README.md").read_text(encoding="utf-8"), encoding="utf-8"
+    DOCS_BRAND + readme[len(README_BRAND) :], encoding="utf-8"
 )
 (ROOT / "docs/security.md").write_text(
     (ROOT / "SECURITY.md").read_text(encoding="utf-8"), encoding="utf-8"
