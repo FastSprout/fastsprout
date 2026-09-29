@@ -43,8 +43,9 @@ containers =
     fastsprout.events
     tests.fastsprout.events
 layers =
-    decorators | middleware
+    decorators
     bus
+    middleware
     backend
     event
-    exceptions | types | consts
+    types | consts
