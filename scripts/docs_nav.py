@@ -4,56 +4,121 @@ import os
 import re
 import subprocess
 import sys
-from itertools import groupby
+from itertools import groupby, takewhile
 from pathlib import Path
+
+TITLE_WORDS = {
+    "api": "API",
+    "crud": "CRUD",
+    "datar": "DataR",
+    "dto": "DTO",
+    "orm": "ORM",
+    "pyd": "Pydantic",
+    "sql": "SQL",
+}
+
+
+def example_parts(path: Path) -> tuple[tuple[int, str], ...]:
+    """Read numbered topic and page names from an example filename."""
+    parts: list[tuple[int, str]] = []
+    number: int | None = None
+    words: list[str] = []
+    for token in path.stem.replace("-", "_").split("_"):
+        if token.isdecimal():
+            if number is not None:
+                parts.append((number, title_words(words)))
+            number, words = int(token), []
+        else:
+            words.append(token)
+    if number is None or not words:
+        raise ValueError(f"Example needs a numbered name: {path}")
+    parts.append((number, title_words(words)))
+    return tuple(parts)
+
+
+def title_words(words: list[str]) -> str:
+    return " ".join(TITLE_WORDS.get(word, word.title()) for word in words)
+
+
+def _common_words(words: list[list[str]]) -> list[str]:
+    return [
+        parts[0]
+        for parts in takewhile(
+            lambda parts: len(set(parts)) == 1,
+            zip(*words, strict=False),
+        )
+    ]
+
+
+def shared_name(titles: list[str]) -> str:
+    words = [title.split() for title in titles]
+    prefix = _common_words(words)
+    if prefix:
+        return " ".join(prefix)
+    suffix = _common_words([list(reversed(item)) for item in words])
+    return " ".join(reversed(suffix))
+
+
+def relative_name(title: str, common: str) -> str:
+    if title == common:
+        return "Overview"
+    if title.startswith(f"{common} "):
+        return title[len(common) + 1 :]
+    if title.endswith(f" {common}"):
+        return title[: -len(common) - 1]
+    return title
 
 
 def page_title(page: Path) -> str:
     return page.read_text(encoding="utf-8").splitlines()[0][2:]
 
 
-def shared_name(titles: list[str]) -> str:
-    words = [title.partition(". ")[2].split() for title in titles]
-    prefix = []
-    for parts in zip(*words, strict=False):
-        if len(set(parts)) != 1:
-            break
-        prefix.append(parts[0])
-    return " ".join(prefix)
-
-
 def example_pages(docs_dir: Path, layer: str) -> list[dict]:
+    layer_dir = docs_dir / "learn" / "examples" / layer
     pages = sorted(
-        (docs_dir / "learn" / "examples" / layer).glob("*.md"),
-        key=lambda page: (int(page.stem.partition("-")[0]), page.stem),
+        (
+            page
+            for page in layer_dir.rglob("*.md")
+            if "<!-- example-source:" in page.read_text(encoding="utf-8")
+        ),
+        key=lambda page: tuple(
+            (int(part.partition("-")[0]), part)
+            for part in page.relative_to(layer_dir).parts
+        ),
     )
-    items = []
-    for number, grouped in groupby(
-        pages, key=lambda page: int(page.stem.partition("-")[0])
+    return _example_nav(pages, layer_dir, layer)
+
+
+def _example_nav(
+    pages: list[Path], layer_dir: Path, layer: str, depth: int = 0
+) -> list[dict]:
+    items: list[dict[str, object]] = []
+    for name, grouped in groupby(
+        pages, key=lambda page: page.relative_to(layer_dir).parts[depth]
     ):
-        variants = list(grouped)
-        if len(variants) == 1:
-            page = variants[0]
+        descendants = list(grouped)
+        if name.endswith(".md"):
+            page = descendants[0]
+            relative = page.relative_to(layer_dir).as_posix()
             items.append(
-                {page_title(page): f"learn/examples/{layer}/{page.name}"}
+                {page_title(page): f"learn/examples/{layer}/{relative}"}
             )
-            continue
-        common = shared_name([page_title(page) for page in variants])
-        children = [
-            {
-                page_title(page).partition(". ")[2].removeprefix(common).strip()
-                or "Overview": f"learn/examples/{layer}/{page.name}"
-            }
-            for page in variants
-        ]
-        items.append({f"{number}. {common}": children})
+        else:
+            number, title = example_parts(Path(name))[0]
+            items.append(
+                {
+                    f"{number}. {title}": _example_nav(
+                        descendants, layer_dir, layer, depth + 1
+                    )
+                }
+            )
     return items
 
 
 def on_config(config):
     examples = [{"Overview": "learn/examples/index.md"}]
     docs_dir = Path(config["docs_dir"])
-    for layer in ("core", "data", "events"):
+    for layer in ("core", "actions", "data", "events"):
         pages = example_pages(docs_dir, layer)
         if pages:
             examples.append({layer.title(): pages})

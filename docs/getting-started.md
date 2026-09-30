@@ -60,7 +60,7 @@ Hello, world!
 ```
 
 An async function can implement the same action protocol; see the
-[class and function examples](learn/examples/core/6-action.md).
+[class and function examples](learn/examples/core/3-action/1-base-action.md).
 
 ## Next steps
 
