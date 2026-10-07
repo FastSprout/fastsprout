@@ -17,7 +17,7 @@ from fastsprout.data.backend.sql.entity import SQL_ENTITY_REGISTRY
 
 
 class DefaultSQLEntity(SQLEntity[UUID], table=False):
-    id: Field[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
     last_login: InternalField[datetime | None] = InternalField[datetime | None](
         default=None
     )
