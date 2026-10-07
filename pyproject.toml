@@ -88,8 +88,8 @@ lint.select = ["B", "C9", "E", "F", "I", "N", "RUF", "UP", "T"]
 line-length = 80
 
 [tool.ruff.lint.per-file-ignores]
-"examples/*.py" = ["T201"]
-"docs_src/*.py" = ["T201"]
+"examples/*.py" = ["T201", 'B008']
+"docs_src/*.py" = ["T201", 'B008']
 
 [tool.ruff.lint.mccabe]
 max-complexity = 5
@@ -106,6 +106,25 @@ root = "src/tests"
 reportArgumentType = false
 reportOptionalCall = false
 reportCallIssue = false
+
+[tool.pylint.main]
+init-hook = "import sys; sys.path.insert(0, '.')"
+load-plugins = ["tools.pylint.exports"]
+ignore-paths = ["src/tests"]
+
+[tool.pylint.messages_control]
+disable = ["all"]
+enable = [
+    "too-many-lines",
+    "import-outside-toplevel",
+    "missing-module-all",
+    "invalid-all-format",
+    "invalid-all-object",
+    "undefined-all-variable",
+]
+
+[tool.pylint.format]
+max-module-lines = 300
 
 [tool.pytest.ini_options]
 minversion = "6.0"

@@ -30,15 +30,10 @@ repos:
   - repo: local
     hooks:
       - id: pylint-too-many-lines
-        name: pylint too-many-lines (C0302)
+        name: pylint library rules
         entry: uv run --system-certs pylint
         language: system
         types: [python]
-        args:
-          - --disable=all
-          - --enable=C0302,C0415
-          - --max-module-lines=300
-          - --ignore-paths=src/tests
 
       - id: import-linter
         name: import-linter

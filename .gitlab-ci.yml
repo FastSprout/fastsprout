@@ -16,8 +16,8 @@ include:
       extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
       checks:
         - uv run --all-extras --all-groups --all-packages ruff check
-        - uv run --all-extras --all-groups --all-packages basedpyright --pythonversion $UV_PYTHON src docs_src
-        - uv run  --all-extras --all-groups --all-packages pylint --disable=all --enable=C0302,C0415 --max-module-lines=300 --ignore-paths=src/tests ./src
+        - uv run --all-extras --all-groups --all-packages basedpyright --pythonversion $UV_PYTHON src docs_src examples
+        - uv run --all-extras --all-groups --all-packages pylint ./src
 
   - component: $CI_SERVER_FQDN/opensource/templates/pytest@0.1.10
     inputs:
@@ -103,6 +103,7 @@ docs-check:
         - docs/**/*
         - docs_src/**/*
         - examples/**/*
+        - src/fastsprout/**/*
         - README.md
         - SECURITY.md
         - assets/**/*
