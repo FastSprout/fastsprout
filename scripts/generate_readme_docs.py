@@ -5,6 +5,7 @@ from pathlib import Path
 
 if __package__:
     from .docs_nav import (  # type: ignore[import-not-found]
+        Navigation,
         example_pages,
         example_parts,
         render_example_output,
@@ -13,6 +14,7 @@ if __package__:
     )
 else:
     from docs_nav import (
+        Navigation,
         example_pages,
         example_parts,
         render_example_output,
@@ -108,7 +110,7 @@ def example_page(layer: str, example: Path) -> tuple[Path, str]:
     folders = [f"{number}-{slug(title)}" for number, title in parts[:-1]]
     number, title = parts[-1]
     page = LEARN_DIR / layer / Path(*folders) / f"{number}-{slug(title)}.md"
-    source = f"examples/{layer}/{example.name}"
+    source = example.relative_to(ROOT).as_posix()
     content = [
         f"# {number}. {title}",
         "",
@@ -132,7 +134,7 @@ def example_page(layer: str, example: Path) -> tuple[Path, str]:
     return page, "\n".join(content)
 
 
-def index_links(items: list[dict], depth: int = 0) -> list[str]:
+def index_links(items: Navigation, depth: int = 0) -> list[str]:
     lines = []
     for item in items:
         label, target = next(iter(item.items()))
@@ -161,7 +163,7 @@ for layer, layer_description in LAYER_DESCRIPTION.items():
     examples = sorted(
         (
             path
-            for path in (EXAMPLES_DIR / layer).glob("*.py")
+            for path in (EXAMPLES_DIR / layer).rglob("*.py")
             if path.read_text(encoding="utf-8").strip()
         ),
         key=example_parts,
@@ -171,7 +173,7 @@ for layer, layer_description in LAYER_DESCRIPTION.items():
         continue
 
     if layer != "actions":
-        first_example = f"examples/{layer}/{examples[0].name}"
+        first_example = examples[0].relative_to(ROOT).as_posix()
         layer_readme = [
             f"# {layer.upper()} Examples",
             "",
@@ -193,10 +195,11 @@ for layer, layer_description in LAYER_DESCRIPTION.items():
                     "| --- | --- |",
                 )
             )
-            layer_readme.extend(
-                f"| [{path.name}]({path.name}) | {summary(path)} |"
-                for path in variants
-            )
+            for path in variants:
+                relative = path.relative_to(EXAMPLES_DIR / layer).as_posix()
+                layer_readme.append(
+                    f"| [{relative}]({relative}) | {summary(path)} |"
+                )
             layer_readme.append("")
         readmes[EXAMPLES_DIR / layer / "README.md"] = (
             "\n".join(layer_readme).rstrip() + "\n"

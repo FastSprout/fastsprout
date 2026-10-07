@@ -17,13 +17,26 @@ TITLE_WORDS = {
     "sql": "SQL",
 }
 
+type Navigation = list[dict[str, str | Navigation]]
+
 
 def example_parts(path: Path) -> tuple[tuple[int, str], ...]:
-    """Read numbered topic and page names from an example filename."""
+    """Read numbered chapters from parent directories and the filename."""
+    chapters = [
+        name for name in path.parts[:-1] if re.fullmatch(r"\d+_[a-z_]+", name)
+    ]
+    return tuple(
+        part
+        for name in (*chapters, path.stem)
+        for part in _numbered_parts(name)
+    )
+
+
+def _numbered_parts(name: str) -> tuple[tuple[int, str], ...]:
     parts: list[tuple[int, str]] = []
     number: int | None = None
     words: list[str] = []
-    for token in path.stem.replace("-", "_").split("_"):
+    for token in name.replace("-", "_").split("_"):
         if token.isdecimal():
             if number is not None:
                 parts.append((number, title_words(words)))
@@ -31,7 +44,7 @@ def example_parts(path: Path) -> tuple[tuple[int, str], ...]:
         else:
             words.append(token)
     if number is None or not words:
-        raise ValueError(f"Example needs a numbered name: {path}")
+        raise ValueError(f"Example needs a numbered name: {name}")
     parts.append((number, title_words(words)))
     return tuple(parts)
 
@@ -73,7 +86,7 @@ def page_title(page: Path) -> str:
     return page.read_text(encoding="utf-8").splitlines()[0][2:]
 
 
-def example_pages(docs_dir: Path, layer: str) -> list[dict]:
+def example_pages(docs_dir: Path, layer: str) -> Navigation:
     layer_dir = docs_dir / "learn" / "examples" / layer
     pages = sorted(
         (
@@ -91,8 +104,8 @@ def example_pages(docs_dir: Path, layer: str) -> list[dict]:
 
 def _example_nav(
     pages: list[Path], layer_dir: Path, layer: str, depth: int = 0
-) -> list[dict]:
-    items: list[dict[str, object]] = []
+) -> Navigation:
+    items: Navigation = []
     for name, grouped in groupby(
         pages, key=lambda page: page.relative_to(layer_dir).parts[depth]
     ):
@@ -116,7 +129,7 @@ def _example_nav(
 
 
 def on_config(config):
-    examples = [{"Overview": "learn/examples/index.md"}]
+    examples: Navigation = [{"Overview": "learn/examples/index.md"}]
     docs_dir = Path(config["docs_dir"])
     for layer in ("core", "actions", "data", "events"):
         pages = example_pages(docs_dir, layer)

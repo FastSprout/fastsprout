@@ -57,7 +57,7 @@ repos:
         name: Generate example documentation
         entry: uv run --system-certs scripts/generate_readme_docs.py
         language: system
-        files: ^(examples/(core|data|events)/.*\.(py|md)|scripts/generate_readme_docs.py)$
+        files: ^(examples/(core|actions|data|events)/.*\.(py|md)|scripts/(generate_readme_docs|docs_nav).py)$
         pass_filenames: false
 
 

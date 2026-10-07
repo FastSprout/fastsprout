@@ -33,6 +33,7 @@ def typed_fields[C](cls: type[C]) -> type[C]:
     """Install Field[T] descriptors on a plain class.
 
     You're responsible for __init__. No validation, no auto-generation.
+    Field defaults and factories are resolved on first instance access.
 
     Example:
         @typed_fields
