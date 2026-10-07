@@ -5,6 +5,8 @@ from dataclasses import dataclass
 
 from fastsprout.data.exceptions import MixedStreamContextsError, NoSessionError
 
+__all__ = ["StreamContext", "in_join_context"]
+
 
 class StreamContext:
     """Identity and lifetime of one router context, shared by its sources."""

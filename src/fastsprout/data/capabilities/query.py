@@ -6,6 +6,8 @@ from annotated_types import Ge
 
 from fastsprout.data.entity import Entitieable
 
+__all__ = ["BaseQuery"]
+
 
 @dataclass
 class BaseQuery[E: Entitieable[Any], StatementT](ABC):

@@ -4,6 +4,8 @@ from fastsprout.data.streams.context import StreamContext
 
 from .signpost import Signpost
 
+__all__ = ["BoundSignpost"]
+
 
 class BoundSignpost[T](Signpost[T]):
     """A private signpost for one DataR context; the entity's stays unchanged."""

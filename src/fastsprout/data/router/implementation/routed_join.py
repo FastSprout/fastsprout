@@ -6,6 +6,8 @@ from fastsprout.data.entity import Entitieable
 from fastsprout.data.streams.implementation import JoinedStream
 from fastsprout.data.streams.implementation.joined_stream import JoinKey
 
+__all__ = ["RoutedJoin"]
+
 if TYPE_CHECKING:
     from fastsprout.data.router.protocols import Routerable
 
