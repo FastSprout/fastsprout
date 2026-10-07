@@ -1,8 +1,8 @@
 from collections.abc import AsyncGenerator
 from contextlib import aclosing
 from contextvars import ContextVar
-from dataclasses import dataclass
 
+from fastsprout.core import dataclass
 from fastsprout.data.exceptions import MixedStreamContextsError, NoSessionError
 
 __all__ = ["StreamContext", "in_join_context"]

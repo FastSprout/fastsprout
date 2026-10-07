@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from .action import BaseAction, BaseActionGroup, BaseTriggerAction
 from .decorators import (
     hidden_lazy_await,
@@ -46,6 +48,7 @@ __all__ = [
     "UndefinedType",
     "WriteDTO",
     "WriteField",
+    "dataclass",
     "dto",
     "hidden_lazy_await",
     "inject_depends",
@@ -54,3 +57,8 @@ __all__ = [
     "typed_fields",
     "typed_pyd_dataclass",
 ]
+
+if TYPE_CHECKING:
+    from .decorators import typed_dataclass as dataclass
+else:
+    dataclass = typed_dataclass

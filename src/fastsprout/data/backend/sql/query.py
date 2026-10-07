@@ -1,10 +1,10 @@
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.sql import Delete, Insert, Update
 from sqlalchemy.sql.selectable import Select
 
+from fastsprout.core import dataclass
 from fastsprout.data.capabilities.query import BaseQuery
 
 if TYPE_CHECKING:

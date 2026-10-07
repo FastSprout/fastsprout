@@ -2,10 +2,12 @@
 
 from collections.abc import Callable
 from copy import deepcopy
-from dataclasses import MISSING, dataclass, fields, is_dataclass
+from dataclasses import MISSING, fields, is_dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Never
 
+from .decorators.dataclasses.dataclass import typed_dataclass
 from .fields.field import Field
+from .fields.visibility import _DTOVisibility
 from .types.undefined import Undefined
 
 __all__ = ["ReadDTO", "ReadWriteDTO", "WriteDTO", "dto"]
@@ -28,14 +30,14 @@ else:
     _DTOMeta = type
 
 
-@dataclass(frozen=True)
+@typed_dataclass(frozen=True)
 class _Definition:
     allowed: frozenset[str]
     required: frozenset[str]
     defaults: dict[str, Callable[[dict[str, Any]], Any]]
 
 
-class _DTO(metaclass=_DTOMeta):
+class _DTO(_DTOVisibility, metaclass=_DTOMeta):
     __fastsprout_operations__: ClassVar[frozenset[str]]
     __fastsprout_forbidden__: ClassVar[frozenset[str]]
     __fastsprout_source__: ClassVar[type]

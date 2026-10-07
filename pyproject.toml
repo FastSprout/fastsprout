@@ -109,7 +109,7 @@ reportCallIssue = false
 
 [tool.pylint.main]
 init-hook = "import sys; sys.path.insert(0, '.')"
-load-plugins = ["tools.pylint.exports"]
+load-plugins = ["tools.pylint.exports", "tools.pylint.dataclasses"]
 ignore-paths = ["src/tests"]
 
 [tool.pylint.messages_control]
@@ -118,6 +118,7 @@ enable = [
     "too-many-lines",
     "import-outside-toplevel",
     "missing-module-all",
+    "stdlib-dataclass",
     "invalid-all-format",
     "invalid-all-object",
     "undefined-all-variable",

@@ -11,9 +11,9 @@ Join three entity streams without a router or database.
 
 import asyncio
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
 from typing import assert_type
 
+from fastsprout.core import dataclass
 from fastsprout.data import JoinedStream
 
 

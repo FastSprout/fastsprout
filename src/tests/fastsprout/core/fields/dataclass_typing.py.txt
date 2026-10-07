@@ -1,0 +1,38 @@
+from typing import assert_type
+
+from fastsprout.core import Field, dataclass, typed_dataclass
+
+
+@dataclass
+class Record:
+    value: Field[int]
+    label: Field[str] = Field(default="default")
+
+
+@typed_dataclass()
+class Config:
+    value: Field[str]
+
+
+@dataclass(frozen=True)
+class Snapshot:
+    value: int
+
+
+@dataclass(kw_only=True)
+class Options:
+    value: str
+
+
+def check() -> None:
+    record = Record(1)
+    assert_type(record.value, int)
+    assert_type(record.label, str)
+    assert_type(Config("value").value, str)
+    assert_type(Snapshot(1).value, int)
+    assert_type(Options(value="value").value, str)
+
+    Record("wrong")  # error: reportArgumentType; mypy: arg-type
+    Config(1)  # error: reportArgumentType; mypy: arg-type
+    Snapshot(1).value = 2  # error: reportAttributeAccessIssue; mypy: misc
+    Options("wrong")  # error: reportCallIssue; mypy: call-arg

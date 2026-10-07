@@ -3,10 +3,10 @@ from typing import TYPE_CHECKING, Any, dataclass_transform
 from pydantic import Field as PydField
 from pydantic._internal._model_construction import ModelMetaclass
 
-from fastsprout.core.dto import is_dto_base
 from fastsprout.core.types.undefined import Undefined
 
 from .field import Field, check_field_visibility, model_building_context_var
+from .visibility import _DTOVisibility
 
 __all__ = [
     "TypedModelMeta",
@@ -174,7 +174,7 @@ class TypedModelMeta(ModelMetaclass):
         namespace: dict[str, Any],
         **kwargs: Any,
     ) -> type:
-        if any(is_dto_base(base) for base in bases):
+        if any(issubclass(base, _DTOVisibility) for base in bases):
             return type.__new__(
                 mcs, name, bases, namespace, init=kwargs.get("init", False)
             )

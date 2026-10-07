@@ -17,7 +17,7 @@ include:
       checks:
         - uv run --all-extras --all-groups --all-packages ruff check
         - uv run --all-extras --all-groups --all-packages basedpyright --pythonversion $UV_PYTHON src docs_src examples
-        - uv run --all-extras --all-groups --all-packages pylint ./src
+        - uv run --all-extras --all-groups --all-packages pylint ./src ./examples
 
   - component: $CI_SERVER_FQDN/opensource/templates/pytest@0.1.10
     inputs:

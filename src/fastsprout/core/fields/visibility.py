@@ -5,6 +5,10 @@ from .field import Field
 __all__ = ["EntityVisibility", "InternalField", "ReadField", "WriteField"]
 
 
+class _DTOVisibility:
+    """Identify DTO bases without importing DTO construction."""
+
+
 class EntityVisibility:
     """Unrestricted source; DTO bases supply a concrete visibility mode.
 

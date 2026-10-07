@@ -35,3 +35,11 @@ package `__init__.py` files. Use an empty list when a module has no exports.
 Imports inside functions, methods, or class bodies are prohibited. Keep
 imports at module scope. Typing-only imports may use a module-level
 `if TYPE_CHECKING:` block.
+
+## Use the FastSprout dataclass
+
+Use `dataclass` or `typed_dataclass` from `fastsprout.core` instead of the
+standard-library decorator, including in examples and tests.
+Only `src/fastsprout/core/decorators/dataclasses/dataclass.py` may import
+the standard-library decorator to implement the wrapper. Dataclass utilities
+such as `fields`, `asdict`, and `is_dataclass` remain allowed.

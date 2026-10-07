@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from typing import Annotated, Any, Self
 
 from annotated_types import Ge
 
+from fastsprout.core import dataclass
 from fastsprout.data.entity import Entitieable
 
 __all__ = ["BaseQuery"]
@@ -14,7 +14,7 @@ class BaseQuery[E: Entitieable[Any], StatementT](ABC):
     """Base for filters."""
 
     entity: type[E]
-    statement: StatementT | None = field(default=None)
+    statement: StatementT | None = None
 
     def limit(self, max_n: Annotated[int, Ge(1)] = 1) -> Self:
         self._limit_value = max_n
