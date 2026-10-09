@@ -53,6 +53,14 @@ repos:
         language: system
         types: [ python ]
 
+      - id: type-coverage
+        name: Public API type completeness (100%)
+        entry: uv run --system-certs --all-extras basedpyright --verifytypes fastsprout --ignoreexternal
+        language: system
+        types: [python]
+        pass_filenames: false
+        require_serial: true
+
       - id: generate-example-readme
         name: Generate example documentation
         entry: uv run --system-certs scripts/generate_readme_docs.py

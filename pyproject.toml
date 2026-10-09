@@ -129,11 +129,21 @@ max-module-lines = 300
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -vvv --cov=src/fastsprout --cov-report=term-missing --cov-fail-under=85"
+addopts = "-ra -vvv --cov=src/fastsprout --cov-report=term-missing"
 testpaths = ["src/tests"]
 asyncio_mode = "auto"
 markers = [
     "unit: Unit tests - no external dependencies",
     "integration: Integration tests - testcontainers or in-memory mocks",
     "slow: Tests taking more than 5 seconds",
+]
+
+[tool.coverage.report]
+fail_under = 100
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "pragma: full coverage",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
 ]

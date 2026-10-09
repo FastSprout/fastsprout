@@ -75,10 +75,19 @@ pytest:
 
 python-quality:
   retry: *retry_nonrelease_job
-  parallel:
+  parallel: &python_matrix
     matrix:
       - UV_PYTHON: ["3.12", "3.13", "3.14"]
   image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
+
+type-coverage:
+  stage: static-analysis
+  retry: *retry_nonrelease_job
+  parallel: *python_matrix
+  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
+  coverage: '/Type completeness score: (\d+(?:\.\d+)?)%/'
+  script:
+    - uv run --locked --all-extras --all-groups basedpyright --pythonversion $UV_PYTHON --verifytypes fastsprout --ignoreexternal
 
 docs-check:
   stage: static-analysis

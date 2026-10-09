@@ -1,5 +1,13 @@
 # Repository rules
 
+## Small, purposeful changes
+
+Keep changes small, clear, and well designed. Every changed line must have a
+concrete purpose that supports the requested behavior. A change without a
+clear purpose is a bad change and must be removed. Prefer the smallest
+coherent fix; do not add unrelated refactors, abstractions, or speculative
+features.
+
 ## No code generation
 
 Code generation is prohibited. Do not add Python code generators, `.pyi`
