@@ -1,5 +1,5 @@
 import inspect
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from functools import wraps
 from typing import (
     TYPE_CHECKING,
@@ -16,7 +16,10 @@ __all__ = ["DependencyInjector", "Depends", "DependsClass", "inject_depends"]
 
 if TYPE_CHECKING:
 
-    class DependsClass:  # pyright: ignore
+    class DependsClass:
+        dependency: Callable[..., Any] | None
+        use_cache: bool
+
         def __init__(
             self,
             dependency: Callable[..., Any] | None = None,
@@ -27,28 +30,27 @@ if TYPE_CHECKING:
         def __repr__(self) -> str: ...
 
 
-try:
-    from fastapi.params import (  # type: ignore
-        Depends as DependsClass,  # pyright: ignore[reportAssignmentType]
-    )
-except ImportError:
+else:
+    try:
+        from fastapi.params import Depends as DependsClass
+    except ImportError:
 
-    class DependsClass:  # type: ignore
-        def __init__(
-            self,
-            dependency: Callable[..., Any] | None = None,
-            *,
-            use_cache: bool = True,
-        ):
-            self.dependency = dependency
-            self.use_cache = use_cache
+        class DependsClass:
+            def __init__(
+                self,
+                dependency: Callable[..., Any] | None = None,
+                *,
+                use_cache: bool = True,
+            ):
+                self.dependency = dependency
+                self.use_cache = use_cache
 
-        def __repr__(self) -> str:
-            attr = getattr(
-                self.dependency, "__name__", type(self.dependency).__name__
-            )
-            cache = "" if self.use_cache else ", use_cache=False"
-            return f"{self.__class__.__name__}({attr}{cache})"
+            def __repr__(self) -> str:
+                attr = getattr(
+                    self.dependency, "__name__", type(self.dependency).__name__
+                )
+                cache = "" if self.use_cache else ", use_cache=False"
+                return f"{self.__class__.__name__}({attr}{cache})"
 
 
 def Depends(  # noqa: N802
@@ -117,10 +119,24 @@ class DependencyInjector:
         function: Callable[..., Any],
         args: tuple[Any, ...],
         kwargs: dict[str, Any],
+        supplied: inspect.BoundArguments | None = None,
     ) -> tuple[inspect.BoundArguments, list[tuple[str, Any, Any]]]:
+        if not inspect.isroutine(function) and not inspect.isclass(function):
+            function = function.__call__
         signature = inspect.signature(function)
-        bound = signature.bind_partial(*args, **kwargs)
-        annotations = get_type_hints(function, include_extras=True)
+        annotations = get_type_hints(
+            inspect.unwrap(function), include_extras=True
+        )
+        parameters = [
+            parameter.replace(
+                annotation=annotations.get(name, parameter.annotation)
+            )
+            for name, parameter in signature.parameters.items()
+        ]
+        bound = signature.replace(parameters=parameters).bind_partial(
+            *args, **kwargs
+        )
+        self._bind(bound, supplied)
         dependencies = []
         for name, parameter in signature.parameters.items():
             if name in bound.arguments:
@@ -131,6 +147,20 @@ class DependencyInjector:
             if marker is not None:
                 dependencies.append((name, marker, value_type))
         return bound, dependencies
+
+    def _bind(
+        self,
+        bound: inspect.BoundArguments,
+        supplied: inspect.BoundArguments | None,
+    ) -> None:
+        if supplied is None:
+            return
+        parameters = bound.signature.parameters
+        for name in parameters.keys() & supplied.arguments.keys() - {"self"}:
+            parameter = parameters[name]
+            marker, _ = self._marker(parameter, parameter.annotation)
+            if marker is None or marker.dependency is None:
+                bound.arguments.setdefault(name, supplied.arguments[name])
 
     def _resolve(
         self,
@@ -165,6 +195,7 @@ class DependencyInjector:
         annotation: Any,
         cache: dict[Callable[..., Any], Any],
         active: set[Callable[..., Any]],
+        supplied: inspect.BoundArguments | None = None,
     ) -> Any:
         provider = self._provider(marker, annotation)
         if marker.use_cache and provider in cache:
@@ -174,10 +205,10 @@ class DependencyInjector:
             override = self.dependency_overrides.get(
                 provider, self.dependency_providers.get(provider, provider)
             )
-            bound, dependencies = self._arguments(override, (), {})
+            bound, dependencies = self._arguments(override, (), {}, supplied)
             for name, nested, value_type in dependencies:
                 bound.arguments[name] = await self._aresolve(
-                    nested, value_type, cache, active
+                    nested, value_type, cache, active, supplied
                 )
             value = override(*bound.args, **bound.kwargs)
             if inspect.isawaitable(value):
@@ -209,19 +240,23 @@ class DependencyInjector:
             )
         return bound
 
-    async def _ainject(
+    async def ainject(
         self,
         function: Callable[..., Any],
         args: tuple[Any, ...],
         kwargs: dict[str, Any],
+        extra_dependencies: Sequence[DependsClass] = (),
+        supplied: inspect.BoundArguments | None = None,
     ) -> inspect.BoundArguments:
         bound, dependencies = self._arguments(function, args, kwargs)
         cache: dict[Callable[..., Any], Any] = {}
         active: set[Callable[..., Any]] = set()
         for name, marker, value_type in dependencies:
             bound.arguments[name] = await self._aresolve(
-                marker, value_type, cache, active
+                marker, value_type, cache, active, supplied
             )
+        for dependency in extra_dependencies:
+            await self._aresolve(dependency, None, cache, active, supplied)
         return bound
 
     def __call__[**P, R](self, function: Callable[P, R]) -> Callable[P, R]:
@@ -229,7 +264,7 @@ class DependencyInjector:
 
             @wraps(function)
             async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
-                bound = await self._ainject(function, args, kwargs)
+                bound = await self.ainject(function, args, kwargs)
                 return await function(*bound.args, **bound.kwargs)
 
             return cast(Callable[P, R], async_wrapper)

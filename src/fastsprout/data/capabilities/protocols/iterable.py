@@ -10,7 +10,7 @@ __all__ = ["Iterable"]
 
 @runtime_checkable
 class Iterable[E: Entitieable, Q: BaseQuery](Protocol):
-    async def iter(self, query: Q, /) -> AsyncIterator[E]: ...
-    async def iter_per(
+    def iter(self, query: Q, /) -> AsyncIterator[E]: ...
+    def iter_per(
         self, query: Q, /, *, chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE
     ) -> AsyncIterator[Sequence[E]]: ...

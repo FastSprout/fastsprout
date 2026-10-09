@@ -1,6 +1,8 @@
+from collections.abc import Sequence
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Protocol, Self, runtime_checkable
 
+from fastsprout.core.depends import DependsClass
 from fastsprout.data.backend.protocols import DataAbilitable, Finalizable
 from fastsprout.data.capabilities import BaseQuery
 from fastsprout.data.entity import Entitieable
@@ -15,7 +17,12 @@ __all__ = ["Routerable"]
 
 @runtime_checkable
 class Routerable(Finalizable, Protocol):
-    def __init__(self, *, bus: EventBus | None = None) -> None: ...
+    def __init__(
+        self,
+        *,
+        bus: EventBus | None = None,
+        dependencies: Sequence[DependsClass] = (),
+    ) -> None: ...
 
     async def __aenter__(self) -> Self: ...
 

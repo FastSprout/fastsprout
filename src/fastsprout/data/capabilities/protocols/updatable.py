@@ -16,7 +16,7 @@ __all__ = ["Updatable", "UpdatableByQuery"]
 class Updatable[E: Entitieable](Protocol):
     async def update(self, entity: E, /) -> E: ...
     async def bulk_update(self, entities: AnyIterable[E], /) -> Sequence[E]: ...
-    async def iter_bulk_update(
+    def iter_bulk_update(
         self,
         entities: AnyIterable[E],
         /,

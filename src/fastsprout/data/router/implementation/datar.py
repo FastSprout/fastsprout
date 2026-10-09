@@ -1,8 +1,9 @@
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import TracebackType
 from typing import Any, Self
 
+from fastsprout.core.depends import DependsClass
 from fastsprout.data.backend.implementation.bound_signpost import BoundSignpost
 from fastsprout.data.backend.protocols import (
     Backendable,
@@ -21,6 +22,7 @@ from fastsprout.data.streams.implementation import JoinedStream
 from fastsprout.data.streams.protocols import AsyncEntityStream
 from fastsprout.events import EventBus
 
+from .dependencies import guard_ability
 from .routed_join import RoutedJoin
 
 __all__ = ["DataR"]
@@ -123,9 +125,18 @@ class Bindinger(Finalizable):
 
 
 class DataR(Routerable):
-    def __init__(self, *, bus: EventBus | None = None) -> None:
+    dependencies: Sequence[DependsClass] = ()
+
+    def __init__(
+        self,
+        *,
+        bus: EventBus | None = None,
+        dependencies: Sequence[DependsClass] | None = None,
+    ) -> None:
         self.__bindings: Bindinger | None = None
         self.__bus: EventBus | None = bus
+        if dependencies is not None:
+            self.dependencies = dependencies
 
     async def __aenter__(self) -> Self:
         self.__bindings = Bindinger()
@@ -158,7 +169,12 @@ class DataR(Routerable):
         self, entity: type[E]
     ) -> DataAbilitable[E, Any, BaseQuery[E, Any], Finalizable]:
         signpost = self.__init_bindings__.add(entity)
-        return ability_of(entity)(signpost, bus=self.__bus)
+        ability = ability_of(entity)(signpost, bus=self.__bus)
+        if self.dependencies:
+            guard_ability(
+                ability, signpost, self, self.dependencies, self.__bus
+            )
+        return ability
 
     def stream[E: Entitieable[Any]](
         self, q: BaseQuery[E, Any]

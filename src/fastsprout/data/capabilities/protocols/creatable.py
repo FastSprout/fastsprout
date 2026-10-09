@@ -14,7 +14,7 @@ __all__ = ["Creatable"]
 class Creatable[E: Entitieable[Any]](Protocol):
     async def create(self, entity: E, /) -> E: ...
     async def bulk_create(self, entities: Sequence[E], /) -> Sequence[E]: ...
-    async def iter_bulk_create(
+    def iter_bulk_create(
         self,
         entities: AnyIterable[E],
         /,

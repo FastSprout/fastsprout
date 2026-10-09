@@ -6,19 +6,20 @@ examples use in-memory SQLite and the development dependency `aiosqlite`.
 Run from the repository root:
 
 ```bash
-uv run --extra data-sql --extra events python examples/data/01_datar_01_smart_router.py
+uv run --extra data-sql --extra events python examples/data/01_datar/01_smart_router.py
 ```
 
 ## 1. DataR
 
 | File | Shows |
 | --- | --- |
-| [01_datar_01_smart_router.py](01_datar_01_smart_router.py) | DataR - Smart data router for CRUD operations and a little more. |
-| [01_datar_02_events_subscriber.py](01_datar_02_events_subscriber.py) | Publish a typed CreateEvent when DataR persists an entity. |
+| [01_datar/01_smart_router.py](01_datar/01_smart_router.py) | DataR - Smart data router for CRUD operations and a little more. |
+| [01_datar/02_events_subscriber.py](01_datar/02_events_subscriber.py) | Publish a typed CreateEvent when DataR persists an entity. |
+| [01_datar/03_dependencies.py](01_datar/03_dependencies.py) | Guard direct backend operations with dependencies configured on DataR. |
 
 ## 2. Stream
 
 | File | Shows |
 | --- | --- |
-| [02_stream_01_joined_stream.py](02_stream_01_joined_stream.py) | Join three entity streams without a router or database. |
-| [02_stream_02_routed_join.py](02_stream_02_routed_join.py) | Join entities from two separate databases through their signposts. |
+| [02_stream/01_joined_stream.py](02_stream/01_joined_stream.py) | Join three entity streams without a router or database. |
+| [02_stream/02_routed_join.py](02_stream/02_routed_join.py) | Join entities from two separate databases through their signposts. |

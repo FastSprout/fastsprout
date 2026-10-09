@@ -1,6 +1,7 @@
+import inspect
 from typing import Annotated
 
-from fastsprout.core import DependencyInjector, Depends
+from fastsprout.core import DependencyInjector, Depends, inject_depends
 
 
 def test_injector_overrides_provider_and_caches_per_call():
@@ -53,3 +54,40 @@ def test_depends_without_provider_uses_annotation():
         return service
 
     assert isinstance(use(), Service)
+
+
+@inject_depends
+async def test_dependencies_share_cache_only_within_one_operation():
+    calls: list[str] = []
+
+    def source() -> int:
+        calls.append("source")
+        return 7
+
+    def nested(value: int = Depends(source)) -> int:
+        calls.append("nested")
+        return value
+
+    def check(operation: str, value: int = Depends(nested)) -> None:
+        assert value == 7
+        calls.append(operation)
+
+    async def execute(operation: str) -> None:
+        pass
+
+    dependencies = [Depends(check), Depends(check)]
+    await inject_depends.ainject(
+        execute,
+        ("create",),
+        {},
+        extra_dependencies=dependencies,
+        supplied=inspect.signature(execute).bind("create"),
+    )
+    await inject_depends.ainject(
+        execute,
+        ("delete",),
+        {},
+        extra_dependencies=dependencies,
+        supplied=inspect.signature(execute).bind("delete"),
+    )
+    assert calls == ["source", "nested", "create", "source", "nested", "delete"]
