@@ -103,14 +103,14 @@ typeCheckingMode = "standard"
 
 [[tool.basedpyright.executionEnvironments]]
 root = "src/tests"
+extraPaths = ["."]
 reportArgumentType = false
 reportOptionalCall = false
 reportCallIssue = false
 
 [tool.pylint.main]
 init-hook = "import sys; sys.path.insert(0, '.')"
-load-plugins = ["tools.pylint.exports", "tools.pylint.dataclasses"]
-ignore-paths = ["src/tests"]
+load-plugins = ["tools.pylint.exports", "tools.pylint.dataclasses", "tools.pylint.names"]
 
 [tool.pylint.messages_control]
 disable = ["all"]
@@ -118,6 +118,10 @@ enable = [
     "too-many-lines",
     "import-outside-toplevel",
     "missing-module-all",
+    "import-outside-all",
+    "private-name",
+    "private-module-name",
+    "missing-package-init",
     "stdlib-dataclass",
     "invalid-all-format",
     "invalid-all-object",
@@ -129,6 +133,7 @@ max-module-lines = 300
 
 [tool.pytest.ini_options]
 minversion = "6.0"
+pythonpath = ["."]
 addopts = "-ra -vvv --cov=src/fastsprout --cov-report=term-missing"
 testpaths = ["src/tests"]
 asyncio_mode = "auto"

@@ -2,13 +2,13 @@
 
 from pathlib import Path
 
-from astroid import nodes
+import astroid.nodes as nodes
 from pylint.checkers import BaseChecker
 from pylint.lint import PyLinter
 
 __all__ = ["DataclassChecker", "register"]
 
-_IMPLEMENTATION = (
+IMPLEMENTATION = (
     Path(__file__).resolve().parents[2]
     / "src/fastsprout/core/decorators/dataclasses/dataclass.py"
 )
@@ -27,15 +27,15 @@ class DataclassChecker(BaseChecker):
             ),
         }
 
-    def _check(self, node: nodes.Import | nodes.ImportFrom) -> None:
+    def check(self, node: nodes.Import | nodes.ImportFrom) -> None:
         module = node.root()
-        if module.file and Path(module.file).resolve() == _IMPLEMENTATION:
+        if module.file and Path(module.file).resolve() == IMPLEMENTATION:
             return
         self.add_message("stdlib-dataclass", node=node)
 
     def visit_import(self, node: nodes.Import) -> None:
         if any(name == "dataclasses" for name, _ in node.names):
-            self._check(node)
+            self.check(node)
 
     def visit_importfrom(self, node: nodes.ImportFrom) -> None:
         if (
@@ -43,7 +43,7 @@ class DataclassChecker(BaseChecker):
             and node.modname == "dataclasses"
             and any(name in {"dataclass", "*"} for name, _ in node.names)
         ):
-            self._check(node)
+            self.check(node)
 
 
 def register(linter: PyLinter) -> None:
