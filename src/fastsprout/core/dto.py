@@ -273,6 +273,15 @@ def dto[C: _DTO](cls: type[C]) -> type[C]:
         for name, value in vars(base).items()
         if isinstance(value, Field)
     }
+    relationship_descriptors = {
+        name: kind._descriptor(name)
+        for base in reversed(source.__mro__)
+        for name, kind in vars(base)
+        .get("__fastsprout_descriptors__", {})
+        .items()
+        if name not in descriptors
+    }
+    descriptors.update(relationship_descriptors)
     operations = mode.__fastsprout_operations__
     allowed = frozenset(
         name
@@ -286,4 +295,6 @@ def dto[C: _DTO](cls: type[C]) -> type[C]:
     cls.__fastsprout_definition__ = _Definition(
         allowed, allowed - defaults.keys(), defaults
     )
+    for name, descriptor in relationship_descriptors.items():
+        setattr(cls, name, descriptor)
     return cls

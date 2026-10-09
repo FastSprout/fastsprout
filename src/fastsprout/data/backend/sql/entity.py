@@ -7,6 +7,7 @@ from typing import (
     TypeVar,
     _ProtocolMeta,
     dataclass_transform,
+    get_args,
 )
 
 from sqlalchemy import MetaData
@@ -16,9 +17,9 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import registry as sa_registry
 from sqlmodel import Field as SQLPydField
 from sqlmodel import SQLModel, Table
-from sqlmodel.main import SQLModelMetaclass
+from sqlmodel.main import RelationshipInfo, SQLModelMetaclass
 
-from fastsprout.core import Field
+from fastsprout.core import Field, InternalField
 from fastsprout.core.dto import is_dto_base
 from fastsprout.core.fields.field import (
     check_field_visibility,
@@ -59,6 +60,44 @@ def _mro_field_names(cls: type) -> list[str]:
     return out
 
 
+def _inject_relationship_keys(
+    name: str,
+    annotations: dict[str, Any],
+    namespace: dict[str, Any],
+    descriptors: dict[str, type[Field]],
+) -> None:
+    for fname, annotation in tuple(annotations.items()):
+        relation = namespace.get(fname)
+        if not isinstance(relation, RelationshipInfo) or not getattr(
+            relation, "__fastsprout_auto__", False
+        ):
+            continue
+        optional = type(None) in get_args(annotation)
+        target = next(
+            (arg for arg in get_args(annotation) if arg is not type(None)),
+            annotation,
+        )
+        table = getattr(target, "__table__", None)
+        model_fields = getattr(target, "model_fields", {})
+        if table is None or "id" not in model_fields:
+            raise TypeError(
+                f"Relationship {name}.{fname} requires a mapped entity"
+            )
+        fk_name = f"{fname}_id"
+        if fk_name in annotations or fk_name in namespace:
+            raise TypeError(
+                f"Relationship {name}.{fname} already has {fk_name}"
+            )
+        id_type = model_fields["id"].annotation
+        annotations[fk_name] = id_type | None
+        descriptors[fk_name] = InternalField
+        namespace[fk_name] = SQLPydField(
+            default=None,
+            foreign_key=f"{table.name}.id",
+            nullable=optional,
+        )
+
+
 @dataclass_transform(
     kw_only_default=True, field_specifiers=(Field, SQLPydField)
 )
@@ -91,6 +130,10 @@ class TypedSQLMeta(SQLModelMetaclass, _ProtocolMeta):
         field_names = list(field_descriptors)
         unwrap_field_annotations(annotations, namespace)
         convert_field_specifiers(namespace, field_names)
+        _inject_relationship_keys(
+            name, annotations, namespace, field_descriptors
+        )
+        field_names = list(field_descriptors)
 
         for fname in field_names:
             if isinstance(annotations.get(fname), TypeVar):
