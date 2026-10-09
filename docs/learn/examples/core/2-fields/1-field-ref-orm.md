@@ -1,6 +1,6 @@
 # 1. Field Ref ORM
 
-<!-- example-source: examples/core/02_fields_01_field_ref_orm.py -->
+<!-- example-source: examples/core/02_fields/01_field_ref_orm.py -->
 
 HasOrm + FieldRef.orm with SQLModel.
 
@@ -27,7 +27,6 @@ HasOrm[CustomOrm[Any]] exposes CustomOrm[Any] for every field.
 from typing import Any, dataclass_transform
 
 from sqlalchemy.orm import Mapped
-from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlmodel import Field as SQLPydField
 from sqlmodel import SQLModel
 from sqlmodel.main import SQLModelMetaclass
@@ -72,13 +71,11 @@ class Hero(BaseSQLEntity, table=True):
 
 def main() -> None:
     hero = Hero(id=1, name="SuperMan")
-    assert hero.id == 1
-    assert hero.name == "SuperMan"
+    print(hero.name)
 
     # Class-level: FieldRef with the SQLAlchemy attribute behind `.orm`.
     orm_attr = Hero.name.orm
-    assert isinstance(orm_attr, InstrumentedAttribute)
-    assert orm_attr.key == "name"
+    print(orm_attr)
 
     # `.set(value)` works the same as on a plain Field.
     print(Hero.name.set("Spider"))
@@ -91,5 +88,7 @@ if __name__ == "__main__":
 ## Result
 
 ```text
+SuperMan
+Hero.name
 FieldAssignment(name='name', value='Spider')
 ```

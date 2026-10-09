@@ -1,6 +1,6 @@
 # 2. Action Sequence
 
-<!-- example-source: examples/core/03_action_02_action_sequence.py -->
+<!-- example-source: examples/core/03_action/02_action_sequence.py -->
 
 BaseSequenceAction — eager collection (list/tuple). Class and function styles.
 
@@ -43,9 +43,6 @@ async def greet_batch(payload: GreetBatchIn, /) -> Sequence[GreetOut]:
 
 async def main() -> None:
     payload = GreetBatchIn(name="world", times=3)
-
-    assert isinstance(GreetBatch(), BaseSequenceAction)
-    assert isinstance(greet_batch, BaseSequenceAction)
 
     print([g.message for g in await GreetBatch()(payload)])
     print([g.message for g in await greet_batch(payload)])

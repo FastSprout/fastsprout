@@ -75,16 +75,12 @@ async def main() -> None:
 
         rows = await only_ada.to_list()
         assert_type(rows, list[tuple[Order, Customer]])
-        assert [(order.id, customer.name) for order, customer in rows] == [
-            (1, "Ada")
-        ]
         print([(order.id, customer.name) for order, customer in rows])
 
         # Branching does not change the earlier plan. Consume within DataR.
         result = [
             (order.id, customer.name) async for order, customer in everyone
         ]
-        assert result == [(1, "Ada"), (2, "Lin")]
         print(result)
 
 

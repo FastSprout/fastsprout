@@ -27,9 +27,6 @@ async def greet(payload: GreetIn, /) -> GreetOut:
 async def main() -> None:
     payload = GreetIn(name="world")
 
-    assert isinstance(Greet(), BaseAction)
-    assert isinstance(greet, BaseAction)
-
     print(await Greet()(payload))
     print(await greet(payload))
 

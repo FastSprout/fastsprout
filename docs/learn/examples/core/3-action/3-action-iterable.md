@@ -1,6 +1,6 @@
 # 3. Action Iterable
 
-<!-- example-source: examples/core/03_action_03_action_iterable.py -->
+<!-- example-source: examples/core/03_action/03_action_iterable.py -->
 
 Return greetings lazily from a class action or an async function.
 
@@ -50,9 +50,6 @@ async def greet_batch(payload: GreetBatchIn, /) -> Iterable[GreetOut]:
 
 async def main() -> None:
     payload = GreetBatchIn(name="world", times=3)
-
-    assert isinstance(GreetBatch(), BaseIterableAction)
-    assert isinstance(greet_batch, BaseIterableAction)
 
     print([g.message for g in await GreetBatch()(payload)])
     print([g.message for g in await greet_batch(payload)])

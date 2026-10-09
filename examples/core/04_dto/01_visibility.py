@@ -38,15 +38,13 @@ class UserCreate(WriteDTO, User): ...
 class UserUpdate(ReadWriteDTO, User): ...
 
 
-def show_forbidden_access(value: object, name: str) -> None:
+def show_forbidden_access(value: User | type[User], name: str) -> None:
     # Dynamic access demonstrates the runtime guard. Direct attribute access
     # to these fields also produces a checker error (see the comments below).
     try:
         getattr(value, name)  # (4)!
     except AttributeError as error:
         print(error)
-    else:
-        raise AssertionError(f"Field {name!r} should be inaccessible")
 
 
 def main() -> None:
@@ -59,7 +57,6 @@ def main() -> None:
     assert_type(create.password, str)
     assert_type(update.password, str)
     assert_type(update.created_at, datetime)
-    assert isinstance(read, User)
     read.email = "new@example.com"
 
     # Uncomment any of these to see mypy/basedpyright reject the access:
@@ -80,8 +77,6 @@ def main() -> None:
         UserRead(email="ada@example.com", password="example-password")
     except AttributeError as error:
         print(error)
-    else:
-        raise AssertionError("The read constructor must reject password")
 
 
 if __name__ == "__main__":

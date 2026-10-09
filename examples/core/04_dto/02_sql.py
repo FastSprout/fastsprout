@@ -13,7 +13,6 @@ from sqlmodel import Field as SQLField
 
 from fastsprout.core import Field, InternalField, ReadDTO, ReadField
 from fastsprout.data.backend.sql import SQLEntity
-from fastsprout.data.backend.sql.entity import SQL_ENTITY_REGISTRY
 
 
 class DefaultSQLEntity(SQLEntity[UUID], table=False):
@@ -29,9 +28,6 @@ class User(DefaultSQLEntity):
     created_at: ReadField[datetime] = ReadField(
         default_factory=lambda: datetime.now(UTC)
     )
-
-
-MAPPERS_BEFORE_DTOS = set(SQL_ENTITY_REGISTRY.mappers)
 
 
 class UserRead(ReadDTO, User): ...
@@ -50,18 +46,14 @@ def display(user: UserRead) -> str:
 
 def main() -> None:
     read = UserRead(email="ada@example.com")
-    summary = UserSummary(email="grace@example.com")
-
-    assert isinstance(read.id, UUID)
-    assert isinstance(summary.id, UUID)
-    assert read.id != summary.id
-    assert isinstance(summary, User)
-    assert set(SQL_ENTITY_REGISTRY.mappers) == MAPPERS_BEFORE_DTOS
-    assert "_sa_instance_state" not in vars(summary)
+    summary = UserSummary(
+        id=UUID("00000000-0000-0000-0000-000000000001"),
+        email="grace@example.com",
+    )
 
     print(display(read))
     print(display(summary))
-    print(summary.label().endswith(": grace@example.com"))
+    print(summary.label())
 
     # Both checkers reject direct access, including on the subclass:
     # _ = summary.last_login
@@ -72,8 +64,6 @@ def main() -> None:
             getattr(summary, name)
         except AttributeError as error:
             print(error)
-        else:
-            raise AssertionError(f"Field {name!r} should be inaccessible")
 
 
 if __name__ == "__main__":

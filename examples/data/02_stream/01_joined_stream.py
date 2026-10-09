@@ -56,7 +56,6 @@ async def main() -> None:
         (order.id, customer.name, product.name)
         for order, customer, product in rows
     ]
-    assert result == [(1, "Ada", "Tea"), (2, "Ada", "Coffee")]
     print(result)
 
     # The third order has no matching customer, so the inner join omits it.

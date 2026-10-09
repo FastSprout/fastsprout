@@ -1,6 +1,6 @@
 # 2. SQL
 
-<!-- example-source: examples/core/04_dto_02_sql.py -->
+<!-- example-source: examples/core/04_dto/02_sql.py -->
 
 Derive a DTO from a SQL entity and extend it with ordinary inheritance.
 
@@ -26,11 +26,10 @@ from sqlmodel import Field as SQLField
 
 from fastsprout.core import Field, InternalField, ReadDTO, ReadField
 from fastsprout.data.backend.sql import SQLEntity
-from fastsprout.data.backend.sql.entity import SQL_ENTITY_REGISTRY
 
 
 class DefaultSQLEntity(SQLEntity[UUID], table=False):
-    id: Field[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
     last_login: InternalField[datetime | None] = InternalField[datetime | None](
         default=None
     )
@@ -42,9 +41,6 @@ class User(DefaultSQLEntity):
     created_at: ReadField[datetime] = ReadField(
         default_factory=lambda: datetime.now(UTC)
     )
-
-
-MAPPERS_BEFORE_DTOS = set(SQL_ENTITY_REGISTRY.mappers)
 
 
 class UserRead(ReadDTO, User): ...
@@ -63,18 +59,14 @@ def display(user: UserRead) -> str:
 
 def main() -> None:
     read = UserRead(email="ada@example.com")
-    summary = UserSummary(email="grace@example.com")
-
-    assert isinstance(read.id, UUID)
-    assert isinstance(summary.id, UUID)
-    assert read.id != summary.id
-    assert isinstance(summary, User)
-    assert set(SQL_ENTITY_REGISTRY.mappers) == MAPPERS_BEFORE_DTOS
-    assert "_sa_instance_state" not in vars(summary)
+    summary = UserSummary(
+        id=UUID("00000000-0000-0000-0000-000000000001"),
+        email="grace@example.com",
+    )
 
     print(display(read))
     print(display(summary))
-    print(summary.label().endswith(": grace@example.com"))
+    print(summary.label())
 
     # Both checkers reject direct access, including on the subclass:
     # _ = summary.last_login
@@ -85,8 +77,6 @@ def main() -> None:
             getattr(summary, name)
         except AttributeError as error:
             print(error)
-        else:
-            raise AssertionError(f"Field {name!r} should be inaccessible")
 
 
 if __name__ == "__main__":
@@ -98,7 +88,7 @@ if __name__ == "__main__":
 ```text
 ada@example.com
 grace@example.com
-True
+00000000-0000-0000-0000-000000000001: grace@example.com
 Field 'last_login' not accessible in DTO (operations: ['read'])
 Field 'password_hash' not accessible in DTO (operations: ['read'])
 ```

@@ -1,6 +1,6 @@
 # 1. Joined Stream
 
-<!-- example-source: examples/data/02_stream_01_joined_stream.py -->
+<!-- example-source: examples/data/02_stream/01_joined_stream.py -->
 
 Join three entity streams without a router or database.
 
@@ -65,7 +65,6 @@ async def main() -> None:
         (order.id, customer.name, product.name)
         for order, customer, product in rows
     ]
-    assert result == [(1, "Ada", "Tea"), (2, "Ada", "Coffee")]
     print(result)
 
     # The third order has no matching customer, so the inner join omits it.

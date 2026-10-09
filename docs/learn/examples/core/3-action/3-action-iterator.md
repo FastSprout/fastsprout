@@ -1,6 +1,6 @@
 # 3. Action Iterator
 
-<!-- example-source: examples/core/03_action_03_action_iterator.py -->
+<!-- example-source: examples/core/03_action/03_action_iterator.py -->
 
 BaseIteratorAction — async streaming (async-gen). Class and function styles.
 
@@ -41,9 +41,6 @@ async def greet_batch(payload: GreetBatchIn, /) -> AsyncIterator[GreetOut]:
 
 async def main() -> None:
     payload = GreetBatchIn(name="world", times=3)
-
-    assert isinstance(GreetBatch(), BaseIteratorAction)
-    assert isinstance(greet_batch, BaseIteratorAction)
 
     print([g.message async for g in GreetBatch()(payload)])
     print([g.message async for g in greet_batch(payload)])

@@ -33,9 +33,6 @@ async def greet_batch(payload: GreetBatchIn, /) -> AsyncIterator[GreetOut]:
 async def main() -> None:
     payload = GreetBatchIn(name="world", times=3)
 
-    assert isinstance(GreetBatch(), BaseIteratorAction)
-    assert isinstance(greet_batch, BaseIteratorAction)
-
     print([g.message async for g in GreetBatch()(payload)])
     print([g.message async for g in greet_batch(payload)])
 

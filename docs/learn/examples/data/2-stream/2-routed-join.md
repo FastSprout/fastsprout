@@ -1,6 +1,6 @@
 # 2. Routed Join
 
-<!-- example-source: examples/data/02_stream_02_routed_join.py -->
+<!-- example-source: examples/data/02_stream/02_routed_join.py -->
 
 Join entities from two separate databases through their signposts.
 
@@ -18,19 +18,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import Field as SQLField
 
-from fastsprout.core import Field
+from fastsprout.core import Field, ReadField
 from fastsprout.data import DataR
 from fastsprout.data.backend.sql import SQLEntity, SQLQuery
 from fastsprout.data.backend.sql.entity import SQLSignpost
 
 
 class Order(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     customer_id: Field[int]
 
 
 class Customer(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str]
 
 
@@ -84,16 +84,12 @@ async def main() -> None:
 
         rows = await only_ada.to_list()
         assert_type(rows, list[tuple[Order, Customer]])
-        assert [(order.id, customer.name) for order, customer in rows] == [
-            (1, "Ada")
-        ]
         print([(order.id, customer.name) for order, customer in rows])
 
         # Branching does not change the earlier plan. Consume within DataR.
         result = [
             (order.id, customer.name) async for order, customer in everyone
         ]
-        assert result == [(1, "Ada"), (2, "Lin")]
         print(result)
 
 

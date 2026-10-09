@@ -1,6 +1,6 @@
 # 1. Base Action
 
-<!-- example-source: examples/core/03_action_01_base_action.py -->
+<!-- example-source: examples/core/03_action/01_base_action.py -->
 
 BaseAction — single typed result. Class and function styles.
 
@@ -35,9 +35,6 @@ async def greet(payload: GreetIn, /) -> GreetOut:
 
 async def main() -> None:
     payload = GreetIn(name="world")
-
-    assert isinstance(Greet(), BaseAction)
-    assert isinstance(greet, BaseAction)
 
     print(await Greet()(payload))
     print(await greet(payload))
