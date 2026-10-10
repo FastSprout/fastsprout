@@ -10,9 +10,6 @@ from fastsprout.data.backend.protocols import (
     DataAbilitable,
     Finalizable,
 )
-from fastsprout.data.backend.sql import SQLEntity
-from fastsprout.data.backend.sql.capabilities import SQLAbilitable
-from fastsprout.data.backend.sql.data_backend import SQLDataBackend
 from fastsprout.data.capabilities import BaseQuery
 from fastsprout.data.entity import Entitieable, Signpostable
 from fastsprout.data.router.exceptions import DataRError, NoBackendError
@@ -25,6 +22,17 @@ from fastsprout.events import EventBus
 from .dependencies import guard_ability
 from .routed_join import RoutedJoin
 
+try:
+    from fastsprout.data.backend.sql import SQLEntity
+    from fastsprout.data.backend.sql.capabilities import SQLAbilitable
+    from fastsprout.data.backend.sql.data_backend import SQLDataBackend
+except ModuleNotFoundError as error:
+    if error.name not in {"sqlalchemy", "sqlmodel"}:
+        raise
+    SQL_SUPPORT = None
+else:
+    SQL_SUPPORT = (SQLEntity, SQLDataBackend, SQLAbilitable)
+
 __all__ = ["DataR"]
 
 
@@ -32,8 +40,10 @@ def backend_of[E: Entitieable[Any]](
     entity: type[E],
 ) -> type[Backendable[Any, Finalizable]]:
     match entity:
-        case entity if issubclass(entity, SQLEntity):
-            return SQLDataBackend
+        case entity if SQL_SUPPORT is not None and issubclass(
+            entity, SQL_SUPPORT[0]
+        ):
+            return SQL_SUPPORT[1]
         case _:
             raise NoBackendError(f"Not found backend for entity: {entity}")
 
@@ -42,8 +52,10 @@ def ability_of[E: Entitieable[Any]](
     entity: type[E],
 ) -> type[DataAbilitable[E, Any, BaseQuery[E, Any], Finalizable]]:
     match entity:
-        case entity if issubclass(entity, SQLEntity):
-            return SQLAbilitable
+        case entity if SQL_SUPPORT is not None and issubclass(
+            entity, SQL_SUPPORT[0]
+        ):
+            return SQL_SUPPORT[2]
         case _:
             raise NoBackendError(f"Not found backend for entity: {entity}")
 
