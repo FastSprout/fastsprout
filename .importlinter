@@ -75,6 +75,7 @@ containers =
     tests.fastsprout.core
 layers =
     decorators
+    context
     depends
     fields
     action | dto | schema
