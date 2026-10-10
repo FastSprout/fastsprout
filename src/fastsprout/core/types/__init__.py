@@ -1,4 +1,4 @@
-from .callable import AnyCallable, AnyCallableEmpty
+from .callable import AnyCallable, AnyCallableEmpty, AsyncFunction
 from .identificable import (
     IdentificatorType,
     IDType,
@@ -13,6 +13,7 @@ __all__ = [
     "AnyCallable",
     "AnyCallableEmpty",
     "AnyIterable",
+    "AsyncFunction",
     "IDType",
     "IdentificatorType",
     "LazyAwait",

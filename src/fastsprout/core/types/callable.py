@@ -1,7 +1,19 @@
+from types import CodeType
+from typing import Protocol
+
 from .protocols.ables import Awaitable, Callable
 
-__all__ = ["AnyCallable", "AnyCallableEmpty"]
+__all__ = ["AnyCallable", "AnyCallableEmpty", "AsyncFunction"]
 
 
 type AnyCallable[S, R] = Callable[[S], R] | Callable[[S], Awaitable[R]]
 type AnyCallableEmpty[R] = Callable[[], R] | Callable[[], Awaitable[R]]
+
+
+class AsyncFunction[**P, R](Protocol):
+    """Distinguish async functions from callable class constructors in overloads."""
+
+    @property
+    def __code__(self) -> CodeType: ...
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> Awaitable[R]: ...
