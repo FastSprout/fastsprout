@@ -28,8 +28,21 @@ containers =
     fastsprout.actions
     tests.fastsprout.actions
 layers =
+    workflows
     service
     action
+
+; === FastSprout-actions-workflows-level layers ===
+[importlinter:contract:FastSprout-actions-workflows-layers-architecture]
+name = FastSprout Actions Workflows Layers Architecture
+type = layers
+containers =
+    fastsprout.actions.workflows
+    tests.fastsprout.actions.workflows
+layers =
+    workflow
+    execution
+    types | fork
 
 
 ; === FastSprout-actions-action-level layers ===

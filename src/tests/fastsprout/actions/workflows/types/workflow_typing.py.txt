@@ -1,0 +1,86 @@
+from typing import assert_type
+
+from fastsprout.actions import ForkResult, Workflow
+from fastsprout.core import BaseSchema
+
+
+class Input(BaseSchema):
+    value: int
+
+
+class Output(BaseSchema):
+    value: str
+
+
+class Decision(BaseSchema):
+    approved: bool
+
+
+class Approved(BaseSchema):
+    value: str
+
+
+class Rejected(BaseSchema):
+    code: int
+
+
+async def first(payload: Input) -> Output:
+    return Output(value=str(payload.value))
+
+
+async def finish(payload: Output) -> Input:
+    return Input(value=len(payload.value))
+
+
+async def join(payload: ForkResult[Input, Output]) -> Output:
+    return payload.right
+
+
+async def identity(payload: Output) -> Output:
+    return payload
+
+
+async def decide(payload: Decision) -> Approved | Rejected:
+    return Approved(value="ok") if payload.approved else Rejected(code=409)
+
+
+async def approve(payload: Approved) -> Approved:
+    return payload
+
+
+async def reject(payload: Rejected) -> Rejected:
+    return payload
+
+
+async def primitive_input(payload: int) -> Output:
+    return Output(value=str(payload))
+
+
+async def primitive_output(payload: Input) -> str:
+    return str(payload.value)
+
+
+async def checks() -> None:
+    linear = Workflow(first).then(finish)
+    assert_type(linear, Workflow[Input, Input])
+    async for result in linear(Input(value=1)):
+        assert_type(result, Input)
+    forked = Workflow(first).fork(finish, identity)
+    assert_type(forked, Workflow[Input, ForkResult[Input, Output]])
+    async for output in forked.join(join)(Input(value=1)):
+        assert_type(output, Output)
+    approvals = Workflow(decide).branch(Approved, approve)
+    assert_type(approvals, Workflow[Decision, Approved, Approved | Rejected])
+    branch = approvals.branch(Rejected, reject)
+    assert_type(branch, Workflow[Decision, Approved | Rejected, Approved | Rejected])
+    async for outcome in branch(Decision(approved=True)):
+        assert_type(outcome, Approved | Rejected)
+    continued = approvals.then(approve)
+    assert_type(continued, Workflow[Decision, Approved])
+    assert_type(Workflow(approvals), Workflow[Decision, Approved])
+    linear(1)  # error: reportArgumentType; mypy: arg-type
+    Workflow(primitive_input)  # error: reportCallIssue, reportArgumentType; mypy: type-var
+    Workflow(primitive_output)  # error: reportCallIssue, reportArgumentType; mypy: type-var
+    Workflow(first).then(primitive_input)  # error: reportArgumentType; mypy: arg-type
+    Workflow(first).then(first)  # error: reportArgumentType; mypy: arg-type
+    Workflow(decide).branch(Approved, reject)  # error: reportCallIssue, reportArgumentType; mypy: arg-type

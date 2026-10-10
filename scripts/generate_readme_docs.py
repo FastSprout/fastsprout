@@ -164,7 +164,8 @@ for layer, layer_description in LAYER_DESCRIPTION.items():
         (
             path
             for path in (EXAMPLES_DIR / layer).rglob("*.py")
-            if path.read_text(encoding="utf-8").strip()
+            if path.name != "__init__.py"
+            and path.read_text(encoding="utf-8").strip()
         ),
         key=example_parts,
     )

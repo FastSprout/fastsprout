@@ -1,11 +1,14 @@
+from collections.abc import AsyncIterable
 from collections.abc import Generator as Generatorable
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 __all__ = [
+    "ACloseable",
     "AIterable",
     "ANextable",
     "Addable",
     "AllComparisonsable",
+    "AsyncIterableResolver",
     "Awaitable",
     "Boolable",
     "Callable",
@@ -33,6 +36,15 @@ __all__ = [
     "Subable",
     "Truncable",
 ]
+
+
+@runtime_checkable
+class ACloseable(Protocol):
+    async def aclose(self) -> None: ...
+
+
+class AsyncIterableResolver[T](Protocol):
+    async def resolve(self) -> AsyncIterable[T]: ...
 
 
 class Awaitable[T](Protocol):
