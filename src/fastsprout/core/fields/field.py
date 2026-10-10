@@ -1,8 +1,8 @@
 import contextvars
 from collections.abc import Callable
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Self, overload
 
-from sqlalchemy.orm import Mapped
 from typing_extensions import TypeVar
 
 from fastsprout.core.types.undefined import Undefined, UndefinedType
@@ -11,7 +11,10 @@ from .field_assigment import FieldAssignment
 from .field_ref import FieldRef
 from .has_orm import HasOrm
 
-__all__ = ["Field"]
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Mapped
+
+__all__ = ["Field", "check_field_visibility", "model_building_context_var"]
 
 model_building_context_var: contextvars.ContextVar[bool] = (
     contextvars.ContextVar("fastsprout_model_building", default=False)
@@ -52,7 +55,7 @@ class Field(Generic[T, FieldOwner]):  # default type parameter on Python 3.12
         Hero.is_active.set(True)        # FieldAssignment[bool]
     """
 
-    __slots__ = ("_orm", "default", "default_factory", "name")
+    __slots__ = ("default", "default_factory", "name", "orm")
     __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"read", "write"})
 
     def __init__(
@@ -62,12 +65,12 @@ class Field(Generic[T, FieldOwner]):  # default type parameter on Python 3.12
         default_factory: Callable[[], T] | None = None,
     ) -> None:
         self.name = ""
-        self._orm = None
+        self.orm = None
         self.default = default
         self.default_factory = default_factory
 
     @classmethod
-    def _descriptor(cls, name: str, orm: Any = None) -> Self:
+    def descriptor(cls, name: str, orm: Any = None) -> Self:
         """Internal: build the descriptor installed on model classes.
 
         Bypasses the public specifier constructor — framework use only
@@ -75,7 +78,7 @@ class Field(Generic[T, FieldOwner]):  # default type parameter on Python 3.12
         """
         self = cls.__new__(cls)
         self.name = name
-        self._orm = orm
+        self.orm = orm
         self.default = Undefined
         self.default_factory = None
         return self
@@ -114,22 +117,30 @@ class Field(Generic[T, FieldOwner]):  # default type parameter on Python 3.12
     ) -> FieldRef[Any, T, Any] | T:
         if model_building_context_var.get() and instance is None:
             raise AttributeError(self.name)
-        self._check_visibility(owner)
+        self.check_visibility(owner)
         if instance is None:
-            return FieldRef(self.name, owner, self._orm)
+            return FieldRef(self.name, owner, self.orm)
         try:
             return instance.__dict__[self.name]  # type: ignore[no-any-return]
-        except KeyError as e:
-            raise AttributeError(
-                f"{type(instance).__name__!r} object has no attribute "
-                f"{self.name!r}"
-            ) from e
+        except KeyError:
+            value = self.default_value(type(instance).__name__)
+            instance.__dict__[self.name] = value
+            return value
 
-    def _check_visibility(self, owner: type) -> None:
+    def default_value(self, owner_name: str) -> T:
+        if self.default_factory is not None:
+            return self.default_factory()
+        if not isinstance(self.default, UndefinedType):
+            return deepcopy(self.default)
+        raise AttributeError(
+            f"{owner_name!r} object has no attribute {self.name!r}"
+        )
+
+    def check_visibility(self, owner: type) -> None:
         check_field_visibility(owner, self.name)
 
     def __set__(self, instance: FieldOwner, value: T) -> None:
-        self._check_visibility(type(instance))
+        self.check_visibility(type(instance))
         instance.__dict__[self.name] = value
 
     def __repr__(self) -> str:

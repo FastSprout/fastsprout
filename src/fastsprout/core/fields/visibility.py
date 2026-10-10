@@ -2,10 +2,16 @@ from typing import Any, ClassVar, Literal, Protocol
 
 from .field import Field
 
-__all__ = ["EntityVisibility", "InternalField", "ReadField", "WriteField"]
+__all__ = [
+    "DTOVisibility",
+    "EntityVisibility",
+    "InternalField",
+    "ReadField",
+    "WriteField",
+]
 
 
-class _DTOVisibility:
+class DTOVisibility:
     """Identify DTO bases without importing DTO construction."""
 
 
@@ -18,42 +24,42 @@ class EntityVisibility:
     """
 
     @property
-    def _fastsprout_visibility(self) -> Any:
+    def fastsprout_visibility(self) -> Any:
         return "entity"
 
 
-class _Readable(Protocol):
+class Readable(Protocol):
     @property
-    def _fastsprout_visibility(
+    def fastsprout_visibility(
         self,
     ) -> Literal["entity", "read", "read_write"]: ...
 
 
-class _Writable(Protocol):
+class Writable(Protocol):
     @property
-    def _fastsprout_visibility(
+    def fastsprout_visibility(
         self,
     ) -> Literal["entity", "write", "read_write"]: ...
 
 
-class _Internal(Protocol):
+class Internal(Protocol):
     @property
-    def _fastsprout_visibility(self) -> Literal["entity"]: ...
+    def fastsprout_visibility(self) -> Literal["entity"]: ...
 
 
-class ReadField[T](Field[T, _Readable]):
+class ReadField[T](Field[T, Readable]):
     """Included in read DTOs, excluded from write-only DTOs."""
 
     __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"read"})
 
 
-class WriteField[T](Field[T, _Writable]):
+class WriteField[T](Field[T, Writable]):
     """Included in write DTOs, excluded from read-only DTOs."""
 
     __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"write"})
 
 
-class InternalField[T](Field[T, _Internal]):
+class InternalField[T](Field[T, Internal]):
     """Accessible on the entity, excluded from every public DTO."""
 
     __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"internal"})

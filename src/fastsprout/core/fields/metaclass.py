@@ -6,7 +6,7 @@ from pydantic._internal._model_construction import ModelMetaclass
 from fastsprout.core.types.undefined import Undefined
 
 from .field import Field, check_field_visibility, model_building_context_var
-from .visibility import _DTOVisibility
+from .visibility import DTOVisibility
 
 __all__ = [
     "TypedModelMeta",
@@ -39,7 +39,7 @@ def read_annotations(namespace: dict[str, Any]) -> dict[str, Any]:
     return anns if anns is not None else {}
 
 
-def _resolve_origin(ann: Any) -> type | None:
+def resolve_origin(ann: Any) -> type | None:
     """Resolve annotation to the underlying Field subclass (or None)."""
     origin = getattr(ann, "__origin__", None)
     if origin is None:
@@ -56,7 +56,7 @@ def _resolve_origin(ann: Any) -> type | None:
 
 def is_field_annotation(ann: Any) -> bool:
     """Check if annotation is `Field[T]` or any Field subclass."""
-    return _resolve_origin(ann) is not None
+    return resolve_origin(ann) is not None
 
 
 def collect_field_names(annotations: dict[str, Any]) -> list[str]:
@@ -72,13 +72,13 @@ def collect_field_descriptors(
     """Map field name -> exact Field subclass extracted from annotation."""
     out: dict[str, type[Field]] = {}
     for name, ann in annotations.items():
-        cls = _resolve_origin(ann)
+        cls = resolve_origin(ann)
         if cls is not None:
             out[name] = cls
     return out
 
 
-def _unwrap_annotation(annotation: Any) -> Any:
+def unwrap_annotation(annotation: Any) -> Any:
     """Field[T, ...] -> T; non-Field -> unchanged."""
     if not is_field_annotation(annotation):
         return annotation
@@ -122,7 +122,7 @@ def unwrap_field_annotations(
     for name, ann in annotations.items():
         if is_field_annotation(ann):
             field_names.append(name)
-            rewritten[name] = _unwrap_annotation(ann)
+            rewritten[name] = unwrap_annotation(ann)
         else:
             rewritten[name] = ann
     annotations.clear()
@@ -150,7 +150,7 @@ def install_descriptors(
         existing = cls.__dict__.get(name)
         if isinstance(existing, brick_cls):
             continue
-        descriptor: Field[Any] = brick_cls._descriptor(name)
+        descriptor: Field[Any] = brick_cls.descriptor(name)
         descriptor.__set_name__(cls, name)
         setattr(cls, name, descriptor)
 
@@ -174,7 +174,7 @@ class TypedModelMeta(ModelMetaclass):
         namespace: dict[str, Any],
         **kwargs: Any,
     ) -> type:
-        if any(issubclass(base, _DTOVisibility) for base in bases):
+        if any(issubclass(base, DTOVisibility) for base in bases):
             return type.__new__(
                 mcs, name, bases, namespace, init=kwargs.get("init", False)
             )
