@@ -3,7 +3,15 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from fastsprout.core import BaseSchema, Field, dataclass, typed_dataclass
+from fastsprout.core import (
+    BaseSchema,
+    Field,
+    InternalField,
+    ReadDTO,
+    dataclass,
+    typed_dataclass,
+    typed_fields,
+)
 
 
 class Hero(BaseSchema):
@@ -90,3 +98,78 @@ def test_dataclass_with_empty_options() -> None:
         name: Field[str]
 
     assert HeroData("Batman").name == "Batman"
+
+
+@typed_fields
+class HeroPower:
+    value: Field[str] = Field(default="Money")
+    items: Field[list[int]] = Field(default_factory=list)
+    tags: Field[list[str]] = Field(default=["hero"])
+    optional: Field[str | None] = Field(default=None)
+
+
+def test_typed_fields_defaults_without_constructor() -> None:
+    power = HeroPower()
+    assert power.value == "Money"
+    assert power.optional is None
+    power.value = "Strength"
+    assert power.value == "Strength"
+
+
+def test_typed_fields_mutable_defaults_are_per_instance() -> None:
+    first, second = HeroPower(), HeroPower()
+    first.items.append(1)
+    first.tags.append("batman")
+    assert first.items == [1]
+    assert second.items == []
+    assert first.tags == ["hero", "batman"]
+    assert second.tags == ["hero"]
+
+
+def test_typed_fields_factory_runs_once_on_first_access() -> None:
+    calls = 0
+
+    def factory() -> str:
+        nonlocal calls
+        calls += 1
+        return "Money"
+
+    @typed_fields
+    class Power:
+        value: Field[str] = Field(default_factory=factory)
+
+    assert Power.value.set("Strength").value == "Strength"
+    assert calls == 0
+    power = Power()
+    assert power.value == "Money"
+    assert power.value == "Money"
+    assert calls == 1
+
+
+def test_typed_fields_required_value_still_raises() -> None:
+    @typed_fields
+    class Required:
+        value: Field[str]
+
+    with pytest.raises(AttributeError, match="has no attribute 'value'"):
+        _ = Required().value
+
+
+def test_read_dto_blocks_internal_default_before_factory_runs() -> None:
+    calls = 0
+
+    def factory() -> str:
+        nonlocal calls
+        calls += 1
+        return "private"
+
+    class User(BaseSchema):
+        name: Field[str]
+        secret: InternalField[str] = InternalField(default_factory=factory)
+
+    class UserRead(ReadDTO, User): ...
+
+    read = UserRead(name="Ada")
+    with pytest.raises(AttributeError, match="not accessible"):
+        read.__getattribute__("secret")
+    assert calls == 0
