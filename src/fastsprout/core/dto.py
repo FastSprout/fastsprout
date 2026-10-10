@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Never
 from .decorators.dataclasses.dataclass import typed_dataclass
 from .fields.field import Field
 from .fields.visibility import _DTOVisibility
+from .types.schema import Schema
 from .types.undefined import Undefined
 
 __all__ = ["ReadDTO", "ReadWriteDTO", "WriteDTO", "dto"]
@@ -37,7 +38,7 @@ class _Definition:
     defaults: dict[str, Callable[[dict[str, Any]], Any]]
 
 
-class _DTO(_DTOVisibility, metaclass=_DTOMeta):
+class _DTO(Schema, _DTOVisibility, metaclass=_DTOMeta):
     __fastsprout_operations__: ClassVar[frozenset[str]]
     __fastsprout_forbidden__: ClassVar[frozenset[str]]
     __fastsprout_source__: ClassVar[type]

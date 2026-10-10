@@ -19,7 +19,7 @@ from sqlmodel import Field as SQLPydField
 from sqlmodel import SQLModel, Table
 from sqlmodel.main import RelationshipInfo, SQLModelMetaclass
 
-from fastsprout.core import Field, InternalField
+from fastsprout.core import Field, InternalField, Schema
 from fastsprout.core.dto import is_dto_base
 from fastsprout.core.fields.field import (
     check_field_visibility,
@@ -183,6 +183,7 @@ class SQLSignpost(Signpost[AbstractAsyncContextManager[AsyncSession]]): ...
 class SQLEntity(
     EntityVisibility,
     SQLModel,
+    Schema,
     HasOrm[Mapped[Any]],
     Entitieable[IDT],
     Generic[IDT],  # noqa: UP046  # SQLModel/pydantic can't build multi-level PEP 695 generics

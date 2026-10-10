@@ -12,7 +12,7 @@ from fastsprout.core.action import (
     BaseTriggerAction,
 )
 from fastsprout.core.depends import DependsClass, inject_depends
-from fastsprout.core.schema import BaseSchema
+from fastsprout.core.schema import Schema
 from fastsprout.events.bus import EventBus
 from fastsprout.events.event import Event, ScheduleEvent
 
@@ -21,13 +21,13 @@ __all__ = ["pub", "sub"]
 
 class PubDecorator(Protocol):
     @overload
-    def __call__[E: Event, R: BaseSchema](
+    def __call__[E: Event, R: Schema](
         self,
         func: BaseAction[E, R],
     ) -> BaseAction[E, R]: ...
 
     @overload
-    def __call__[E: Event, R: BaseSchema | None](
+    def __call__[E: Event, R: Schema | None](
         self,
         func: BaseNullableAction[E, R],
     ) -> BaseNullableAction[E, R]: ...
@@ -61,19 +61,19 @@ class SchedulePubDecorator(Protocol):
 
 class SubDecorator(Protocol):
     @overload
-    def __call__[E: Event, R: BaseSchema | None](
+    def __call__[E: Event, R: Schema | None](
         self,
         func: BaseNullableAction[E, R],
     ) -> BaseNullableAction[E, R]: ...
 
     @overload
-    def __call__[E: Event, R: BaseSchema](
+    def __call__[E: Event, R: Schema](
         self,
         func: BaseSequenceAction[E, R],
     ) -> BaseSequenceAction[E, R]: ...
 
     @overload
-    def __call__[E: Event, R: BaseSchema](
+    def __call__[E: Event, R: Schema](
         self,
         func: BaseAction[E, R],
     ) -> BaseAction[E, R]: ...
@@ -132,7 +132,7 @@ def pub(
     return cast(PubDecorator, wrapper)
 
 
-def sub[T: Event, R: BaseSchema](
+def sub[T: Event, R: Schema](
     *event_types: type[T],
     bus: EventBus = Depends(),  # noqa: B008
 ) -> SubDecorator:

@@ -18,7 +18,7 @@ from .fields import (
     ReadField,
     WriteField,
 )
-from .schema import BaseSchema
+from .schema import BaseSchema, Schema
 from .types.identificable import (
     IdentificatorType,
     IDType,
@@ -44,6 +44,7 @@ __all__ = [
     "ReadDTO",
     "ReadField",
     "ReadWriteDTO",
+    "Schema",
     "Undefined",
     "UndefinedType",
     "WriteDTO",
