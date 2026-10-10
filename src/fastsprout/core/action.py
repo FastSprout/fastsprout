@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator, Iterable, Sequence
 from typing import ClassVar, Protocol, runtime_checkable
 
-from fastsprout.core.schema import Schema
+from fastsprout.core.types.schema import Schema
 
 __all__ = [
     "BaseAction",
