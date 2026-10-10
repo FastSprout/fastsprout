@@ -10,7 +10,15 @@ from .decorators import (
     typed_pyd_dataclass,
 )
 from .depends import DependencyInjector, Depends, inject_depends
-from .dto import ReadDTO, ReadWriteDTO, WriteDTO, dto
+from .dto import (
+    ReadDTO,
+    ReadWriteDTO,
+    WriteDTO,
+    derive_read_dto,
+    derive_read_write_dto,
+    derive_write_dto,
+    dto,
+)
 from .exceptions import BaseFastSproutError, FastSproutError
 from .fields import (
     EntityVisibility,
@@ -52,6 +60,9 @@ __all__ = [
     "WriteDTO",
     "WriteField",
     "dataclass",
+    "derive_read_dto",
+    "derive_read_write_dto",
+    "derive_write_dto",
     "dto",
     "hidden_lazy_await",
     "inject_depends",

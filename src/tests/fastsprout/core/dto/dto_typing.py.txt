@@ -6,6 +6,7 @@ from sqlmodel import Field as SQLField
 from fastsprout.core import (
     BaseSchema, Field, ReadField, WriteField, InternalField,
     ReadDTO, WriteDTO, ReadWriteDTO,
+    derive_read_dto, derive_write_dto, derive_read_write_dto,
 )
 from fastsprout.data.backend.sql import SQLEntity
 
@@ -23,6 +24,10 @@ class UserRead(ReadDTO, User): ...
 class UserCreate(WriteDTO, User): ...
 
 class UserUpdate(ReadWriteDTO, User): ...
+
+assert_type(derive_read_dto(User), type[User])
+assert_type(derive_write_dto(User), type[User])
+assert_type(derive_read_write_dto(User), type[User])
 
 class S(UserRead):
     def display(self) -> str:

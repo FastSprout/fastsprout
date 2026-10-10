@@ -5,10 +5,10 @@ from copy import deepcopy
 from dataclasses import MISSING, fields, is_dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Never
 
-from .fields.field import Field
-from .fields.visibility import DTOVisibility
-from .types.schema import Schema
-from .types.undefined import Undefined
+from ..fields.field import Field
+from ..fields.visibility import DTOVisibility
+from ..types.schema import Schema
+from ..types.undefined import Undefined
 
 __all__ = ["ReadDTO", "ReadWriteDTO", "WriteDTO", "dto", "is_dto_base"]
 

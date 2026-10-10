@@ -13,6 +13,9 @@ from fastsprout.core import (
     ReadWriteDTO,
     WriteDTO,
     WriteField,
+    derive_read_dto,
+    derive_read_write_dto,
+    derive_write_dto,
     dto,
 )
 
@@ -43,7 +46,9 @@ class ChildRead(UserRead):
 class GrandchildRead(ChildRead): ...
 
 
-@pytest.fixture(params=[UserRead, ChildRead, GrandchildRead])
+@pytest.fixture(
+    params=[UserRead, ChildRead, GrandchildRead, derive_read_dto(User)]
+)
 def read(request: pytest.FixtureRequest) -> UserRead:
     return request.param(email="a@b.c", created_at=datetime(2026, 9, 17))
 
@@ -85,13 +90,24 @@ def test_read_guards_all_normal_access(read: UserRead, name: str) -> None:
     assert name not in vars(read)
 
 
-def test_write_and_union_visibility() -> None:
-    create = UserCreate(email="a", password="secret")
+@pytest.mark.parametrize(
+    ("create_type", "update_type"),
+    [
+        (UserCreate, UserUpdate),
+        (derive_write_dto(User), derive_read_write_dto(User)),
+    ],
+)
+def test_write_and_union_visibility(
+    create_type: type[User], update_type: type[User]
+) -> None:
+    create = create_type(email="a", password="secret")
     assert create.password == "secret"
     for name in ("created_at", "password_hash"):
         with pytest.raises(AttributeError, match="not accessible"):
             getattr(create, name)
-    update = UserUpdate(email="a", password="secret", created_at=datetime.now())
+    update = update_type(
+        email="a", password="secret", created_at=datetime.now()
+    )
     assert update.password == "secret"
     assert isinstance(update.created_at, datetime)
     internal_name = "password_hash"
