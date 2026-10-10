@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 from .action import BaseAction, BaseActionGroup, BaseTriggerAction
+from .context import Context
 from .decorators import (
     hidden_lazy_await,
     lazy_await,
@@ -32,6 +33,7 @@ __all__ = [
     "BaseFastSproutError",
     "BaseSchema",
     "BaseTriggerAction",
+    "Context",
     "DependencyInjector",
     "Depends",
     "EntityVisibility",
