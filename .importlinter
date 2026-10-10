@@ -77,6 +77,6 @@ layers =
     decorators
     context
     depends
-    fields
     action | dto | schema
+    fields
     exceptions | types
