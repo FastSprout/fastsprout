@@ -28,9 +28,20 @@ containers =
     fastsprout.actions
     tests.fastsprout.actions
 layers =
-    decorators
     service
     action
+
+
+; === FastSprout-actions-action-level layers ===
+[importlinter:contract:FastSprout-action-workflows-layers-architecture]
+name = FastSprout Actions action Layers Architecture
+type = layers
+containers =
+    fastsprout.actions.action
+    tests.fastsprout.actions.action
+layers =
+    decorator_action
+    class_action | function_action
 
 
 ; === FastSprout-data-level layers ===

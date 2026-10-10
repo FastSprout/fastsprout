@@ -2,37 +2,17 @@
 
 from collections.abc import Awaitable, Callable, Sequence
 
-from fastsprout.core.action import BaseAction
 from fastsprout.core.depends import DependsClass
 from fastsprout.core.depends.invocation import (
     DependencyOwner,
     with_dependencies,
 )
-from fastsprout.core.types.schema import Schema
 
-__all__ = ["Action", "FunctionAction"]
-
-
-class Action[I: Schema, O: Schema](BaseAction[I, O]):
-    """Base for a class action with one typed input and output."""
-
-    dependencies: Sequence[DependsClass] = ()
-
-    def __init__(
-        self, *, dependencies: Sequence[DependsClass] | None = None
-    ) -> None:
-        if dependencies is not None:
-            self.dependencies = dependencies
-
-    def __init_subclass__(cls) -> None:
-        super().__init_subclass__()
-        method = cls.__dict__.get("__call__")
-        if method is not None:
-            type.__setattr__(cls, "__call__", with_dependencies(method))
+__all__ = ["FunctionAction"]
 
 
 class FunctionAction[**P, R]:
-    """Callable object so assignment to a service never binds ``self``."""
+    """Callable object so assignment to a action never binds ``self``."""
 
     def __init__(
         self,
