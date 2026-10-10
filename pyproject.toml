@@ -102,8 +102,8 @@ include = ["src", "examples"]
 typeCheckingMode = "standard"
 
 [[tool.basedpyright.executionEnvironments]]
-root = "src/tests"
-extraPaths = ["."]
+root = "src/tests/fastsprout"
+extraPaths = ["src", "."]
 reportArgumentType = false
 reportOptionalCall = false
 reportCallIssue = false

@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from pydantic import AliasGenerator, BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel, to_snake
 
@@ -25,7 +27,7 @@ class BaseSchema(Schema, EntityVisibility, BaseModel, metaclass=TypedModelMeta):
         Hero.is_active.set(True)        # FieldAssignment[bool]
     """
 
-    model_config = ConfigDict(
+    model_config: ClassVar[ConfigDict] = ConfigDict(
         alias_generator=AliasGenerator(
             alias=to_snake,
             validation_alias=to_camel,

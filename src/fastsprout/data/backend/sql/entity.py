@@ -35,7 +35,7 @@ from fastsprout.core.fields.metaclass import (
 from fastsprout.core.fields.visibility import EntityVisibility
 from fastsprout.core.types import IdentificatorType
 from fastsprout.data.backend.implementation import Signpost
-from fastsprout.data.entity import Entitieable
+from fastsprout.data.entity import Entitieable, Signpostable
 
 __all__ = [
     "SQL_ENTITY_REGISTRY",
@@ -193,6 +193,8 @@ class SQLEntity(
     if TYPE_CHECKING:
         __table__: ClassVar[Table]
 
-    __signpost__: ClassVar[SQLSignpost]  # pyright: ignore[reportIncompatibleVariableOverride]
+    __signpost__: ClassVar[
+        Signpostable[AbstractAsyncContextManager[AsyncSession]]
+    ]
 
     id: Field[IDT]
