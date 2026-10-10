@@ -19,6 +19,20 @@ layers =
     events
     core
 
+
+; === FastSprout-actions-level layers ===
+[importlinter:contract:FastSprout-actions-layers-architecture]
+name = FastSprout Actions Layers Architecture
+type = layers
+containers =
+    fastsprout.actions
+    tests.fastsprout.actions
+layers =
+    decorators
+    service
+    action
+
+
 ; === FastSprout-data-level layers ===
 [importlinter:contract:FastSprout-data-layers-architecture]
 name = FastSprout Data Layers Architecture
@@ -50,3 +64,18 @@ layers =
     backend
     event
     types | consts
+
+
+; === FastSprout-core-level layers ===
+[importlinter:contract:FastSprout-core-layers-architecture]
+name = FastSprout Core Layers Architecture
+type = layers
+containers =
+    fastsprout.core
+    tests.fastsprout.core
+layers =
+    decorators
+    depends
+    fields
+    action | dto | schema
+    exceptions | types
