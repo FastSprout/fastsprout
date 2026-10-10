@@ -1,0 +1,125 @@
+from datetime import datetime
+from typing import assert_type
+from uuid import UUID, uuid4
+
+from sqlmodel import Field as SQLField
+from fastsprout.core import (
+    BaseSchema, Field, ReadField, WriteField, InternalField,
+    ReadDTO, WriteDTO, ReadWriteDTO,
+)
+from fastsprout.data.backend.sql import SQLEntity
+
+class DefaultSQLEntity(SQLEntity[UUID], table=False):
+    id: Field[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+
+class User(DefaultSQLEntity):
+    email: Field[str]
+    password: WriteField[str]
+    password_hash: InternalField[str]
+    created_at: ReadField[datetime]
+
+class UserRead(ReadDTO, User): ...
+
+class UserCreate(WriteDTO, User): ...
+
+class UserUpdate(ReadWriteDTO, User): ...
+
+class S(UserRead):
+    def display(self) -> str:
+        return self.email
+
+class GrandchildRead(S): ...
+
+class ChildCreate(UserCreate): ...
+
+class ChildUpdate(UserUpdate): ...
+
+def display(user: UserRead) -> str:
+    assert_type(user.email, str)
+    assert_type(user.created_at, datetime)
+    assert_type(user.id, UUID)
+    return user.email
+
+def identity[T: User](user: T) -> T:
+    return user
+
+read = UserRead(email="a@b.c", created_at=datetime.now())
+create = UserCreate(email="a@b.c", password="secret")
+update = UserUpdate(email="a", password="secret", created_at=datetime.now())
+assert_type(identity(read), UserRead)
+assert_type(create.password, str)
+assert_type(update.created_at, datetime)
+assert_type(update.password, str)
+assert_type(UserRead.email.set("changed").value, str)
+read.email = "changed"
+create.password = "changed"
+update.created_at = datetime.now()
+
+child = S(email="a", created_at=datetime.now())
+grandchild = GrandchildRead(email="a", created_at=datetime.now())
+child_create = ChildCreate(email="a", password="secret")
+child_update = ChildUpdate(email="a", password="secret", created_at=datetime.now())
+assert_type(identity(child), S)
+assert_type(identity(grandchild), GrandchildRead)
+assert_type(child.id, UUID)
+assert_type(child.email, str)
+assert_type(child.created_at, datetime)
+assert_type(grandchild.display(), str)
+assert_type(S.email.set("changed").value, str)
+assert_type(child_create.password, str)
+assert_type(child_update.password, str)
+assert_type(child_update.created_at, datetime)
+child.email = "changed"
+child_create.password = "changed"
+
+class Schema(BaseSchema):
+    value: ReadField[int] = ReadField(default=1)
+    secret: InternalField[str] = InternalField(default="secret")
+
+schema = Schema()
+assert_type(schema.value, int)
+assert_type(schema.secret, str)
+
+class CoreUser(BaseSchema):
+    name: Field[str]
+    internal: InternalField[int]
+
+class CoreRead(ReadDTO, CoreUser): ...
+
+class CoreChild(CoreRead): ...
+
+core = CoreRead(name="a")
+assert_type(core, CoreRead)
+assert_type(core.name, str)
+core_child = CoreChild(name="a")
+assert_type(core_child.name, str)
+
+def forbidden(read: UserRead, create: UserCreate, update: UserUpdate) -> None:
+    _ = read.password  # error: reportAttributeAccessIssue; mypy: call-overload
+    read.password = "secret"  # error: reportAttributeAccessIssue; mypy: arg-type
+    _ = read.password_hash  # error: reportAttributeAccessIssue; mypy: call-overload
+    read.password_hash = "hash"  # error: reportAttributeAccessIssue; mypy: arg-type
+    _ = UserRead.password  # error: reportAttributeAccessIssue; mypy: arg-type
+    _ = UserRead.password_hash  # error: reportAttributeAccessIssue; mypy: arg-type
+    _ = create.created_at  # error: reportAttributeAccessIssue; mypy: call-overload
+    create.created_at = datetime.now()  # error: reportAttributeAccessIssue; mypy: arg-type
+    _ = create.password_hash  # error: reportAttributeAccessIssue; mypy: call-overload
+    _ = update.password_hash  # error: reportAttributeAccessIssue; mypy: call-overload
+    read.email = 123  # error: reportAttributeAccessIssue; mypy: assignment
+    create.password = 123  # error: reportAttributeAccessIssue; mypy: assignment
+    _ = read.missing  # error: reportAttributeAccessIssue; mypy: attr-defined
+    _ = core.internal  # error: reportAttributeAccessIssue; mypy: call-overload
+    User(email="a")  # error: reportCallIssue; mypy: call-arg, call-arg, call-arg
+    CoreUser(name="a")  # error: reportCallIssue; mypy: call-arg
+    Schema(value="wrong")  # error: reportArgumentType; mypy: arg-type
+    _ = S.password  # error: reportAttributeAccessIssue; mypy: arg-type
+    _ = child.password  # error: reportAttributeAccessIssue; mypy: call-overload
+    child.password = "secret"  # error: reportAttributeAccessIssue; mypy: arg-type
+    _ = GrandchildRead.password_hash  # error: reportAttributeAccessIssue; mypy: arg-type
+    _ = grandchild.password_hash  # error: reportAttributeAccessIssue; mypy: call-overload
+    grandchild.password_hash = "hash"  # error: reportAttributeAccessIssue; mypy: arg-type
+    child.email = 123  # error: reportAttributeAccessIssue; mypy: assignment
+    _ = child.missing  # error: reportAttributeAccessIssue; mypy: attr-defined
+    _ = child_create.created_at  # error: reportAttributeAccessIssue; mypy: call-overload
+    _ = child_update.password_hash  # error: reportAttributeAccessIssue; mypy: call-overload
+    _ = core_child.internal  # error: reportAttributeAccessIssue; mypy: call-overload

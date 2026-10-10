@@ -3,9 +3,8 @@
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import MISSING, fields, is_dataclass
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Never
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Never
 
-from .decorators.dataclasses.dataclass import typed_dataclass
 from .fields.field import Field
 from .fields.visibility import DTOVisibility
 from .types.schema import Schema
@@ -27,8 +26,7 @@ else:
     DTOMeta = type
 
 
-@typed_dataclass(frozen=True)
-class DTODefinition:
+class DTODefinition(NamedTuple):
     allowed: frozenset[str]
     required: frozenset[str]
     defaults: dict[str, Callable[[dict[str, Any]], Any]]
