@@ -79,7 +79,7 @@ class SubDecorator(Protocol):
     ) -> BaseAction[E, R]: ...
 
 
-async def _publish_result(bus: EventBus, result: Any) -> None:
+async def emit_result(bus: EventBus, result: Any) -> None:
     if isinstance(result, Event):
         await bus.publish(result)
     elif isinstance(result, Sequence):
@@ -116,7 +116,7 @@ def pub(
                 else bus
             )
             result = await injected_func(*args, **kwargs)
-            await _publish_result(selected_bus, result)
+            await emit_result(selected_bus, result)
             return result
 
         if on is not None:
