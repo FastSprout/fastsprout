@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import Field as SQLPydField
 
-from fastsprout.core import Depends, Field, inject_depends
+from fastsprout.core import Depends, Field, ReadField, inject_depends
 from fastsprout.data.backend.sql import SQLEntity
 from fastsprout.data.backend.sql.entity import (
     SQL_ENTITY_REGISTRY,
@@ -19,9 +19,7 @@ from fastsprout.events import EventBus, sub
 
 
 class Item(SQLEntity[int]):
-    id: Field[int | None] = SQLPydField(  # pyright: ignore[reportIncompatibleVariableOverride, reportAssignmentType]
-        default=None, primary_key=True
-    )
+    id: ReadField[int] = SQLPydField(primary_key=True)
     name: Field[str] = Field(default="")
 
 
@@ -51,6 +49,21 @@ async def test_reads_and_writes_in_one_context(signpost) -> None:
     async with DataR() as data:
         rows = await data.stream(SQLQuery(entity=Item)).to_list()
         assert sorted(r.name for r in rows) == ["a", "b"]
+
+
+async def test_database_generates_integer_identity(signpost) -> None:
+    item = Item(name="generated")
+    assert "id" not in vars(item)
+
+    async with DataR() as data:
+        created = await data.ability(Item).create(item)
+        assert isinstance(created.id, int)
+        assert created.id == item.id
+
+    async with DataR() as data:
+        found = await data.stream(SQLQuery(entity=Item)).first()
+        assert found is not None
+        assert found.id == created.id
 
 
 async def test_exception_aborts_everything(signpost) -> None:

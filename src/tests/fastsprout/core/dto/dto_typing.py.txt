@@ -10,7 +10,7 @@ from fastsprout.core import (
 from fastsprout.data.backend.sql import SQLEntity
 
 class DefaultSQLEntity(SQLEntity[UUID], table=False):
-    id: Field[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
 
 class User(DefaultSQLEntity):
     email: Field[str]

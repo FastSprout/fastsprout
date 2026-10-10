@@ -27,7 +27,7 @@ class SortField[T](Field[T]): ...
 
 
 class CustomSQLBase(SQLEntity[UUID], table=False):
-    id: Field[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
     code: SearchField[str]
     inherited: SearchField[str]
 
@@ -41,7 +41,7 @@ class CustomSQLRecord(CustomSQLMiddle):
 
 
 class DefaultSQLEntity(SQLEntity[UUID], table=False):
-    id: Field[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
     last_login: InternalField[datetime | None] = InternalField[datetime | None](
         default=None
     )
@@ -55,7 +55,7 @@ class VisibilitySQLUser(DefaultSQLEntity):
 
 
 class Hero(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str] = Field(default="")
     age: Field[int] = Field(default=0)
 

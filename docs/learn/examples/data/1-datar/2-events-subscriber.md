@@ -1,6 +1,6 @@
 # 2. Events Subscriber
 
-<!-- example-source: examples/data/01_datar_02_events_subscriber.py -->
+<!-- example-source: examples/data/01_datar/02_events_subscriber.py -->
 
 Publish a typed CreateEvent when DataR persists an entity.
 
@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import Field as SQLField
 
-from fastsprout.core import Field
+from fastsprout.core import Field, ReadField
 from fastsprout.data import DataR
 from fastsprout.data.backend.sql import SQLEntity
 from fastsprout.data.backend.sql.entity import SQL_ENTITY_REGISTRY, SQLSignpost
@@ -34,7 +34,7 @@ HERO_ID = uuid4()
 class HeroEntity(SQLEntity[UUID]):
     __signpost__ = sqlite_backend
 
-    id: Field[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
     name: Field[str]
 
 

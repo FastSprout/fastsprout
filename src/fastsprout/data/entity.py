@@ -1,9 +1,9 @@
 from collections.abc import Callable
-from typing import Annotated, ClassVar, Protocol, runtime_checkable
+from typing import Annotated, ClassVar, Literal, Protocol, runtime_checkable
 
 from annotated_types import Ge
 
-from fastsprout.core.fields.field import Field
+from fastsprout.core.fields.visibility import ReadField
 from fastsprout.core.schema import BaseSchema
 from fastsprout.core.types.identificable import IdentificatableType
 
@@ -32,7 +32,12 @@ class Entitieable[ID: IdentificatableType](Protocol):
 
     __signpost__: ClassVar[Signpostable]
 
-    id: Field[ID]
+    @property
+    def fastsprout_visibility(
+        self,
+    ) -> Literal["entity", "read", "write", "read_write"]: ...
+
+    id: ReadField[ID]
 
 
 class BaseEntity[ID: IdentificatableType](BaseSchema):
@@ -40,4 +45,4 @@ class BaseEntity[ID: IdentificatableType](BaseSchema):
     # invisible to pydantic (TYPE_CHECKING) and not a model field.
     __signpost__: ClassVar[Signpostable]
 
-    id: Field[ID]
+    id: ReadField[ID]

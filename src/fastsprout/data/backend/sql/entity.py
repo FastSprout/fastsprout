@@ -21,7 +21,7 @@ from sqlmodel import Field as SQLPydField
 from sqlmodel import SQLModel, Table
 from sqlmodel.main import RelationshipInfo, SQLModelMetaclass
 
-from fastsprout.core import Field, InternalField, Schema
+from fastsprout.core import Field, InternalField, ReadField, Schema
 from fastsprout.core.dto import is_dto_base
 from fastsprout.core.fields.field import (
     check_field_visibility,
@@ -200,4 +200,4 @@ class SQLEntity(
         Signpostable[AbstractAsyncContextManager[AsyncSession]]
     ]
 
-    id: Field[IDT]
+    id: ReadField[IDT]

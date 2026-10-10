@@ -57,11 +57,11 @@ reveal_type(Hero.name.orm)
 """
 
 SQL_ENTITY = """
-from fastsprout.core import Field
+from fastsprout.core import Field, ReadField
 from fastsprout.data.backend.sql import SQLEntity
 
 class Hero(SQLEntity[int]):
-    id: Field[int]
+    id: ReadField[int]
     name: Field[str]
 
 reveal_type(Hero.id.orm)

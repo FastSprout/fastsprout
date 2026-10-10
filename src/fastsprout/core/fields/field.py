@@ -14,6 +14,8 @@ from .has_orm import HasOrm
 if TYPE_CHECKING:
     from sqlalchemy.orm import Mapped
 
+    from .visibility import Readable, SQLReadable
+
 __all__ = ["Field", "check_field_visibility", "model_building_context_var"]
 
 model_building_context_var: contextvars.ContextVar[bool] = (
@@ -90,6 +92,13 @@ class Field(Generic[T, FieldOwner]):  # default type parameter on Python 3.12
         return FieldAssignment(self.name, value)
 
     if TYPE_CHECKING:
+
+        @overload
+        def __get__(
+            self: "Field[T, Readable]",
+            instance: None,
+            owner: type[SQLReadable],
+        ) -> FieldRef[SQLReadable, T, Mapped[T]]: ...
 
         @overload
         def __get__(

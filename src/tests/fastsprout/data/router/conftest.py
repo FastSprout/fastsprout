@@ -4,24 +4,24 @@ import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import Field as SQLField
 
-from fastsprout.core import Field
+from fastsprout.core import Field, ReadField
 from fastsprout.data.backend.sql import SQLEntity
 from fastsprout.data.backend.sql.entity import SQLSignpost
 
 
 class JoinOrder(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     customer_id: Field[int]
     product_id: Field[int]
 
 
 class JoinCustomer(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str]
 
 
 class JoinProduct(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str]
 
 

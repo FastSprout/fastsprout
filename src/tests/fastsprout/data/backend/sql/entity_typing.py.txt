@@ -1,16 +1,41 @@
 from typing import assert_type
+from uuid import UUID, uuid4
+from sqlalchemy.orm import Mapped
 from sqlmodel import Field as SQLField
-from fastsprout.core import Field
+from fastsprout.core import Field, ReadDTO, ReadField, WriteDTO
 from fastsprout.data.backend.sql import SQLEntity
 
 class SQLUser(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str]
 
 SQLUser(id=1, name="a")
+assert_type(SQLUser(id=1, name="a").id, int)
 SQLUser(1, "a")  # error: reportCallIssue; mypy: call-arg
 
 def entities[T](source: type[T] | list[T]) -> list[T]:
     return []
 
 assert_type(entities(SQLUser), list[SQLUser])
+
+class Team(SQLEntity[UUID]):
+    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+    name: Field[str]
+
+class TeamRead(ReadDTO, Team): ...
+class TeamCreate(WriteDTO, Team): ...
+class ChildCreate(TeamCreate): ...
+
+assert_type(Team(name="team").id, UUID)
+assert_type(Team.id.orm, Mapped[UUID])
+assert_type(TeamRead(name="team").id, UUID)
+
+def identity(entity: SQLEntity[UUID]) -> UUID:
+    assert_type(entity.id, UUID)
+    return entity.id
+
+def forbidden(create: TeamCreate, child: ChildCreate) -> None:
+    _ = create.id  # error: reportAttributeAccessIssue; mypy: call-overload
+    create.id = uuid4()  # error: reportAttributeAccessIssue; mypy: arg-type
+    _ = TeamCreate.id  # error: reportAttributeAccessIssue; mypy: arg-type
+    _ = child.id  # error: reportAttributeAccessIssue; mypy: call-overload

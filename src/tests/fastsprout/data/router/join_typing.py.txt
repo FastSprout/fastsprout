@@ -3,19 +3,19 @@ from typing import assert_type
 
 from sqlmodel import Field as SQLField
 
-from fastsprout.core import Field
+from fastsprout.core import Field, ReadField
 from fastsprout.data import DataR, JoinedStream
 from fastsprout.data.backend.sql import SQLEntity, SQLQuery
 from fastsprout.data.router.protocols import Routerable
 
 
 class Order(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     customer_id: Field[int]
 
 
 class Customer(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str]
 
 

@@ -1,4 +1,4 @@
-from typing import Any, ClassVar, Literal, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol
 
 from .field import Field
 
@@ -7,6 +7,8 @@ __all__ = [
     "EntityVisibility",
     "InternalField",
     "ReadField",
+    "Readable",
+    "SQLReadable",
     "WriteField",
 ]
 
@@ -33,6 +35,13 @@ class Readable(Protocol):
     def fastsprout_visibility(
         self,
     ) -> Literal["entity", "read", "read_write"]: ...
+
+
+if TYPE_CHECKING:
+    from sqlalchemy import Table
+
+    class SQLReadable(Readable, Protocol):
+        __table__: ClassVar[Table]
 
 
 class Writable(Protocol):

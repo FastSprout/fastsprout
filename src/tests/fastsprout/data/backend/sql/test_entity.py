@@ -2,10 +2,17 @@ import subprocess
 import sys
 from datetime import datetime
 from typing import Any, ClassVar
+from uuid import uuid4
 
 import pytest
 
-from fastsprout.core import Field, InternalField, ReadField, WriteField
+from fastsprout.core import (
+    Field,
+    InternalField,
+    ReadField,
+    WriteDTO,
+    WriteField,
+)
 
 from .base_test_sql_entity import BaseTestSQLEntity
 from .conftest import (
@@ -18,6 +25,9 @@ from .conftest import (
 )
 
 
+class VisibilitySQLUserCreate(WriteDTO, VisibilitySQLUser): ...
+
+
 class TestCustomSQLFields(BaseTestSQLEntity[CustomSQLRecord]):
     _entity_type = CustomSQLRecord
     _data: ClassVar[dict[str, Any]] = {
@@ -28,7 +38,7 @@ class TestCustomSQLFields(BaseTestSQLEntity[CustomSQLRecord]):
     }
     _updated_data: ClassVar[dict[str, Any]] = {"code": "updated"}
     _field_types: ClassVar[dict[str, type[Field[Any, Any]]]] = {
-        "id": Field,
+        "id": ReadField,
         "code": SearchField,
         "sort_key": SortField,
         "inherited": SearchField,
@@ -61,7 +71,7 @@ class TestSQLVisibilityFields(BaseTestSQLEntity[VisibilitySQLUser]):
     }
     _updated_data: ClassVar[dict[str, Any]] = {"password_hash": "updated-hash"}
     _field_types: ClassVar[dict[str, type[Field[Any, Any]]]] = {
-        "id": Field,
+        "id": ReadField,
         "email": Field,
         "password": WriteField,
         "password_hash": InternalField,
@@ -71,6 +81,15 @@ class TestSQLVisibilityFields(BaseTestSQLEntity[VisibilitySQLUser]):
 
     def test_inherited_internal_default(self, entity: VisibilitySQLUser):
         assert entity.last_login is None
+
+
+def test_create_dto_excludes_generated_identity() -> None:
+    user = VisibilitySQLUserCreate(email="a@b.c", password="secret")
+    assert "id" not in vars(user)
+    with pytest.raises(AttributeError, match="not accessible"):
+        user.__getattribute__("id")
+    with pytest.raises(AttributeError, match="not accessible"):
+        VisibilitySQLUserCreate(id=uuid4(), email="a@b.c", password="secret")
 
 
 def test_sql_can_be_imported_in_a_fresh_interpreter() -> None:
