@@ -24,6 +24,15 @@ errors instead of fixing their cause.
 If a required check fails or cannot be run, report this explicitly and do
 not present the work as complete.
 
+The sole private-import exception is `typing._ProtocolMeta` in
+`src/fastsprout/data/backend/sql/entity.py`: it preserves protocol metaclass
+compatibility and static entity types without separate runtime and
+type-checking definitions.
+
+Every suppression (`noqa`, `type: ignore`, `pyright: ignore`, or Pylint
+disable) and every test skip must include a one-sentence explanation of
+the concrete reason. An explanation does not authorize a new suppression.
+
 ## Precise typing
 
 `Any`, `object`, `Unknown`, and other broad types used in place of the actual

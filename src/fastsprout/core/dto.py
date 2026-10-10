@@ -7,42 +7,38 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Never
 
 from .decorators.dataclasses.dataclass import typed_dataclass
 from .fields.field import Field
-from .fields.visibility import _DTOVisibility
+from .fields.visibility import DTOVisibility
 from .types.schema import Schema
 from .types.undefined import Undefined
 
-__all__ = ["ReadDTO", "ReadWriteDTO", "WriteDTO", "dto"]
+__all__ = ["ReadDTO", "ReadWriteDTO", "WriteDTO", "dto", "is_dto_base"]
 
 
 if TYPE_CHECKING:
     from fastsprout.core.fields.metaclass import TypedModelMeta
     from fastsprout.data.backend.sql.entity import TypedSQLMeta
 
-    class _DTOMeta(TypedSQLMeta, TypedModelMeta):
-        """Static view of the DTO branch in the entity metaclasses.
-
-        DTOs bypass model construction, so do not reapply the entity
-        metaclasses' dataclass transforms to their constructors.
-        """
+    class DTOMeta(TypedSQLMeta, TypedModelMeta):
+        """DTO constructors bypass entity dataclass transforms."""
 
 else:
     # Let Python select the source entity's metaclass at runtime. Its DTO
     # branch already skips Pydantic construction and SQLAlchemy mapping.
-    _DTOMeta = type
+    DTOMeta = type
 
 
 @typed_dataclass(frozen=True)
-class _Definition:
+class DTODefinition:
     allowed: frozenset[str]
     required: frozenset[str]
     defaults: dict[str, Callable[[dict[str, Any]], Any]]
 
 
-class _DTO(Schema, _DTOVisibility, metaclass=_DTOMeta):
+class DTO(Schema, DTOVisibility, metaclass=DTOMeta):
     __fastsprout_operations__: ClassVar[frozenset[str]]
     __fastsprout_forbidden__: ClassVar[frozenset[str]]
     __fastsprout_source__: ClassVar[type]
-    __fastsprout_definition__: ClassVar[_Definition]
+    __fastsprout_definition__: ClassVar[DTODefinition]
 
     def __init_subclass__(
         cls, *, init: Literal[False] = False, **kwargs: Any
@@ -53,13 +49,13 @@ class _DTO(Schema, _DTOVisibility, metaclass=_DTOMeta):
         # The visibility bases themselves are declared before dto() below.
         # Concrete DTOs are created after module initialization, when their
         # source entity and its descriptors are already complete.
-        if _DTO not in cls.__bases__:
+        if DTO not in cls.__bases__:
             dto(cls)
 
     def __init__(self, **values: Any) -> None:
-        definition = _definition(type(self))
+        definition = get_definition(type(self))
         for name in values:
-            _check_name(type(self), name, definition)
+            check_name(type(self), name, definition)
         missing = definition.required - values.keys()
         if missing:
             raise TypeError(f"Missing DTO fields: {', '.join(sorted(missing))}")
@@ -72,22 +68,22 @@ class _DTO(Schema, _DTOVisibility, metaclass=_DTOMeta):
     if not TYPE_CHECKING:
 
         def __getattr__(self, name: str) -> Never:
-            _check_name(type(self), name, _definition(type(self)))
+            check_name(type(self), name, get_definition(type(self)))
             raise AttributeError(f"DTO field {name!r} has not been set")
 
     def __setattr__(self, name: str, value: Any) -> None:
-        _check_name(type(self), name, _definition(type(self)))
+        check_name(type(self), name, get_definition(type(self)))
         object.__setattr__(self, name, value)
 
     def __delattr__(self, name: str) -> None:
-        _check_name(type(self), name, _definition(type(self)))
+        check_name(type(self), name, get_definition(type(self)))
         try:
             del vars(self)[name]
         except KeyError:
             raise AttributeError(name) from None
 
     def __repr__(self) -> str:
-        definition = _definition(type(self))
+        definition = get_definition(type(self))
         body = ", ".join(
             f"{key}={value!r}"
             for key, value in self.__dict__.items()
@@ -112,27 +108,27 @@ class _DTO(Schema, _DTOVisibility, metaclass=_DTOMeta):
         raise TypeError("DTOs use their constructor")
 
 
-class ReadDTO(_DTO):
+class ReadDTO(DTO):
     """Use first in the bases of a read DTO, followed by the source entity."""
 
     __fastsprout_operations__: ClassVar[frozenset[str]] = frozenset({"read"})
 
     @property
-    def _fastsprout_visibility(self) -> Literal["read"]:
+    def fastsprout_visibility(self) -> Literal["read"]:
         return "read"
 
 
-class WriteDTO(_DTO):
+class WriteDTO(DTO):
     """Use first in the bases of a write DTO, followed by the source entity."""
 
     __fastsprout_operations__: ClassVar[frozenset[str]] = frozenset({"write"})
 
     @property
-    def _fastsprout_visibility(self) -> Literal["write"]:
+    def fastsprout_visibility(self) -> Literal["write"]:
         return "write"
 
 
-class ReadWriteDTO(_DTO):
+class ReadWriteDTO(DTO):
     """Union of read and write fields; internal fields are still forbidden."""
 
     __fastsprout_operations__: ClassVar[frozenset[str]] = frozenset(
@@ -140,25 +136,25 @@ class ReadWriteDTO(_DTO):
     )
 
     @property
-    def _fastsprout_visibility(self) -> Literal["read_write"]:
+    def fastsprout_visibility(self) -> Literal["read_write"]:
         return "read_write"
 
 
 def is_dto_base(base: type) -> bool:
     """Model metaclasses must not validate or map DTO subclasses."""
-    return issubclass(base, _DTO)
+    return issubclass(base, DTO)
 
 
-def _definition(cls: type[_DTO]) -> _Definition:
+def get_definition(cls: type[DTO]) -> DTODefinition:
     definition = vars(cls).get("__fastsprout_definition__")
-    if not isinstance(definition, _Definition):
+    if not isinstance(definition, DTODefinition):
         raise TypeError(
             "Use a DTO class derived from a visibility base and an entity"
         )
     return definition
 
 
-def _check_name(cls: type[_DTO], name: str, definition: _Definition) -> None:
+def check_name(cls: type[DTO], name: str, definition: DTODefinition) -> None:
     if name in cls.__fastsprout_forbidden__:
         raise AttributeError(
             f"Field {name!r} not accessible in DTO "
@@ -168,35 +164,37 @@ def _check_name(cls: type[_DTO], name: str, definition: _Definition) -> None:
         raise AttributeError(f"Unknown DTO field {name!r}")
 
 
-def _copy_default(value: Any) -> Callable[[dict[str, Any]], Any]:
+def copy_default(value: Any) -> Callable[[dict[str, Any]], Any]:
     return lambda _: deepcopy(value)
 
 
-def _factory_default(
+def factory_default(
     factory: Callable[[], Any],
 ) -> Callable[[dict[str, Any]], Any]:
     return lambda _: factory()
 
 
-def _model_default(field: Any) -> Callable[[dict[str, Any]], Any]:
+def model_default(field: Any) -> Callable[[dict[str, Any]], Any]:
     return lambda data: field.get_default(
         call_default_factory=True, validated_data=data
     )
 
 
-def _defaults(source: type, allowed: frozenset[str]) -> dict[str, Callable]:
+def collect_defaults(
+    source: type, allowed: frozenset[str]
+) -> dict[str, Callable]:
     model_fields = getattr(source, "model_fields", None)
     if model_fields is not None:
         return {
-            name: _model_default(field)
+            name: model_default(field)
             for name, field in model_fields.items()
             if name in allowed and not field.is_required()
         }
     if is_dataclass(source):
         return {
-            field.name: _factory_default(field.default_factory)
+            field.name: factory_default(field.default_factory)
             if field.default_factory is not MISSING
-            else _copy_default(field.default)
+            else copy_default(field.default)
             for field in fields(source)
             if field.name in allowed
             and (
@@ -207,7 +205,7 @@ def _defaults(source: type, allowed: frozenset[str]) -> dict[str, Callable]:
     return {}
 
 
-def _descriptor_defaults(
+def descriptor_defaults(
     descriptors: dict[str, Field],
     allowed: frozenset[str],
     defaults: dict[str, Callable],
@@ -215,12 +213,12 @@ def _descriptor_defaults(
     for name in allowed - defaults.keys():
         field = descriptors[name]
         if field.default_factory is not None:
-            defaults[name] = _factory_default(field.default_factory)
+            defaults[name] = factory_default(field.default_factory)
         elif field.default is not Undefined:
-            defaults[name] = _copy_default(field.default)
+            defaults[name] = copy_default(field.default)
 
 
-def _inherit_definition(cls: type[_DTO]) -> bool:
+def inherit_definition(cls: type[DTO]) -> bool:
     if len(cls.__bases__) != 1:
         return False
     parent = cls.__bases__[0]
@@ -233,11 +231,11 @@ def _inherit_definition(cls: type[_DTO]) -> bool:
     cls.__fastsprout_source__ = parent.__fastsprout_source__
     cls.__fastsprout_operations__ = parent.__fastsprout_operations__
     cls.__fastsprout_forbidden__ = parent.__fastsprout_forbidden__
-    cls.__fastsprout_definition__ = _definition(parent)
+    cls.__fastsprout_definition__ = get_definition(parent)
     return True
 
 
-def _derivation_bases(cls: type[_DTO]) -> tuple[type[_DTO], type]:
+def derivation_bases(cls: type[DTO]) -> tuple[type[DTO], type]:
     if len(cls.__bases__) != 2 or not is_dto_base(cls.__bases__[0]):
         raise TypeError(
             "Declare class Name(ReadDTO | WriteDTO | ReadWriteDTO, Entity)"
@@ -250,7 +248,7 @@ def _derivation_bases(cls: type[_DTO]) -> tuple[type[_DTO], type]:
     return mode, source
 
 
-def dto[C: _DTO](cls: type[C]) -> type[C]:
+def dto[C: DTO](cls: type[C]) -> type[C]:
     """Prepare a visibility-restricted DTO without copying field declarations.
 
     Called automatically when a DTO class is declared. Applying ``@dto``
@@ -265,9 +263,9 @@ def dto[C: _DTO](cls: type[C]) -> type[C]:
     forbidden names at runtime, but does not validate values. Subclasses
     inherit the same fields, defaults, and visibility as their parent DTO.
     """
-    if _inherit_definition(cls):
+    if inherit_definition(cls):
         return cls
-    mode, source = _derivation_bases(cls)
+    mode, source = derivation_bases(cls)
     descriptors = {
         name: value
         for base in reversed(source.__mro__)
@@ -275,7 +273,7 @@ def dto[C: _DTO](cls: type[C]) -> type[C]:
         if isinstance(value, Field)
     }
     relationship_descriptors = {
-        name: kind._descriptor(name)
+        name: kind.descriptor(name)
         for base in reversed(source.__mro__)
         for name, kind in vars(base)
         .get("__fastsprout_descriptors__", {})
@@ -289,11 +287,11 @@ def dto[C: _DTO](cls: type[C]) -> type[C]:
         for name, field in descriptors.items()
         if field.__fastsprout_ops__ & operations
     )
-    defaults = _defaults(source, allowed)
-    _descriptor_defaults(descriptors, allowed, defaults)
+    defaults = collect_defaults(source, allowed)
+    descriptor_defaults(descriptors, allowed, defaults)
     cls.__fastsprout_source__ = source
     cls.__fastsprout_forbidden__ = frozenset(descriptors.keys() - allowed)
-    cls.__fastsprout_definition__ = _Definition(
+    cls.__fastsprout_definition__ = DTODefinition(
         allowed, allowed - defaults.keys(), defaults
     )
     for name, descriptor in relationship_descriptors.items():

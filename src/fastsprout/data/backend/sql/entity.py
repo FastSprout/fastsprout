@@ -1,5 +1,7 @@
 from contextlib import AbstractAsyncContextManager
-from typing import (
+
+# _ProtocolMeta keeps protocol inheritance and static types consistent.
+from typing import (  # pylint: disable=private-name,import-outside-all
     TYPE_CHECKING,
     Any,
     ClassVar,
@@ -41,6 +43,7 @@ __all__ = [
     "SQL_ENTITY_REGISTRY",
     "SQLEntity",
     "SQLSignpost",
+    "TypedSQLMeta",
 ]
 
 IDT = TypeVar("IDT", bound=IdentificatorType)
@@ -48,7 +51,7 @@ IDT = TypeVar("IDT", bound=IdentificatorType)
 SQL_ENTITY_REGISTRY = sa_registry(metadata=MetaData())
 
 
-def _mro_field_names(cls: type) -> list[str]:
+def mro_field_names(cls: type) -> list[str]:
     """All Field-annotated names declared anywhere in the class's MRO."""
     seen: set[str] = set()
     out: list[str] = []
@@ -60,7 +63,7 @@ def _mro_field_names(cls: type) -> list[str]:
     return out
 
 
-def _inject_relationship_keys(
+def inject_relationship_keys(
     name: str,
     annotations: dict[str, Any],
     namespace: dict[str, Any],
@@ -130,7 +133,7 @@ class TypedSQLMeta(SQLModelMetaclass, _ProtocolMeta):
         field_names = list(field_descriptors)
         unwrap_field_annotations(annotations, namespace)
         convert_field_specifiers(namespace, field_names)
-        _inject_relationship_keys(
+        inject_relationship_keys(
             name, annotations, namespace, field_descriptors
         )
         field_names = list(field_descriptors)
@@ -152,7 +155,7 @@ class TypedSQLMeta(SQLModelMetaclass, _ProtocolMeta):
         super().__init__(name, bases, namespace, **kwargs)
         if hasattr(cls, "__table__"):
             model_fields = getattr(cls, "model_fields", {})
-            targets = [n for n in _mro_field_names(cls) if n in model_fields]
+            targets = [n for n in mro_field_names(cls) if n in model_fields]
             mapper_attrs = sa_inspect(cls).attrs
         else:
             targets = cls.__dict__.get("__fastsprout_fields__", [])
@@ -170,7 +173,7 @@ class TypedSQLMeta(SQLModelMetaclass, _ProtocolMeta):
                 if fname in mapper_attrs
                 else None
             )
-            descriptor: Field[Any] = descriptors.get(fname, Field)._descriptor(
+            descriptor: Field[Any] = descriptors.get(fname, Field).descriptor(
                 fname, orm_attr
             )
             descriptor.__set_name__(cls, fname)
