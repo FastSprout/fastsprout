@@ -2,7 +2,7 @@ from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import aclosing, nullcontext
 
 from fastsprout.core.decorators.lazy_await import lazy_await
-from fastsprout.core.depends.scope import invocation_scope
+from fastsprout.core.depends.scope import async_invocation_scope
 from fastsprout.core.types.schema import Schema
 from fastsprout.data.utils.iterable import resolve_any_iterable
 
@@ -36,7 +36,7 @@ async def execute[I: Schema, O: Schema](
 ) -> AsyncGenerator[O, None]:
     if not isinstance(payload, Schema):
         raise TypeError("Workflow input must be a Schema")
-    with invocation_scope():
+    async with async_invocation_scope():
         async with aclosing(resolve_result(action(payload))) as results:
             async for result in results:
                 yield result
