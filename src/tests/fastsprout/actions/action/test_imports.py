@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = Path(__file__).resolve().parents[5]
 EXAMPLES = sorted((ROOT / "examples/actions/01_action").rglob("*.py"))
 
 WITHOUT_SQL = """

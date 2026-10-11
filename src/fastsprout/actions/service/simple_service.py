@@ -6,7 +6,7 @@ from typing import ClassVar
 from fastsprout.core.action import BaseActionGroup
 from fastsprout.core.depends import DependsClass
 
-from .action.decorator_action import decorate_action_group
+from ..action.decorator_action import decorate_action_group
 
 __all__ = ["Service", "decorate_action_group"]
 
