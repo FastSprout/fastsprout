@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 from .bindings import dependency_bindings
 from .injector import inject_depends
 from .marker import DependsClass
-from .scope import invocation_scope
+from .scope import async_invocation_scope
 
 __all__ = ["DependencyOwner", "with_dependencies"]
 
@@ -50,7 +50,7 @@ def with_dependencies[**P, R](
         bindings = InvocationBindings(
             parameters.bind_partial(*args, **kwargs), function.__name__
         )
-        with invocation_scope():
+        async with async_invocation_scope():
             with dependency_bindings(bindings):
                 bound = await inject_depends.ainject(function, args, kwargs)
                 bound.apply_defaults()

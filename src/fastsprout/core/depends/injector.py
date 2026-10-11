@@ -1,6 +1,6 @@
 import asyncio
 import inspect
-from collections.abc import Callable, Sequence
+from collections.abc import AsyncGenerator, Callable, Generator, Sequence
 from functools import wraps
 from typing import (
     Annotated,
@@ -16,8 +16,10 @@ from .bindings import bind_arguments, dependency_key, enter_provider
 from .marker import DependsClass
 from .resolver import DependencyResolver
 from .scope import (
+    async_invocation_scope,
     current_dependency_cache,
     invocation_scope,
+    resolve_yield,
 )
 
 __all__ = ["DependencyInjector", "Depends", "DependsClass", "inject_depends"]
@@ -95,6 +97,8 @@ class DependencyInjector:
         provider: Callable[..., Any], bound: inspect.BoundArguments
     ) -> Any:
         value = provider(*bound.args, **bound.kwargs)
+        if isinstance(value, AsyncGenerator | Generator):
+            return await resolve_yield(value)
         if inspect.isawaitable(value):
             return await value
         return value
@@ -277,7 +281,7 @@ class DependencyInjector:
 
             @wraps(function)
             async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
-                with invocation_scope():
+                async with async_invocation_scope():
                     bound = await self.ainject(function, args, kwargs)
                     return await function(*bound.args, **bound.kwargs)
 
