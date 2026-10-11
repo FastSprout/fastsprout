@@ -2,7 +2,7 @@
 
 from types import new_class
 
-from .base import ReadDTO, ReadWriteDTO, WriteDTO
+from .base import DTO, ReadDTO, ReadWriteDTO, WriteDTO
 
 __all__ = [
     "derive_dto",
@@ -12,9 +12,7 @@ __all__ = [
 ]
 
 
-def derive_dto[E](
-    entity: type[E], mode: type[ReadDTO | WriteDTO | ReadWriteDTO]
-) -> type[E]:
+def derive_dto[E](entity: type[E], mode: type[DTO]) -> type[E]:
     """Cache each source and visibility combination independently.
 
     Visibility is enforced at runtime. For static field restrictions, declare

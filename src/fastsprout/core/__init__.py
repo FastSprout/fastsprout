@@ -11,6 +11,9 @@ from .decorators import (
 )
 from .depends import DependencyInjector, Depends, inject_depends
 from .dto import (
+    ExtraReadDTO,
+    ExtraReadWriteDTO,
+    ExtraWriteDTO,
     ReadDTO,
     ReadWriteDTO,
     WriteDTO,
@@ -22,6 +25,8 @@ from .dto import (
 from .exceptions import BaseFastSproutError, FastSproutError
 from .fields import (
     EntityVisibility,
+    ExtraReadField,
+    ExtraWriteField,
     Field,
     InternalField,
     ReadField,
@@ -45,6 +50,11 @@ __all__ = [
     "DependencyInjector",
     "Depends",
     "EntityVisibility",
+    "ExtraReadDTO",
+    "ExtraReadField",
+    "ExtraReadWriteDTO",
+    "ExtraWriteDTO",
+    "ExtraWriteField",
     "FastSproutError",
     "Field",
     "IDType",

@@ -35,7 +35,15 @@ class Entitieable[ID: IdentificatableType](Protocol):
     @property
     def fastsprout_visibility(
         self,
-    ) -> Literal["entity", "read", "write", "read_write"]: ...
+    ) -> Literal[
+        "entity",
+        "read",
+        "write",
+        "read_write",
+        "extra_read",
+        "extra_write",
+        "extra_read_write",
+    ]: ...
 
     id: ReadField[ID]
 

@@ -1,0 +1,71 @@
+from typing import assert_type
+
+from sqlalchemy.orm import Mapped
+from fastsprout.core import (
+    BaseSchema, Field, ReadField, WriteField, InternalField,
+    ExtraReadField, ExtraWriteField,
+    ReadDTO, WriteDTO, ReadWriteDTO,
+    ExtraReadDTO, ExtraWriteDTO, ExtraReadWriteDTO,
+)
+from fastsprout.core.fields.field_ref import FieldRef
+from fastsprout.data.backend.sql import SQLEntity
+
+class Source(BaseSchema):
+    name: Field[str]
+    read: ReadField[str]
+    write: WriteField[str]
+    details: ExtraReadField[str]
+    override: ExtraWriteField[int]
+    internal: InternalField[str]
+
+class Read(ReadDTO, Source): ...
+class Write(WriteDTO, Source): ...
+class Both(ReadWriteDTO, Source): ...
+class ExtraRead(ExtraReadDTO, Source): ...
+class ExtraWrite(ExtraWriteDTO, Source): ...
+class ExtraBoth(ExtraReadWriteDTO, Source): ...
+class Child(ExtraRead): ...
+
+def values(source: Source, read: ExtraRead, write: ExtraWrite, both: ExtraBoth, child: Child) -> None:
+    assert_type(source.details, str)
+    assert_type(source.override, int)
+    assert_type(read.name, str)
+    assert_type(read.read, str)
+    assert_type(read.details, str)
+    assert_type(write.write, str)
+    assert_type(write.override, int)
+    assert_type(both.details, str)
+    assert_type(both.override, int)
+    assert_type(child.details, str)
+    read.details = "changed"
+    write.override = 1
+    _ = read.override  # error: reportAttributeAccessIssue; mypy: call-overload
+    _ = write.details  # error: reportAttributeAccessIssue; mypy: call-overload
+    _ = both.internal  # error: reportAttributeAccessIssue; mypy: call-overload
+    read.details = 1  # error: reportAttributeAccessIssue; mypy: assignment
+
+def forbidden(read: Read, write: Write, both: Both) -> None:
+    _ = read.details  # error: reportAttributeAccessIssue; mypy: call-overload
+    _ = write.override  # error: reportAttributeAccessIssue; mypy: call-overload
+    _ = both.details  # error: reportAttributeAccessIssue; mypy: call-overload
+    _ = both.override  # error: reportAttributeAccessIssue; mypy: call-overload
+    print(Read.details)  # error: reportAttributeAccessIssue; mypy: type-var
+    print(Write.override)  # error: reportAttributeAccessIssue; mypy: type-var
+    read.details = "hidden"  # error: reportAttributeAccessIssue; mypy: arg-type
+
+class SQLSource(SQLEntity[int]):
+    id: ReadField[int]
+    details: ExtraReadField[str]
+    override: ExtraWriteField[int]
+
+class SQLRead(ExtraReadDTO, SQLSource): ...
+class SQLWrite(ExtraWriteDTO, SQLSource): ...
+class SQLBoth(ExtraReadWriteDTO, SQLSource): ...
+
+assert_type(SQLSource.details, FieldRef[SQLSource, str, Mapped[str]])
+assert_type(SQLRead.details, FieldRef[SQLRead, str, Mapped[str]])
+assert_type(SQLWrite.override, FieldRef[SQLWrite, int, Mapped[int]])
+assert_type(SQLBoth.details, FieldRef[SQLBoth, str, Mapped[str]])
+assert_type(SQLBoth.override, FieldRef[SQLBoth, int, Mapped[int]])
+print(SQLRead.override)  # error: reportAttributeAccessIssue; mypy: type-var
+print(SQLWrite.details)  # error: reportAttributeAccessIssue; mypy: type-var

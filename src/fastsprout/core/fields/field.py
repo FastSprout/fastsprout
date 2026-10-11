@@ -14,7 +14,15 @@ from .has_orm import HasOrm
 if TYPE_CHECKING:
     from sqlalchemy.orm import Mapped
 
-    from .visibility import Readable, SQLReadable
+    from .visibility import (
+        ExtraReadable,
+        ExtraWritable,
+        Readable,
+        SQLExtraReadable,
+        SQLExtraWritable,
+        SQLFields,
+        SQLReadable,
+    )
 
 __all__ = ["Field", "check_field_visibility", "model_building_context_var"]
 
@@ -94,18 +102,32 @@ class Field(Generic[T, FieldOwner]):  # default type parameter on Python 3.12
     if TYPE_CHECKING:
 
         @overload
-        def __get__(
-            self: "Field[T, Readable]",
+        def __get__[E: SQLExtraReadable](
+            self: "Field[T, ExtraReadable]",
             instance: None,
-            owner: type[SQLReadable],
-        ) -> FieldRef[SQLReadable, T, Mapped[T]]: ...
+            owner: type[E],
+        ) -> FieldRef[E, T, Mapped[T]]: ...
 
         @overload
-        def __get__(
+        def __get__[E: SQLExtraWritable](
+            self: "Field[T, ExtraWritable]",
+            instance: None,
+            owner: type[E],
+        ) -> FieldRef[E, T, Mapped[T]]: ...
+
+        @overload
+        def __get__[E: SQLReadable](
+            self: "Field[T, Readable]",
+            instance: None,
+            owner: type[E],
+        ) -> FieldRef[E, T, Mapped[T]]: ...
+
+        @overload
+        def __get__[E: SQLFields](
             self: "Field[T, object]",
             instance: None,
-            owner: type[HasOrm[Mapped[Any]]],
-        ) -> FieldRef[Any, T, Mapped[T]]: ...
+            owner: type[E],
+        ) -> FieldRef[E, T, Mapped[T]]: ...
 
     @overload
     def __get__[OrmCtor](

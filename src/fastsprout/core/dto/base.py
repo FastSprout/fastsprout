@@ -10,7 +10,7 @@ from ..fields.visibility import DTOVisibility
 from ..types.schema import Schema
 from ..types.undefined import Undefined
 
-__all__ = ["ReadDTO", "ReadWriteDTO", "WriteDTO", "dto", "is_dto_base"]
+__all__ = ["DTO", "ReadDTO", "ReadWriteDTO", "WriteDTO", "dto", "is_dto_base"]
 
 
 if TYPE_CHECKING:
@@ -235,11 +235,9 @@ def inherit_definition(cls: type[DTO]) -> bool:
 
 def derivation_bases(cls: type[DTO]) -> tuple[type[DTO], type]:
     if len(cls.__bases__) != 2 or not is_dto_base(cls.__bases__[0]):
-        raise TypeError(
-            "Declare class Name(ReadDTO | WriteDTO | ReadWriteDTO, Entity)"
-        )
+        raise TypeError("Declare class Name(VisibilityDTO, Entity)")
     mode, source = cls.__bases__
-    if mode not in (ReadDTO, WriteDTO, ReadWriteDTO) or is_dto_base(source):
+    if DTO not in mode.__bases__ or is_dto_base(source):
         raise TypeError(
             "Derive each DTO directly from a visibility base and its entity"
         )

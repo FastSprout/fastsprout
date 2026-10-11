@@ -39,3 +39,4 @@ The SQL entity examples need `--extra data-sql`.
 | --- | --- |
 | [04_dto_01_visibility.py](04_dto_01_visibility.py) | Declare fields once, then derive DTOs by choosing a visibility base. |
 | [04_dto_02_sql.py](04_dto_02_sql.py) | Derive a DTO from a SQL entity and extend it with ordinary inheritance. |
+| [04_dto/03_extra_fields.py](04_dto/03_extra_fields.py) | Expose extra read and write fields only when explicitly requested. |

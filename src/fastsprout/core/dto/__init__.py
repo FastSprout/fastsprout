@@ -5,8 +5,12 @@ from .derivation import (
     derive_read_write_dto,
     derive_write_dto,
 )
+from .extra import ExtraReadDTO, ExtraReadWriteDTO, ExtraWriteDTO
 
 __all__ = [
+    "ExtraReadDTO",
+    "ExtraReadWriteDTO",
+    "ExtraWriteDTO",
     "ReadDTO",
     "ReadWriteDTO",
     "WriteDTO",

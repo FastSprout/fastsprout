@@ -5,9 +5,16 @@ from .field import Field
 __all__ = [
     "DTOVisibility",
     "EntityVisibility",
+    "ExtraReadField",
+    "ExtraReadable",
+    "ExtraWritable",
+    "ExtraWriteField",
     "InternalField",
     "ReadField",
     "Readable",
+    "SQLExtraReadable",
+    "SQLExtraWritable",
+    "SQLFields",
     "SQLReadable",
     "WriteField",
 ]
@@ -34,21 +41,45 @@ class Readable(Protocol):
     @property
     def fastsprout_visibility(
         self,
-    ) -> Literal["entity", "read", "read_write"]: ...
+    ) -> Literal[
+        "entity", "read", "read_write", "extra_read", "extra_read_write"
+    ]: ...
+
+
+class ExtraReadable(Protocol):
+    @property
+    def fastsprout_visibility(
+        self,
+    ) -> Literal["entity", "extra_read", "extra_read_write"]: ...
+
+
+class ExtraWritable(Protocol):
+    @property
+    def fastsprout_visibility(
+        self,
+    ) -> Literal["entity", "extra_write", "extra_read_write"]: ...
 
 
 if TYPE_CHECKING:
     from sqlalchemy import Table
 
-    class SQLReadable(Readable, Protocol):
+    class SQLFields(Protocol):
         __table__: ClassVar[Table]
+
+    class SQLReadable(Readable, SQLFields, Protocol): ...
+
+    class SQLExtraReadable(ExtraReadable, SQLFields, Protocol): ...
+
+    class SQLExtraWritable(ExtraWritable, SQLFields, Protocol): ...
 
 
 class Writable(Protocol):
     @property
     def fastsprout_visibility(
         self,
-    ) -> Literal["entity", "write", "read_write"]: ...
+    ) -> Literal[
+        "entity", "write", "read_write", "extra_write", "extra_read_write"
+    ]: ...
 
 
 class Internal(Protocol):
@@ -72,3 +103,15 @@ class InternalField[T](Field[T, Internal]):
     """Accessible on the entity, excluded from every public DTO."""
 
     __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"internal"})
+
+
+class ExtraReadField[T](Field[T, ExtraReadable]):
+    """Excluded from ordinary DTOs; requires extended read visibility."""
+
+    __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"extra_read"})
+
+
+class ExtraWriteField[T](Field[T, ExtraWritable]):
+    """Excluded from ordinary DTOs; requires extended write visibility."""
+
+    __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"extra_write"})
