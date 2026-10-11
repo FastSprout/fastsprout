@@ -1,4 +1,15 @@
-# Repository rules
+# Shared source rules
+
+## Instruction scope
+
+Before modifying files, read the applicable nested `AGENTS.md` files along
+their directory paths. Parent rules remain active; nested rules add local
+requirements and take precedence within their scope when rules conflict.
+Paths in these instructions are relative to the repository root.
+
+- `src/fastsprout/AGENTS.md`: library rules, with module rules in `core/`,
+  `actions/`, `data/`, and `events/`.
+- `src/tests/AGENTS.md`: test structure and reuse.
 
 ## Small, purposeful changes
 
@@ -7,21 +18,6 @@ concrete purpose that supports the requested behavior. A change without a
 clear purpose is a bad change and must be removed. Prefer the smallest
 coherent fix; do not add unrelated refactors, abstractions, or speculative
 features.
-
-## Test structure and reuse
-
-Follow `TestJoinedStreamContext` in
-`src/tests/fastsprout/data/router/test_join_context.py` as the test style reference.
-Group related tests in classes and mark setup, execution, and assertions with
-`# given`, `# when`, and `# then`; use `# when / then` for expected exceptions.
-Extend existing tests and parametrize related cases before adding a new test
-or file. Reuse fixtures, models, and helpers from `conftest.py` and `common.py`
-instead of duplicating setup. Extract shared setup when it is reused, without
-adding helpers or fixtures for a single use.
-For behavior shared by multiple implementations or input types, reuse a base
-test class and vary its factories, types, or fixtures, as in
-`BaseTestSimpleAsyncEntityStream` in
-`src/tests/fastsprout/data/streams/base_test_simple_entity_stream.py`.
 
 ## No code generation
 
@@ -39,11 +35,6 @@ errors instead of fixing their cause.
 If a required check fails or cannot be run, report this explicitly and do
 not present the work as complete.
 
-The sole private-import exception is `typing._ProtocolMeta` in
-`src/fastsprout/data/backend/sql/entity.py`: it preserves protocol metaclass
-compatibility and static entity types without separate runtime and
-type-checking definitions.
-
 Every suppression (`noqa`, `type: ignore`, `pyright: ignore`, or Pylint
 disable) and every test skip must include a one-sentence explanation of
 the concrete reason. An explanation does not authorize a new suppression.
@@ -56,11 +47,6 @@ This also applies to collections and callables without type parameters,
 and to aliases or casts that conceal lost type information.
 Use concrete types, precise protocols, and bounded or constrained generics
 that preserve field, argument, and result types for IDEs and type checkers.
-
-## Explicit module exports
-
-Every Python module under `src/fastsprout` must define `__all__`, including
-package `__init__.py` files. Use an empty list when a module has no exports.
 
 ## No local imports
 

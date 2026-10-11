@@ -5,6 +5,8 @@ site_url: https://fastsprout.dev/dev/
 repo_url: https://github.com/FastSprout/fastsprout
 repo_name: FastSprout/fastsprout
 docs_dir: docs
+exclude_docs: |
+  AGENTS.md
 site_dir: site
 strict: true
 
