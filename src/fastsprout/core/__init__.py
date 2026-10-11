@@ -38,6 +38,7 @@ from .types.identificable import (
     IDType,
     PublicIDType,
 )
+from .types.iterable import Chunk
 from .types.undefined import Undefined, UndefinedType
 
 __all__ = [
@@ -46,6 +47,7 @@ __all__ = [
     "BaseFastSproutError",
     "BaseSchema",
     "BaseTriggerAction",
+    "Chunk",
     "Context",
     "DependencyInjector",
     "Depends",

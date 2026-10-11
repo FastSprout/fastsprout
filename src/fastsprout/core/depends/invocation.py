@@ -6,6 +6,8 @@ from inspect import BoundArguments, Signature, signature
 from typing import Protocol, runtime_checkable
 from uuid import UUID, uuid4
 
+from fastsprout.core.types import Chunk
+
 from .bindings import dependency_bindings
 from .injector import inject_depends
 from .marker import DependsClass
@@ -38,6 +40,23 @@ class InvocationBindings:
         self.bind(arguments)
         return self.token if arguments.arguments else None
 
+    def replace_chunk[T](
+        self, replacement: Chunk[T], bound: BoundArguments
+    ) -> None:
+        names = [
+            name
+            for name, value in bound.arguments.items()
+            if isinstance(value, Chunk)
+        ]
+        if len(names) != 1:
+            raise TypeError(
+                "A Chunk result requires exactly one Chunk argument"
+            )
+        name = names[0]
+        bound.arguments[name] = replacement
+        self.arguments.arguments[name] = replacement
+        self.token = uuid4()
+
 
 def with_dependencies[**P, R](
     function: Callable[P, Awaitable[R]],
@@ -62,7 +81,9 @@ def with_dependencies[**P, R](
                     else ()
                 )
                 for dependency in (*inherited, *dependencies):
-                    await inject_depends.aresolve(dependency, None)
+                    result = await inject_depends.aresolve(dependency, None)
+                    if isinstance(result, Chunk):
+                        bindings.replace_chunk(result, bound)
                 return await function(*bound.args, **bound.kwargs)
 
     return call

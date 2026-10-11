@@ -4,7 +4,7 @@ from .identificable import (
     IDType,
     PublicIDType,
 )
-from .iterable import AnyIterable
+from .iterable import AnyIterable, Chunk
 from .lazy_await import LazyAwait
 from .protocols import ables, identificable
 from .undefined import Undefined, UndefinedType
@@ -14,6 +14,7 @@ __all__ = [
     "AnyCallableEmpty",
     "AnyIterable",
     "AsyncFunction",
+    "Chunk",
     "IDType",
     "IdentificatorType",
     "LazyAwait",
