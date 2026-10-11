@@ -1,6 +1,7 @@
 import asyncio
 from abc import ABC
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from functools import partial
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,10 +35,14 @@ class SQLDataBackend(
 
     @asynccontextmanager
     async def bind(self):
-        """Signpost side of the backend: open a session for the context
-        and yield a clone bound to it."""
+        """Yield the shared finalizer for this SQL session."""
         async with self._signpost.factory() as session:
-            yield SQLFinalizable(session)
+            flow = session.info.get("fastsprout_finalizer")
+            if not isinstance(flow, SQLFinalizable):
+                flow = session.info["fastsprout_finalizer"] = SQLFinalizable(
+                    session
+                )
+            yield flow
 
     @asynccontextmanager
     async def session(self):
@@ -48,10 +53,15 @@ class SQLDataBackend(
     @asynccontextmanager
     async def transaction(self):
         async with self.bind() as flow:
-            async with flow.transaction() as transaction:
-                yield transaction
-                await super()._publish_to_bus(*self.__waited_events)
-                self.__waited_events = []
+            try:
+                async with flow.transaction() as transaction:
+                    yield transaction
+                if self.__waited_events:
+                    flow.after_commit.append(
+                        partial(super()._publish_to_bus, *self.__waited_events)
+                    )
+            finally:
+                self.__waited_events.clear()
 
     def query_for[E: SQLEntity[Any]](self, entity: type[E]) -> SQLQuery[E]:  # pyright: ignore[reportIncompatibleMethodOverride]
         return SQLQuery[E](entity=entity)

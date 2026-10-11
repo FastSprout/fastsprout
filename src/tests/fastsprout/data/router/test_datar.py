@@ -67,22 +67,26 @@ async def test_database_generates_integer_identity(signpost) -> None:
 
 
 async def test_exception_aborts_everything(signpost) -> None:
+    bus = EventBus()
     with pytest.raises(RuntimeError):
-        async with DataR() as data:
+        async with DataR(bus=bus) as data:
             items = data.ability(Item)
             await items.bulk_create([Item(name="x")])
             raise RuntimeError("boom")
 
+    assert [state async for state in await bus.get(CreateEvent[Item])] == []
     async with DataR() as data:
         assert await data.stream(SQLQuery(entity=Item)).to_list() == []
 
 
 async def test_explicit_abort_mid_context(signpost) -> None:
-    async with DataR() as data:
+    bus = EventBus()
+    async with DataR(bus=bus) as data:
         items = data.ability(Item)
         await items.bulk_create([Item(name="x")])
         await data.abort()
 
+    assert [state async for state in await bus.get(CreateEvent[Item])] == []
     async with DataR() as data:
         assert await data.stream(SQLQuery(entity=Item)).to_list() == []
 
@@ -104,6 +108,8 @@ async def test_create_event_uses_concrete_entity_type(signpost) -> None:
 
     async with DataR(bus=bus) as data:
         await data.ability(Item).create(Item(name="created"))
+        assert [state async for state in await bus.get(CreateEvent[Item])] == []
+        await data.finalize()
 
     states = [state async for state in await bus.get(CreateEvent[Item])]
     assert len(states) == 1
@@ -127,6 +133,7 @@ async def test_update_event_reaches_subscriber_through_datar(signpost) -> None:
         count = await data.ability(Item).update_by_query(
             SQLQuery(entity=Item), Item.name.set("after")
         )
+        assert [state async for state in await bus.get(UpdateEvent[Item])] == []
 
     states = [state async for state in await bus.get(UpdateEvent[Item])]
     assert len(states) == 1
@@ -149,6 +156,7 @@ async def test_delete_event_reaches_subscriber_through_datar(signpost) -> None:
 
     async with DataR(bus=bus) as data:
         count = await data.ability(Item).delete(item)
+        assert [state async for state in await bus.get(DeleteEvent[int])] == []
 
     states = [state async for state in await bus.get(DeleteEvent[int])]
     assert len(states) == 1

@@ -2,7 +2,8 @@ from collections.abc import AsyncIterator, Sequence
 from typing import Any, cast
 from uuid import uuid4
 
-from sqlalchemy import and_, column, inspect, update, values
+from sqlalchemy import and_, column, update, values
+from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.base import Mapped
 
 from fastsprout.core.fields.field_assigment import FieldAssignment
@@ -40,7 +41,7 @@ class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLDataBackend):
             async for chunk in stream.chunked():
                 entity_cls = type(chunk[0])
                 table = entity_cls.__table__
-                mapper = inspect(entity_cls)
+                mapper = class_mapper(entity_cls)
                 pk_keys = get_primary_key(entity_cls)
 
                 mappings = [
@@ -55,12 +56,19 @@ class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLDataBackend):
                     continue
 
                 values_cols = [
-                    column(col.key, col.type) for col in mapper.column_attrs
+                    column(col.key, col.columns[0].type)
+                    for col in mapper.column_attrs
                 ]
-                data_view = values(
-                    *values_cols,
-                    name=f"{self.__class__.__name__}_update_data_{uuid4().hex}",
-                ).data(cast(Sequence[tuple[Any, ...]], mappings))
+                data_view = (
+                    values(
+                        *values_cols,
+                        name=f"{self.__class__.__name__}_update_data_{uuid4().hex}",
+                    )
+                    .data([tuple(mapping.values()) for mapping in mappings])
+                    .cte(nesting=True)
+                    .select()
+                    .subquery()
+                )
 
                 where_conditions = [
                     table.c[key] == getattr(data_view.c, key) for key in pk_keys

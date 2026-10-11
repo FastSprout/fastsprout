@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,11 +11,16 @@ __all__ = ["SQLFinalizable"]
 class SQLFinalizable(Finalizable):
     def __init__(self, session: AsyncSession, /) -> None:
         self.__session = session
+        self.after_commit: list[Callable[[], Awaitable[None]]] = []
 
     async def finalize(self) -> None:
+        callbacks, self.after_commit = self.after_commit, []
         await self.__session.commit()
+        for callback in callbacks:
+            await callback()
 
     async def abort(self) -> None:
+        self.after_commit.clear()
         await self.__session.rollback()
 
     @asynccontextmanager
