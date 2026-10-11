@@ -1,5 +1,5 @@
 from collections.abc import AsyncGenerator, Awaitable, Callable
-from contextlib import aclosing, nullcontext
+from contextlib import aclosing
 
 from fastsprout.core.decorators.lazy_await import lazy_await
 from fastsprout.core.depends.scope import async_invocation_scope
@@ -19,13 +19,7 @@ async def resolve_result[O: Schema](
     if isinstance(result, Schema):
         yield result
     elif result is not None:
-        iterator = resolve_any_iterable(result)
-        scope = (
-            aclosing(iterator)
-            if isinstance(iterator, AsyncGenerator)
-            else nullcontext(iterator)
-        )
-        async with scope:
+        async with aclosing(resolve_any_iterable(result)) as iterator:
             async for item in iterator:
                 yield item
 
