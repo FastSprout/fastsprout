@@ -19,6 +19,12 @@ clear purpose is a bad change and must be removed. Prefer the smallest
 coherent fix; do not add unrelated refactors, abstractions, or speculative
 features.
 
+Approaching 500 changed lines of production code (additions and deletions,
+including untracked files) is a large change. Before expanding it, reassess
+whether each part is necessary and can reuse existing code. Simplify or split
+the work into coherent stages where possible; 500 lines is a review trigger,
+not a target or permission to add more code.
+
 ## No code generation
 
 Code generation is prohibited. Do not add Python code generators, `.pyi`
