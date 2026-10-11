@@ -8,6 +8,21 @@ clear purpose is a bad change and must be removed. Prefer the smallest
 coherent fix; do not add unrelated refactors, abstractions, or speculative
 features.
 
+## Test structure and reuse
+
+Follow `TestJoinedStreamContext` in
+`src/tests/fastsprout/data/router/test_join_context.py` as the test style reference.
+Group related tests in classes and mark setup, execution, and assertions with
+`# given`, `# when`, and `# then`; use `# when / then` for expected exceptions.
+Extend existing tests and parametrize related cases before adding a new test
+or file. Reuse fixtures, models, and helpers from `conftest.py` and `common.py`
+instead of duplicating setup. Extract shared setup when it is reused, without
+adding helpers or fixtures for a single use.
+For behavior shared by multiple implementations or input types, reuse a base
+test class and vary its factories, types, or fixtures, as in
+`BaseTestSimpleAsyncEntityStream` in
+`src/tests/fastsprout/data/streams/base_test_simple_entity_stream.py`.
+
 ## No code generation
 
 Code generation is prohibited. Do not add Python code generators, `.pyi`
