@@ -12,7 +12,8 @@ ROOT = Path(__file__).resolve().parents[2]
     [
         pytest.param(example, id=example.relative_to(ROOT).as_posix())
         for example in sorted((ROOT / "examples").rglob("*.py"))
-        if example.read_text(encoding="utf-8").strip()
+        if example.name != "__init__.py"
+        and example.read_text(encoding="utf-8").strip()
     ],
 )
 def test_example_runs(example: Path) -> None:
