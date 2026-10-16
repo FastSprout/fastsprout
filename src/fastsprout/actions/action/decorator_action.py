@@ -2,12 +2,14 @@
 
 import inspect
 from collections.abc import Awaitable, Callable, Sequence
+from types import MethodType
 from typing import Self, get_type_hints, overload
 
 from fastsprout.core.depends import DependsClass, inject_depends
 from fastsprout.core.depends.invocation import with_dependencies
 from fastsprout.core.types import AsyncFunction
 
+from .class_action import Action
 from .function_action import FunctionAction
 
 __all__ = ["action", "decorate_action_group"]
@@ -36,6 +38,21 @@ def decorate_action_group[T](action_group: type[T]) -> type[T]:
     type.__setattr__(action_group, "__action_group__", True)
     annotations = get_type_hints(action_group)
     for name, member in vars(action_group).items():
+        if isinstance(member, Action):
+            call = member.__call__
+            function = inspect.unwrap(
+                call, stop=lambda method, original=call: method is not original
+            )
+            setattr(
+                action_group,
+                name,
+                FunctionAction(
+                    MethodType(function, member),
+                    dependencies=member.dependencies,
+                    source=member,
+                ),
+            )
+            continue
         if isinstance(member, DependsClass):
             setattr(
                 action_group,

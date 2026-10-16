@@ -4,8 +4,9 @@ from typing import Annotated, assert_type
 
 import pytest
 
-from fastsprout.actions import Action, Service, action
+from fastsprout.actions import Action, FunctionAction, Service, action
 from fastsprout.core import Depends, Schema, dataclass, inject_depends
+from fastsprout.core.depends import DependsClass
 
 
 @dataclass
@@ -23,12 +24,14 @@ def current_actor() -> Actor:
 
 
 async def test_function_dependencies_accept_different_signatures() -> None:
+    # given
     calls: list[str] = []
 
     def check_configuration() -> str:
         calls.append("configuration")
         return "ready"
 
+    @action
     async def check_access(
         actor: Annotated[Actor, Depends(current_actor)],
     ) -> None:
@@ -42,7 +45,7 @@ async def test_function_dependencies_accept_different_signatures() -> None:
     @action(
         dependencies=[
             Depends(check_configuration),
-            Depends(check_access),
+            check_access.dependency,
             Depends(check_payload),
         ]
     )
@@ -50,7 +53,10 @@ async def test_function_dependencies_accept_different_signatures() -> None:
         calls.append("action")
         return payload.value
 
+    # when
     result = await execute(Input(42))
+
+    # then
     assert_type(result, int)
     assert result == 42
     assert calls == ["configuration", "access", "payload", "action"]
@@ -69,6 +75,7 @@ async def test_dependencies_reject_before_executing_action() -> None:
 
 
 async def test_class_action_uses_the_same_dependency_execution() -> None:
+    # given
     values: list[int] = []
 
     def check(payload: Input) -> None:
@@ -79,13 +86,30 @@ async def test_class_action_uses_the_same_dependency_execution() -> None:
             return Input(payload.value * 2)
 
     execute = Execute(dependencies=[Depends(check)])
+
+    class Checks(Service):
+        async def verify(self, payload: Input) -> None:
+            values.append(-payload.value)
+
+    checks = Checks()
+
+    @action(dependencies=[Depends(execute), Depends(checks.verify)])
+    async def submit(payload: Input) -> int:
+        return payload.value
+
+    # when
     result = await execute(Input(21))
+    submitted = await submit(Input(42))
+
+    # then
     assert_type(result, Input)
     assert result.value == 42
-    assert values == [21]
+    assert submitted == 42
+    assert values == [21, 42, -42]
 
 
 async def test_service_and_function_dependencies_share_cache() -> None:
+    # given
     calls: list[str] = []
 
     def shared() -> Actor:
@@ -106,11 +130,22 @@ async def test_service_and_function_dependencies_share_cache() -> None:
             return payload.value
 
     documents = Documents(dependencies=[Depends(shared)])
+
+    submit = FunctionAction(
+        execute.__wrapped__, dependencies=[documents.run.dependency]
+    )
+
+    # when / then
+    assert_type(Documents.run.dependency, DependsClass)
+    assert_type(documents.run.dependency, DependsClass)
     assert await documents.run(Input(42)) == 42
     assert calls == ["shared", "local"]
     calls.clear()
     assert await documents.render(Input(42)) == 42
     assert calls == ["shared"]
+    calls.clear()
+    assert await submit(Input(42)) == 42
+    assert calls == ["shared", "local"]
 
 
 async def test_dependencies_apply_to_overridden_service_methods() -> None:

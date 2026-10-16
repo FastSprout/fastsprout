@@ -7,6 +7,7 @@ from typing import Protocol, runtime_checkable
 from uuid import UUID, uuid4
 
 from fastsprout.core.types import Chunk
+from fastsprout.core.types.protocols.ables import Hashable
 
 from .bindings import dependency_bindings
 from .injector import inject_depends
@@ -28,6 +29,8 @@ class InvocationBindings:
         operation: str,
     ) -> None:
         self.token = uuid4()
+        self.providers: set[Hashable] = set()
+        self.cache_keys: set[Hashable] = set()
         self.arguments = arguments
         self.arguments.apply_defaults()
         self.arguments.arguments.setdefault("operation", operation)
@@ -35,10 +38,16 @@ class InvocationBindings:
     def bind(self, arguments: BoundArguments) -> None:
         inject_depends.bind(arguments, self.arguments)
 
-    def key(self, signature: Signature) -> UUID | None:
+    def key[**P, R](
+        self, signature: Signature, provider: Callable[P, R]
+    ) -> UUID | None:
         arguments = signature.bind_partial()
         self.bind(arguments)
-        return self.token if arguments.arguments else None
+        return (
+            self.token
+            if arguments.arguments or provider in self.providers
+            else None
+        )
 
     def replace_chunk[T](
         self, replacement: Chunk[T], bound: BoundArguments
@@ -69,18 +78,20 @@ def with_dependencies[**P, R](
         bindings = InvocationBindings(
             parameters.bind_partial(*args, **kwargs), function.__name__
         )
+        owner = bindings.arguments.arguments.get("self")
+        inherited = (
+            owner.dependencies if isinstance(owner, DependencyOwner) else ()
+        )
+        checks = (*inherited, *dependencies)
+        bindings.providers = {
+            inject_depends.provider(dependency, None) for dependency in checks
+        }
         async with async_invocation_scope():
             with dependency_bindings(bindings):
                 bound = await inject_depends.ainject(function, args, kwargs)
                 bound.apply_defaults()
                 bindings.arguments.arguments.update(bound.arguments)
-                owner = bound.arguments.get("self")
-                inherited = (
-                    owner.dependencies
-                    if isinstance(owner, DependencyOwner)
-                    else ()
-                )
-                for dependency in (*inherited, *dependencies):
+                for dependency in checks:
                     result = await inject_depends.aresolve(dependency, None)
                     if isinstance(result, Chunk):
                         bindings.replace_chunk(result, bound)

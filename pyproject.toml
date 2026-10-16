@@ -94,6 +94,9 @@ line-length = 80
 [tool.ruff.lint.mccabe]
 max-complexity = 5
 
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastsprout.core.Depends"]
+
 [tool.ruff.lint.flake8-annotations]
 mypy-init-return = true
 

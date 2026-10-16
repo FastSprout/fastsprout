@@ -1,27 +1,76 @@
+import asyncio
+from weakref import ReferenceType, ref
+
+import pytest
+
 from fastsprout.core import Depends, inject_depends
 from fastsprout.core.depends.invocation import with_dependencies
+from fastsprout.core.depends.scope import current_dependency_cache
 
 
-@inject_depends
-async def test_nested_providers_without_operation_arguments_share_cache():
-    calls: list[str] = []
+class TestInvocationDependencies:
+    calls: list[str]
+    values: list[ReferenceType[memoryview]]
+    failure: type[BaseException] | None
 
-    def source() -> int:
-        calls.append("source")
+    def source(self) -> int:
+        self.calls.append("source")
         return 7
 
-    def nested(value: int = Depends(source)) -> int:
-        calls.append("nested")
+    def transient(self) -> memoryview:
+        value = memoryview(b"dependency result")
+        self.values.append(ref(value))
         return value
 
-    def check(operation: str, value: int = Depends(nested)) -> None:
-        assert value == 7
-        calls.append(operation)
+    async def execute(self, operation: str) -> None:
+        self.calls.append(operation)
+        if operation == "abort" and self.failure is not None:
+            raise self.failure
 
-    async def execute(operation: str) -> None:
-        pass
+    @pytest.mark.parametrize("use_cache", [True, False])
+    @pytest.mark.parametrize(
+        "failure", [None, ValueError, asyncio.CancelledError]
+    )
+    @inject_depends
+    async def test_nested_providers_without_operation_arguments_share_cache(
+        self, use_cache: bool, failure: type[BaseException] | None
+    ) -> None:
+        # given
+        self.calls = []
+        self.values = []
+        self.failure = failure
 
-    guarded = with_dependencies(execute, [Depends(check)])
-    await guarded("create")
-    await guarded("delete")
-    assert calls == ["source", "nested", "create", "delete"]
+        def nested(value: int = Depends(self.source)) -> int:
+            self.calls.append("nested")
+            return value
+
+        def check(operation: str, value: int = Depends(nested)) -> None:
+            assert value == 7
+
+        guarded = with_dependencies(
+            self.execute,
+            [Depends(check), Depends(self.transient, use_cache=use_cache)],
+        )
+
+        # when
+        await guarded("create")
+        await guarded("delete")
+
+        # then
+        assert self.calls == ["source", "nested", "create", "delete"]
+        cache = current_dependency_cache()
+        assert cache is not None
+        shared_size = len(cache)
+
+        # when
+        for _ in range(20):
+            await guarded("update")
+        if failure is not None:
+            # when / then
+            with pytest.raises(failure):
+                await guarded("abort")
+
+        # then
+        assert all(value() is None for value in self.values)
+        assert len(cache) == shared_size
+        assert self.calls.count("source") == self.calls.count("nested") == 1

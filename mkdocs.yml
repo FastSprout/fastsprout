@@ -94,7 +94,9 @@ nav:
   - Getting Started: getting-started.md
   - Events: guide/events.md
   - Learn: learn/examples/index.md
-  - Reference: reference.md
+  - Reference:
+      - Overview: reference.md
+      - Dependencies: guide/dependencies.md
   - API Reference:
       - Overview: api/index.md
       - Core: api/core.md

@@ -1,8 +1,16 @@
 import asyncio
 from typing import Annotated, assert_type
 
+import pytest
+
 from fastsprout.actions import Action, Service, action
-from fastsprout.core import BaseActionGroup, Depends, Schema, dataclass
+from fastsprout.core import (
+    BaseActionGroup,
+    Depends,
+    Schema,
+    dataclass,
+    inject_depends,
+)
 
 
 @dataclass
@@ -34,12 +42,34 @@ class HeroesService(BaseHeroesService):
         return await self.strengthen(payload)
 
 
-async def test_service_inherits_actions() -> None:
+async def test_service_inherits_actions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # given
+    checks: list[str] = []
+
+    def check() -> None:
+        checks.append("check")
+
+    monkeypatch.setattr(BaseHeroesService, "dependencies", [Depends(check)])
     heroes = HeroesService()
-    assert isinstance(heroes, BaseActionGroup)
+
+    # when
     result = await heroes.get(10)
+    await heroes.get(20)
+    await heroes.boost(StrengthenHero(10))
+
+    # then
+    assert isinstance(heroes, BaseActionGroup)
     assert_type(result, StrengthenHero)
     assert result.power == 10
+    assert checks == ["check"] * 4
+
+    # when
+    await HeroesService(dependencies=[]).get(10)
+
+    # then
+    assert checks == ["check"] * 4
 
 
 async def test_service_methods_keep_typing_and_dependency_injection() -> None:
@@ -82,22 +112,66 @@ async def test_unused_service_dependency_is_not_resolved() -> None:
     assert await DocumentsService().render("document") == "document"
 
 
-async def test_service_can_compose_class_actions_and_bound_service_methods() -> (
-    None
-):
+async def test_service_can_compose_class_actions_and_bound_service_methods(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # given
+    calls: list[str] = []
+
+    def shared() -> None:
+        calls.append("shared")
+
+    def local() -> None:
+        calls.append("local")
+
     class Strengthen(Action[StrengthenHero, StrengthenHero]):
         async def __call__(self, payload: StrengthenHero) -> StrengthenHero:
+            calls.append("action")
             return StrengthenHero(payload.power + 1)
 
+    strengthen = Strengthen(dependencies=[Depends(shared), Depends(local)])
     heroes = HeroesService()
 
     class ComposedService(Service):
-        strengthen = Strengthen()
+        execute = strengthen
         boost = heroes.boost
 
-    composed = ComposedService()
-    assert (await composed.strengthen(StrengthenHero(10))).power == 11
+    composed = ComposedService(dependencies=[Depends(shared)])
+
+    # when
+    first = await composed.execute(StrengthenHero(10))
+    second = await composed.execute(StrengthenHero(20))
+
+    # then
+    assert_type(first, StrengthenHero)
+    assert (first.power, second.power) == (11, 21)
+    assert calls == ["shared", "local", "action"] * 2
+
+    # when
     assert (await composed.boost(StrengthenHero(10))).power == 12
+
+    # then
+    assert calls[-1] == "shared"
+
+    # given
+    monkeypatch.setitem(
+        inject_depends.dependency_overrides, strengthen, heroes.strengthen
+    )
+    result_dependency = Depends(composed.execute)
+
+    @action(dependencies=[result_dependency])
+    async def submit(
+        payload: StrengthenHero, result: StrengthenHero = result_dependency
+    ) -> StrengthenHero:
+        return result
+
+    # when
+    calls.clear()
+    result = await submit(StrengthenHero(10))
+
+    # then
+    assert result.power == 12
+    assert calls == []
 
 
 async def test_concurrent_actions_resolve_cached_dependency_once() -> None:

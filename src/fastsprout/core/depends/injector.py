@@ -2,17 +2,10 @@ import asyncio
 import inspect
 from collections.abc import AsyncGenerator, Callable, Generator, Sequence
 from functools import wraps
-from typing import (
-    Annotated,
-    Any,
-    cast,
-    get_args,
-    get_origin,
-    get_type_hints,
-)
+from typing import Annotated, Any, cast, get_args, get_origin, get_type_hints
 from uuid import UUID
 
-from .bindings import bind_arguments, dependency_key, enter_provider
+from .bindings import bind_arguments, cache_key, dependency_key, enter_provider
 from .marker import DependsClass
 from .resolver import DependencyResolver
 from .scope import (
@@ -63,16 +56,19 @@ class DependencyInjector:
             raise TypeError(
                 "Depends() needs a provider or a callable annotation"
             )
-        return self.dependency_overrides.get(
-            dependency, self.dependency_providers.get(dependency, dependency)
-        )
+        sources = (dependency, inspect.unwrap(dependency))
+        for providers in (self.dependency_overrides, self.dependency_providers):
+            for source in sources:
+                if source in providers:
+                    return providers[source]
+        return dependency
 
     def dependency_key[**P, R](
         self, provider: Callable[P, R], active: frozenset[int] = frozenset()
     ) -> UUID | None:
         enter_provider(id(provider), seen := set(active))
         bound, dependencies = self.arguments(provider, (), {})
-        key = dependency_key(bound.signature)
+        key = dependency_key(bound.signature, provider)
         for _, marker, annotation in dependencies:
             if isinstance(marker, DependsClass):
                 nested = self.dependency_key(
@@ -170,7 +166,7 @@ class DependencyInjector:
             )
         provider = self.provider(marker, annotation)
         bound, dependencies = self.arguments(provider, (), {})
-        key = (self, provider, self.dependency_key(provider))
+        key = cache_key(self, provider, self.dependency_key(provider))
         if marker.use_cache and key in cache:
             return cache[key]
         enter_provider(provider, active)
@@ -203,7 +199,7 @@ class DependencyInjector:
             )
         provider = self.provider(marker, annotation)
         bound, dependencies = self.arguments(provider, (), {}, supplied)
-        key = (self, provider, self.dependency_key(provider))
+        key = cache_key(self, provider, self.dependency_key(provider))
         enter_provider(provider, active)
         try:
             async with cache.setdefault((key, "lock"), asyncio.Lock()):
