@@ -188,8 +188,8 @@ class DataR(Routerable):
             )
         return ability
 
-    def stream[E: Entitieable[Any]](
-        self, q: BaseQuery[E, Any]
+    def stream[E: Entitieable[Any], StatementT](
+        self, q: BaseQuery[E, StatementT]
     ) -> AsyncEntityStream[E]:
         if isinstance(q, BaseQuery):
             self.__init_bindings__.add(q.entity)

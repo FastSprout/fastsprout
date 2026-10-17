@@ -2,7 +2,6 @@ import asyncio
 from collections.abc import (
     AsyncGenerator,
     AsyncIterable,
-    Awaitable,
     Callable,
     Hashable,
 )
@@ -10,11 +9,13 @@ from contextlib import aclosing
 from inspect import isawaitable, iscoroutinefunction
 
 from fastsprout.data.streams.context import in_join_context
+from fastsprout.data.streams.protocols.joined_stream import (
+    AsyncJoinedStream,
+    JoinKey,
+)
 from fastsprout.data.utils.iterable import resolve_any_iterable
 
 __all__ = ["JoinKey", "JoinedStream"]
-
-type JoinKey[T] = Callable[[T], Hashable | Awaitable[Hashable]]
 
 
 async def resolve_key[T](callback: JoinKey[T], item: T) -> Hashable:
@@ -26,7 +27,7 @@ async def resolve_key[T](callback: JoinKey[T], item: T) -> Hashable:
     return await result if isawaitable(result) else result
 
 
-class JoinedStream[*Ts]:
+class JoinedStream[*Ts](AsyncJoinedStream[*Ts]):
     """Lazy inner joins producing flat, statically typed tuples.
 
     Each step buffers its right source in a hash index, then streams the

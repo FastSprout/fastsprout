@@ -1,5 +1,7 @@
+from collections.abc import Hashable
 from typing import Any, Protocol, runtime_checkable
 
+from fastsprout.core.fields.field_ref import FieldRef
 from fastsprout.core.types import AnyIterable
 from fastsprout.core.types.protocols.ables import RichComparisonable
 from fastsprout.data.entity import Entitieable
@@ -12,6 +14,7 @@ from fastsprout.data.types import (
 )
 
 from .common_stream import AsyncCommonStream
+from .joined_stream import AsyncJoinedStream
 from .value_stream import AsyncValueStream
 
 __all__ = ["AsyncEntityStream"]
@@ -24,6 +27,13 @@ class AsyncEntityStream[E: Entitieable](AsyncCommonStream[E], Protocol):
     Transformations are lazy. Terminal operations materialize results.
     Use `map_to_stream(key)` to extract values and exit the entity-stream.
     """
+
+    def join[F: Entitieable, Key: Hashable, LeftOrm, RightOrm](
+        self,
+        other: "AsyncEntityStream[F]",
+        *,
+        on: tuple[FieldRef[E, Key, LeftOrm], FieldRef[F, Key, RightOrm]],
+    ) -> AsyncJoinedStream[E, F]: ...
 
     def concat(
         self, *others: "AsyncEntityStream[E] | AnyIterable[E]"

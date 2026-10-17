@@ -13,6 +13,38 @@ from .conftest import JoinCustomer, JoinOrder
 @pytest.mark.usefixtures("databases")
 class TestJoinedStreamContext:
     @pytest.mark.parametrize("shared", [False, True])
+    @pytest.mark.parametrize("nested", [False, True])
+    async def test_field_join_requires_one_context(
+        self, shared: bool, nested: bool
+    ) -> None:
+        # given
+        async with DataR() as first, DataR() as second:
+            other = first if shared else second
+            left = first.stream(SQLQuery(JoinCustomer))
+            # when
+            stream = left.join(
+                other.stream(SQLQuery(JoinCustomer)),
+                on=(JoinCustomer.id, JoinCustomer.id),
+            )
+            joined = (
+                stream.join(
+                    stream, on=(lambda row: row[0].id, lambda row: row[0].id)
+                )
+                if nested
+                else stream
+            )
+            if shared:
+                # then
+                assert [(row[0].id, row[1].id) async for row in joined] == [
+                    (10, 10),
+                    (11, 11),
+                ]
+            else:
+                # when / then
+                with pytest.raises(MixedStreamContextsError):
+                    _ = [row async for row in joined]
+
+    @pytest.mark.parametrize("shared", [False, True])
     @pytest.mark.parametrize(
         "transform",
         [

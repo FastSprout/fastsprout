@@ -37,8 +37,8 @@ class Routerable(Finalizable, Protocol):
         self, entity: type[E]
     ) -> DataAbilitable[E, Any, BaseQuery[E, Any], Finalizable]: ...
 
-    def stream[E: Entitieable[Any]](
-        self, q: BaseQuery[E, Any]
+    def stream[E: Entitieable[Any], StatementT](
+        self, q: BaseQuery[E, StatementT]
     ) -> AsyncEntityStream[E]: ...
 
     def join[E: Entitieable[Any], StatementT](

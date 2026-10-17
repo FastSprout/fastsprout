@@ -47,6 +47,12 @@ async def check_streams(numbers: AsyncIterable[int], words: AsyncIterable[str], 
 
 
 async def check_router(data: DataR, protocol: Routerable, other: DataR) -> None:
+    native = data.stream(SQLQuery(Order)).join(data.stream(SQLQuery(Customer)), on=(Order.customer_id, Customer.id))
+    assert_type(await native.to_list(), list[tuple[Order, Customer]])
+    chained = native.join(data.stream(SQLQuery(Customer)), on=(lambda row: row[1].id, lambda customer: customer.id))
+    assert_type(await chained.to_list(), list[tuple[Order, Customer, Customer]])
+    nested = native.join(native, on=(lambda row: row[0].id, lambda row: row[0].id))
+    assert_type(await nested.to_list(), list[tuple[Order, Customer, tuple[Order, Customer]]])
     first = data.join(SQLQuery(entity=Order))
     assert_type(await first.to_list(), list[tuple[Order]])
     assert_type(await protocol.join(SQLQuery(entity=Order)).to_list(), list[tuple[Order]])

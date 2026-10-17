@@ -1,9 +1,10 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator, Hashable
 from contextlib import AbstractAsyncContextManager
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 from sqlalchemy.sql import Select
 from sqlmodel import Column
 
@@ -13,8 +14,10 @@ from fastsprout.core.types.protocols.ables import RichComparisonable
 from fastsprout.data.backend.implementation import BaseDataBackend
 from fastsprout.data.backend.sql.data_backend import SQLDataBackend
 from fastsprout.data.backend.sql.entity import SQLEntity, SQLSignpost
-from fastsprout.data.entity import Signpostable
+from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
+from fastsprout.data.entity import Entitieable, Signpostable
 from fastsprout.data.streams.implementation import (
+    JoinedStream,
     SimpleAsyncEntityStream,
 )
 from fastsprout.data.streams.protocols import (
@@ -72,6 +75,49 @@ class SQLEntityStream[E: SQLEntity[Any]](
 
     def __aiter__(self) -> AsyncIterator[E]:
         return self.scalars(self._stmt)
+
+    def join[F: Entitieable, Key: Hashable, LeftOrm, RightOrm](
+        self,
+        other: AsyncEntityStream[F],
+        *,
+        on: tuple[FieldRef[E, Key, LeftOrm], FieldRef[F, Key, RightOrm]],
+    ) -> JoinedStream[E, F]:
+        if (
+            not isinstance(other, SQLEntityStream)
+            or self._signpost is not other._signpost
+        ):
+            return super().join(other, on=on)
+        left_field, right_field = on
+        left_select = self._stmt.subquery()
+        right_select = other._stmt.subquery()
+        left = aliased(left_field.entity_cls, left_select)
+        right = aliased(right_field.entity_cls, right_select)
+        left_column = left_select.c[left_field.name]
+        right_column = right_select.c[right_field.name]
+        statement = select(left, right).join(
+            right,
+            or_(
+                left_column == right_column,
+                left_column.is_(None) & right_column.is_(None),
+            ),
+        )
+
+        async def rows() -> AsyncGenerator[tuple[E, F], None]:
+            async with self.session() as session:
+                result = await session.stream(
+                    statement,
+                    execution_options={
+                        "yield_per": DEFAULT_ITERATION_CHUNK_SIZE
+                    },
+                )
+                try:
+                    async for row in result.tuples():
+                        self._check_stream_context()
+                        yield row
+                finally:
+                    await result.close()
+
+        return JoinedStream.from_factory(rows)
 
     def take(self, n: int) -> "SQLEntityStream[E]":
         return self._clone(self._stmt.limit(n))
