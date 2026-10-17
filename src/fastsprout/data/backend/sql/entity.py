@@ -1,13 +1,10 @@
 from contextlib import AbstractAsyncContextManager
-
-# _ProtocolMeta keeps protocol inheritance and static types consistent.
-from typing import (  # pylint: disable=private-name,import-outside-all
+from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
     Generic,
     TypeVar,
-    _ProtocolMeta,
     dataclass_transform,
     get_args,
 )
@@ -34,7 +31,6 @@ from fastsprout.core.fields.metaclass import (
     read_annotations,
     unwrap_field_annotations,
 )
-from fastsprout.core.fields.visibility import EntityVisibility
 from fastsprout.core.types import IdentificatorType
 from fastsprout.data.backend.implementation import Signpost
 from fastsprout.data.entity import Entitieable, Signpostable
@@ -104,7 +100,7 @@ def inject_relationship_keys(
 @dataclass_transform(
     kw_only_default=True, field_specifiers=(Field, SQLPydField)
 )
-class TypedSQLMeta(SQLModelMetaclass, _ProtocolMeta):
+class TypedSQLMeta(SQLModelMetaclass):
     """SQLModel metaclass + fastsprout Field installation.
 
     1. __new__: unwrap Field[T] → T for Pydantic/SQLModel
@@ -184,7 +180,6 @@ class SQLSignpost(Signpost[AbstractAsyncContextManager[AsyncSession]]): ...
 
 
 class SQLEntity(
-    EntityVisibility,
     SQLModel,
     Schema,
     HasOrm[Mapped[Any]],
