@@ -51,14 +51,7 @@ class SQLValueStream[T: Valuable](
         return SQLValueStream(stmt, self._signpost)
 
     def __aiter__(self) -> AsyncIterator[T]:
-        async def gen() -> AsyncIterator[T]:
-            async with self.session() as session:
-                result = await session.stream(self._stmt)
-                async for item in result.scalars():
-                    self._check_stream_context()
-                    yield item
-
-        return gen()
+        return self.scalars(self._stmt)
 
     async def _aggregate(self, fn: Any) -> Any:
         sub = self._stmt.subquery()

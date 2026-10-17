@@ -1,15 +1,18 @@
 import asyncio
 from abc import ABC
+from collections.abc import AsyncGenerator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from functools import partial
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
 from fastsprout.core import Undefined, UndefinedType
 from fastsprout.data.backend.implementation.data_backend import BaseDataBackend
 from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.finalizer import SQLFinalizable
+from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.entity import Signpostable
 from fastsprout.events import EventBus
 from fastsprout.events.event import Eventable
@@ -49,6 +52,21 @@ class SQLDataBackend(
         async with self.bind() as flow:
             async with flow.session() as session:
                 yield session
+
+    async def scalars[T](
+        self, statement: Select[tuple[T]]
+    ) -> AsyncGenerator[T, None]:
+        async with self.session() as session:
+            result = await session.stream(
+                statement,
+                execution_options={"yield_per": DEFAULT_ITERATION_CHUNK_SIZE},
+            )
+            try:
+                async for item in result.scalars():
+                    self._check_stream_context()
+                    yield item
+            finally:
+                await result.close()
 
     @asynccontextmanager
     async def transaction(self):

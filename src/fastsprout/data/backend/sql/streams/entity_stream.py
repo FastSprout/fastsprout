@@ -13,7 +13,6 @@ from fastsprout.core.types.protocols.ables import RichComparisonable
 from fastsprout.data.backend.implementation import BaseDataBackend
 from fastsprout.data.backend.sql.data_backend import SQLDataBackend
 from fastsprout.data.backend.sql.entity import SQLEntity, SQLSignpost
-from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.entity import Signpostable
 from fastsprout.data.streams.implementation import (
     SimpleAsyncEntityStream,
@@ -72,19 +71,7 @@ class SQLEntityStream[E: SQLEntity[Any]](
         return SQLEntityStream(stmt, self._signpost)
 
     def __aiter__(self) -> AsyncIterator[E]:
-        async def gen() -> AsyncIterator[E]:
-            async with self.session() as session:
-                result = await session.stream(
-                    self._stmt,
-                    execution_options={
-                        "yield_per": DEFAULT_ITERATION_CHUNK_SIZE
-                    },
-                )
-                async for item in result.scalars():
-                    self._check_stream_context()
-                    yield item
-
-        return gen()
+        return self.scalars(self._stmt)
 
     def take(self, n: int) -> "SQLEntityStream[E]":
         return self._clone(self._stmt.limit(n))
