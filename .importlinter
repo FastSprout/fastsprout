@@ -32,6 +32,19 @@ layers =
     service
     action
 
+
+; === FastSprout-actions-service-level layers ===
+[importlinter:contract:FastSprout-actions-service-layers-architecture]
+name = FastSprout Actions Service Layers Architecture
+type = layers
+containers =
+    fastsprout.actions.service
+    tests.fastsprout.actions.service
+layers =
+    datas
+    simple_service
+
+
 ; === FastSprout-actions-workflows-level layers ===
 [importlinter:contract:FastSprout-actions-workflows-layers-architecture]
 name = FastSprout Actions Workflows Layers Architecture
