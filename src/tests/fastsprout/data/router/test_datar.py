@@ -233,16 +233,18 @@ async def test_read_dependencies_are_lazy_and_guard_derived_sql_streams(
     assert calls == ["read"]
 
 
-async def test_bulk_create_checks_once(signpost):
+async def test_bulk_create_accepts_async_generator_and_checks_once(signpost):
     calls: list[str] = []
+
+    async def entities() -> AsyncIterator[Item]:
+        yield Item(name="Batman")
+        yield Item(name="Robin")
 
     def check(operation: str) -> None:
         calls.append(operation)
 
     async with DataR(dependencies=[Depends(check)]) as data:
-        created = await data.ability(Item).bulk_create(
-            [Item(name="Batman"), Item(name="Robin")]
-        )
+        created = await data.ability(Item).bulk_create(entities())
         assert [item.name for item in created] == ["Batman", "Robin"]
     assert calls == ["bulk_create"]
 

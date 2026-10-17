@@ -61,6 +61,33 @@ def test_raw_literal_default() -> None:
     assert Villain(name="Joker", level=9).level == 9
 
 
+def test_typed_dataclass_defaults_keep_required_fields() -> None:
+    @typed_dataclass
+    class HeroData:
+        name: Field[str]
+        power: str
+        level: Field[int] = Field(default=1)
+
+    hero = HeroData(name="Batman", power="Money")
+    assert hero.name == "Batman"
+    assert hero.power == "Money"
+    assert hero.level == 1
+    with pytest.raises(TypeError, match="missing"):
+        # Omitting name verifies that the constructor rejects missing fields.
+        HeroData(power="Money")  # pyright: ignore[reportCallIssue]
+
+
+def test_typed_dataclass_field_factory_is_per_instance() -> None:
+    @typed_dataclass
+    class Batch:
+        items: Field[list[int]] = Field(default_factory=list)
+
+    first, second = Batch(), Batch()
+    first.items.append(1)
+    assert first.items == [1]
+    assert second.items == []
+
+
 def test_dataclass_alias_preserves_frozen_fields_and_defaults() -> None:
     assert dataclass is typed_dataclass
 
