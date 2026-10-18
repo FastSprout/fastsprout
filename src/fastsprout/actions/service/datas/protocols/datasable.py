@@ -1,7 +1,7 @@
 """Structural contract for data services and their schema-specific actions."""
 
 import builtins
-from collections.abc import Sequence
+from collections.abc import AsyncGenerator, Hashable, Sequence
 from typing import Annotated, Protocol, overload
 
 from annotated_types import Ge
@@ -10,12 +10,13 @@ from typing_extensions import TypeVar
 from fastsprout.core import IdentificatorType, Schema, UndefinedType
 from fastsprout.core.depends import DependsClass
 from fastsprout.core.fields.field_assigment import FieldAssignment
+from fastsprout.core.fields.field_ref import FieldRef
 from fastsprout.core.types import AnyIterable, LazyAwait
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.router import DataR
 from fastsprout.data.streams.protocols import AsyncCommonStream
-from fastsprout.data.types import Valuable
+from fastsprout.data.types import MapperCallable, Valuable
 
 from ..types import DataSOperation, Page
 from .owners import (
@@ -212,3 +213,27 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
         *,
         datar: DataR = ...,
     ) -> AsyncCommonStream[R]: ...
+
+    def map[O: Schema, Statement](
+        self: QueryOwner[E, R],
+        query: BaseQuery[E, Statement],
+        mapper: MapperCallable[R, O],
+        *,
+        datar: DataR = ...,
+    ) -> AsyncGenerator[O, None]: ...
+
+    def join[
+        Other: Entitieable,
+        Left,
+        Right,
+        Key: Hashable,
+        LeftOrm,
+        RightOrm,
+    ](
+        self: QueryOwner[E, R],
+        query: BaseQuery[E, Left],
+        other: BaseQuery[Other, Right],
+        *,
+        on: tuple[FieldRef[E, Key, LeftOrm], FieldRef[Other, Key, RightOrm]],
+        datar: DataR = ...,
+    ) -> AsyncGenerator[tuple[R, Other], None]: ...

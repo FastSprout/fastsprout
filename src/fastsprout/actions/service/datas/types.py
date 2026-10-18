@@ -15,7 +15,8 @@ __all__ = [
 ]
 
 type DataSOperation = Literal[
-    "project",
+    "join",
+    "map",
     "find_first",
     "find_exactly_one",
     "find_all",

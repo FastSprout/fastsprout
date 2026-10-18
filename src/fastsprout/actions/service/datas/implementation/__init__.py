@@ -1,4 +1,4 @@
-from . import commands, configuration, queries
+from . import commands, configuration, queries, selection
 from .service import DataS
 
 __all__ = [
@@ -6,4 +6,5 @@ __all__ = [
     "commands",
     "configuration",
     "queries",
+    "selection",
 ]

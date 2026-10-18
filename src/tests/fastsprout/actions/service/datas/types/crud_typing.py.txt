@@ -183,3 +183,40 @@ async def upsert_types(
     async for row in contract.bulk_upsert([entity]):
         assert_type(row, HeroRead)
     await service.upsert(HeroCreate(name="Batman"))  # error: reportArgumentType; mypy: arg-type
+
+
+class HeroSummary(BaseSchema):
+    label: str
+
+
+async def selection_types[Left, Right](
+    service: DataS[Hero, HeroRead],
+    contract: DataSable[Hero, HeroRead],
+    query: BaseQuery[Hero, Left],
+    other: BaseQuery[Other, Right],
+) -> None:
+    async for row in service.join(query, other, on=(Hero.id, Other.id)):
+        assert_type(row, tuple[HeroRead, Other])
+    async for row in contract.join(query, other, on=(Hero.id, Other.id)):
+        assert_type(row, tuple[HeroRead, Other])
+    async for summary in service.map(query, lambda row: HeroSummary(label=row.name)):
+        assert_type(summary, HeroSummary)
+    async for summary in contract.map(query, lambda row: HeroSummary(label=row.name)):
+        assert_type(summary, HeroSummary)
+    service.map(other, lambda row: HeroSummary(label=row.name))  # error: reportArgumentType; mypy: arg-type
+    service.join(other, other, on=(Hero.id, Other.id))  # error: reportArgumentType; mypy: arg-type
+
+
+async def summarize_async(hero: HeroRead) -> HeroSummary:
+    return HeroSummary(label=hero.name.upper())
+
+
+async def async_mapping_types[Statement](
+    service: DataS[Hero, HeroRead],
+    contract: DataSable[Hero, HeroRead],
+    query: BaseQuery[Hero, Statement],
+) -> None:
+    async for summary in service.map(query, summarize_async):
+        assert_type(summary, HeroSummary)
+    async for summary in contract.map(query, summarize_async):
+        assert_type(summary, HeroSummary)

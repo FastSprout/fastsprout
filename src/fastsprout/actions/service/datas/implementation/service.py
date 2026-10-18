@@ -19,7 +19,7 @@ from fastsprout.data.types import Valuable
 from ...simple_service import Service
 from ..protocols import DataSable
 from ..types import DataSOperation, Page, SchemaSetting
-from . import commands, configuration, queries
+from . import commands, configuration, queries, selection
 
 __all__ = ["DataS"]
 
@@ -141,3 +141,5 @@ class DataS(Service, DataSable[E, R, C, U, P, CreateSetting]):
     find_exactly_one = queries.find_exactly_one
     find_all = queries.find_all
     stream = queries.stream
+    map = selection.map
+    join = selection.join

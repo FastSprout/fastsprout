@@ -110,3 +110,7 @@ class TestReads:
             await service.find_all(query)
         with pytest.raises(AttributeError, match="disabled"):
             service.stream(query)
+        with pytest.raises(AttributeError, match="disabled"):
+            service.map(query, lambda row: row)
+        with pytest.raises(AttributeError, match="disabled"):
+            service.join(query, query, on=(Record.id, Record.id))

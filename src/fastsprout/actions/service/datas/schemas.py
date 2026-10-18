@@ -24,6 +24,8 @@ __all__ = [
 SCHEMA_OPERATIONS: dict[str, frozenset[DataSOperation]] = {
     "read_schema": frozenset(
         {
+            "join",
+            "map",
             "get",
             "find_first",
             "find_exactly_one",

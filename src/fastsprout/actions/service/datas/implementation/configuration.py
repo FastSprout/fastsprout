@@ -26,6 +26,8 @@ ENTITY_ATTRIBUTE = "entity_type"
 
 DATAS_OPERATIONS: frozenset[DataSOperation] = frozenset(
     {
+        "join",
+        "map",
         "create",
         "update",
         "patch",
