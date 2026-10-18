@@ -1,5 +1,6 @@
 from collections.abc import AsyncIterator
 from contextlib import aclosing
+from uuid import uuid4
 
 import pytest
 from sqlalchemy.exc import MultipleResultsFound, NoResultFound
@@ -164,3 +165,41 @@ class TestReads:
             assert name not in vars(created)
             with pytest.raises(AttributeError, match="not accessible"):
                 created.__getattribute__(name)
+
+    async def test_exists_checks_the_key_before_and_after_delete(
+        self,
+        records: DataS[Record],
+    ) -> None:
+        # given
+        missing = uuid4()
+        # when / then
+        async with DataR() as datar:
+            assert await records.exists(missing, datar=datar) is False
+            created = await records.create(Record(name="Batman"), datar=datar)
+            assert await records.exists(created.id, datar=datar) is True
+            await records.delete(created.id, datar=datar)
+            assert await records.exists(created.id, datar=datar) is False
+
+    async def test_exists_has_an_independent_operation_switch(
+        self,
+        records: DataS[Record],
+    ) -> None:
+        # given
+        operations: list[str] = []
+
+        def observe(operation: str) -> None:
+            operations.append(operation)
+
+        service = DataS(
+            Record,
+            dependencies=[Depends(observe)],
+            operations=frozenset({"exists"}),
+        )
+        # when / then
+        async with DataR() as datar:
+            created = await records.create(Record(name="Batman"), datar=datar)
+            assert await service.exists(created.id, datar=datar) is True
+            service.operations = frozenset()
+            with pytest.raises(AttributeError, match="disabled"):
+                await service.exists(created.id, datar=datar)
+        assert operations == ["exists"]
