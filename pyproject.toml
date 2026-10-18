@@ -89,6 +89,8 @@ line-length = 80
 
 [tool.ruff.lint.per-file-ignores]
 "examples/*.py" = ["T201", 'B008']
+# Numeric prefixes define the chapter order of runnable documentation examples.
+"examples/**/[0-9]*_*.py" = ["N999"]
 "docs_src/*.py" = ["T201", 'B008']
 
 [tool.ruff.lint.mccabe]

@@ -1,12 +1,20 @@
 """Execute dependencies with the arguments of the current invocation."""
 
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import (
+    AsyncGenerator,
+    AsyncIterable,
+    Awaitable,
+    Callable,
+    Sequence,
+)
+from contextlib import aclosing
 from functools import wraps
 from inspect import BoundArguments, Signature, signature
 from typing import Protocol, runtime_checkable
 from uuid import UUID, uuid4
 
 from fastsprout.core.types import Chunk
+from fastsprout.core.types.iterable import resolve_any_iterable
 from fastsprout.core.types.protocols.ables import Hashable
 
 from .bindings import dependency_bindings
@@ -14,7 +22,7 @@ from .injector import inject_depends
 from .marker import DependsClass
 from .scope import async_invocation_scope
 
-__all__ = ["DependencyOwner", "with_dependencies"]
+__all__ = ["DependencyOwner", "stream_dependencies", "with_dependencies"]
 
 
 @runtime_checkable
@@ -98,3 +106,26 @@ def with_dependencies[**P, R](
                 return await function(*bound.args, **bound.kwargs)
 
     return call
+
+
+def stream_dependencies[**P, T](
+    function: Callable[P, AsyncIterable[T]],
+) -> Callable[P, AsyncGenerator[T, None]]:
+    @wraps(function)
+    async def source(*args: P.args, **kwargs: P.kwargs) -> AsyncIterable[T]:
+        return function(*args, **kwargs)
+
+    run = with_dependencies(source)
+
+    @wraps(function)
+    async def iterate(
+        *args: P.args, **kwargs: P.kwargs
+    ) -> AsyncGenerator[T, None]:
+        async with async_invocation_scope():
+            async with aclosing(
+                resolve_any_iterable(await run(*args, **kwargs))
+            ) as iterator:
+                async for item in iterator:
+                    yield item
+
+    return iterate

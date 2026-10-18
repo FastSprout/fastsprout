@@ -1,10 +1,12 @@
 from collections.abc import (
     AsyncIterable,
     AsyncIterator,
+    Callable,
     Hashable,
 )
 from contextlib import aclosing
 from copy import deepcopy
+from functools import wraps
 from typing import Any
 
 from fastsprout.core import lazy_await
@@ -12,6 +14,7 @@ from fastsprout.core.types import AnyIterable
 from fastsprout.core.types.protocols.ables import Addable, RichComparisonable
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.entity import Entitieable
+from fastsprout.data.streams.protocols import AsyncCommonStream
 from fastsprout.data.types import (
     ConsumerCallable,
     GetterCallable,
@@ -26,6 +29,16 @@ __all__ = ["BaseCommonStream"]
 
 
 class BaseCommonStream[T: Valuable | Entitieable]:
+    @staticmethod
+    def as_stream[S: Valuable | Entitieable, **P](
+        function: Callable[P, AsyncIterable[S]],
+    ) -> Callable[P, AsyncCommonStream[S]]:
+        @wraps(function)
+        def call(*args: P.args, **kwargs: P.kwargs) -> BaseCommonStream[S]:
+            return BaseCommonStream(function(*args, **kwargs))
+
+        return call
+
     def __init__(self, values: AnyIterable[T]) -> None:
         self.values: AsyncIterable[T] = resolve_any_iterable(values)
 

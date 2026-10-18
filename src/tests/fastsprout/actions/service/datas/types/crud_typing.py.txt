@@ -13,6 +13,7 @@ from fastsprout.data import sql
 from fastsprout.data import DataR
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable, Signpostable
+from fastsprout.data.streams.protocols import AsyncCommonStream
 from fastsprout.data.streams.implementation.base_common_stream import BaseCommonStream
 
 
@@ -139,3 +140,21 @@ async def non_sql_checks(
     assert_type(await custom.create(MemoryInput(name="Batman")), MemoryRead)
     assert_type(await custom.list(), Page[MemoryRead])
     await custom.create(HeroCreate(name="Batman"))  # error: reportArgumentType; mypy: arg-type
+
+async def query_reads[Statement](
+    service: DataS[Hero, HeroRead],
+    contract: DataSable[Hero, HeroRead],
+    query: BaseQuery[Hero, Statement],
+    wrong: BaseQuery[MemoryEntity, Statement],
+) -> None:
+    assert_type(await service.find_first(query), HeroRead | None)
+    assert_type(await service.find_exactly_one(query), HeroRead)
+    assert_type(await service.find_all(query), list[HeroRead])
+    assert_type(service.stream(query), AsyncCommonStream[HeroRead])
+    assert_type(await contract.find_first(query), HeroRead | None)
+    assert_type(await contract.find_exactly_one(query), HeroRead)
+    assert_type(await contract.find_all(query), list[HeroRead])
+    async for item in contract.stream(query):
+        assert_type(item, HeroRead)
+    await service.find_first(wrong)  # error: reportArgumentType; mypy: arg-type
+    service.stream(wrong)  # error: reportArgumentType; mypy: arg-type

@@ -1,0 +1,112 @@
+from collections.abc import AsyncIterator
+from contextlib import aclosing
+
+import pytest
+from sqlalchemy.exc import MultipleResultsFound, NoResultFound
+
+from fastsprout.actions import DataS
+from fastsprout.core import Depends, inject_depends
+from fastsprout.core.depends.scope import dependency_resources
+from fastsprout.data import DataR, sql
+from fastsprout.data.utils.iterable import resolve_any_iterable
+
+from ...common import Record, RecordRead
+
+
+class TestReads:
+    async def test_read_dtos_preserve_query_order_and_pagination(
+        self, records: DataS[Record]
+    ) -> None:
+        # given
+        service = DataS(Record, read=RecordRead)
+        await records.bulk_create(
+            Record(name=name, score=score)
+            for name, score in (("Batman", 10), ("Robin", 20), ("Batgirl", 30))
+        ).to_list()
+        query = sql.SQLQuery(Record).order_by(Record.score).offset(1).limit(1)
+        # when
+        first = await service.find_first(query)
+        only = await service.find_exactly_one(query)
+        all_rows = await service.find_all(query)
+        streamed = await service.stream(query).to_list()
+        # then
+        assert first is not None
+        for row in (first, only, *all_rows, *streamed):
+            assert isinstance(row, RecordRead)
+            assert row.name == "Robin"
+            with pytest.raises(AttributeError):
+                row.__getattribute__("system_key")
+        assert len(all_rows) == len(streamed) == 1
+
+    async def test_empty_and_multiple_results(
+        self, records: DataS[Record]
+    ) -> None:
+        # given
+        query = sql.SQLQuery(Record)
+        # when / then
+        assert await records.find_first(query) is None
+        assert await records.find_all(query) == []
+        assert await records.stream(query).to_list() == []
+        with pytest.raises(NoResultFound):
+            await records.find_exactly_one(query)
+        await records.bulk_create(
+            Record(name=name) for name in ("a", "b")
+        ).to_list()
+        with pytest.raises(MultipleResultsFound):
+            await records.find_exactly_one(query)
+
+    @pytest.mark.parametrize("stop_early", [False, True])
+    async def test_stream_is_lazy_and_closes_dependency_scope(
+        self,
+        records: DataS[Record],
+        monkeypatch: pytest.MonkeyPatch,
+        stop_early: bool,
+    ) -> None:
+        # given
+        await records.bulk_create(
+            Record(name=name) for name in ("a", "b")
+        ).to_list()
+        lifecycle: list[str] = []
+
+        async def provide() -> AsyncIterator[DataR]:
+            lifecycle.append("open")
+            try:
+                async with DataR() as datar:
+                    yield datar
+            finally:
+                lifecycle.append("close")
+
+        def check(operation: str, datar: DataR) -> None:
+            assert operation == "stream"
+            assert isinstance(datar, DataR)
+            lifecycle.append("check")
+
+        monkeypatch.setitem(inject_depends.dependency_providers, DataR, provide)
+        service = DataS(Record, dependencies=[Depends(check)])
+        # when
+        stream = service.stream(sql.SQLQuery(Record).order_by(Record.name))
+        assert lifecycle == []
+        async with aclosing(resolve_any_iterable(stream)) as rows:
+            assert (await anext(rows)).name == "a"
+            assert lifecycle == ["open", "check"]
+            if not stop_early:
+                assert [row.name async for row in rows] == ["b"]
+        # then
+        assert lifecycle == ["open", "check", "close"]
+        assert dependency_resources.get() is None
+
+    async def test_read_none_disables_all_query_read_actions(
+        self, records: DataS[Record]
+    ) -> None:
+        # given
+        service = DataS(Record, read=None)
+        query = sql.SQLQuery(Record)
+        # when / then
+        with pytest.raises(AttributeError, match="disabled"):
+            await service.find_first(query)
+        with pytest.raises(AttributeError, match="disabled"):
+            await service.find_exactly_one(query)
+        with pytest.raises(AttributeError, match="disabled"):
+            await service.find_all(query)
+        with pytest.raises(AttributeError, match="disabled"):
+            service.stream(query)

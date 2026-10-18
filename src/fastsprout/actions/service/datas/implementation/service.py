@@ -132,3 +132,8 @@ class DataS(Service, DataSable[E, R, C, U, P, CreateSetting]):
     exists = queries.exists
     count = queries.count
     list = queries.list
+
+    find_first = queries.find_first
+    find_exactly_one = queries.find_exactly_one
+    find_all = queries.find_all
+    stream = queries.stream

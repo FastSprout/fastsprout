@@ -1,5 +1,6 @@
 """Structural contract for data services and their schema-specific actions."""
 
+import builtins
 from collections.abc import Sequence
 from typing import Annotated, Protocol, overload
 
@@ -155,3 +156,31 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
         *,
         datar: DataR = ...,
     ) -> LazyAwait[int]: ...
+
+    async def find_first[Statement](
+        self: QueryOwner[E, R],
+        query: BaseQuery[E, Statement],
+        *,
+        datar: DataR = ...,
+    ) -> R | None: ...
+
+    async def find_exactly_one[Statement](
+        self: QueryOwner[E, R],
+        query: BaseQuery[E, Statement],
+        *,
+        datar: DataR = ...,
+    ) -> R: ...
+
+    async def find_all[Statement](
+        self: QueryOwner[E, R],
+        query: BaseQuery[E, Statement],
+        *,
+        datar: DataR = ...,
+    ) -> builtins.list[R]: ...
+
+    def stream[Statement](
+        self: QueryOwner[E, R],
+        query: BaseQuery[E, Statement],
+        *,
+        datar: DataR = ...,
+    ) -> AsyncCommonStream[R]: ...

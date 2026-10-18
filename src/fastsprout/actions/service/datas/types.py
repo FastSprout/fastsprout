@@ -19,7 +19,7 @@ type DataSOperation = Literal[
     "find_first",
     "find_exactly_one",
     "find_all",
-    "iter",
+    "stream",
     "get",
     "exists",
     "list",

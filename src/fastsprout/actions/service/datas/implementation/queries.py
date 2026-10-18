@@ -1,11 +1,16 @@
 """Query actions and read projection shared by DataSs."""
 
+import builtins
+from collections.abc import AsyncGenerator
+from contextlib import aclosing
+
 from fastsprout.core import (
     Depends,
     IdentificatorType,
     Undefined,
     UndefinedType,
 )
+from fastsprout.core.depends.invocation import stream_dependencies
 from fastsprout.core.dto.base import DTO
 from fastsprout.core.dto.conversion import field_names, project_read
 from fastsprout.data.capabilities.query import (
@@ -18,9 +23,13 @@ from fastsprout.data.capabilities.query import (
 )
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.router import DataR
+from fastsprout.data.streams.implementation.base_common_stream import (
+    BaseCommonStream,
+)
 from fastsprout.data.streams.protocols import AsyncEntityStream
 from fastsprout.data.types import Valuable
 from fastsprout.data.utils.callable import resolve_any_callable
+from fastsprout.data.utils.iterable import resolve_any_iterable
 
 from ..protocols.owners import PageOwner, QueryOwner
 from ..schemas import read_source
@@ -30,6 +39,8 @@ from .payloads import find_entity
 __all__ = [
     "count",
     "exists",
+    "find_all",
+    "find_exactly_one",
     "find_first",
     "get",
     "list",
@@ -66,12 +77,6 @@ def validated[
     return query
 
 
-def stream[E: Entitieable, R: Valuable | Entitieable, Statement](
-    self: QueryOwner[E, R], datar: DataR, query: BaseQuery[E, Statement] | None
-) -> AsyncEntityStream[E]:
-    return datar.stream(validated(self, datar, query).unpaged())
-
-
 async def count[
     E: Entitieable,
     R: Valuable | Entitieable,
@@ -82,7 +87,7 @@ async def count[
     *,
     datar: DataR = Depends(),
 ) -> int:
-    return await stream(self, datar, query).count()
+    return await datar.stream(validated(self, datar, query).unpaged()).count()
 
 
 async def list[
@@ -127,6 +132,38 @@ async def find_first[
     return None if found is None else project_read(found, self.read_schema)
 
 
+async def find_exactly_one[
+    E: Entitieable,
+    R: Valuable | Entitieable,
+    Statement,
+](
+    self: QueryOwner[E, R],
+    query: BaseQuery[E, Statement],
+    *,
+    datar: DataR = Depends(),
+) -> R:
+    found = await datar.ability(self.entity).find_exactly_one(
+        validated(self, datar, query)
+    )
+    return project_read(found, self.read_schema)
+
+
+async def find_all[
+    E: Entitieable,
+    R: Valuable | Entitieable,
+    Statement,
+](
+    self: QueryOwner[E, R],
+    query: BaseQuery[E, Statement],
+    *,
+    datar: DataR = Depends(),
+) -> builtins.list[R]:
+    rows = await datar.ability(self.entity).find_all(
+        validated(self, datar, query)
+    )
+    return [project_read(row, self.read_schema) for row in rows]
+
+
 def selected[
     E: Entitieable,
     R: Valuable | Entitieable,
@@ -135,6 +172,21 @@ def selected[
     self: QueryOwner[E, R], datar: DataR, query: BaseQuery[E, Statement]
 ) -> AsyncEntityStream[E]:
     return datar.stream(validated(self, datar, query))
+
+
+@BaseCommonStream.as_stream
+@stream_dependencies
+async def stream[E: Entitieable, R: Valuable | Entitieable, Statement](
+    self: QueryOwner[E, R],
+    query: BaseQuery[E, Statement],
+    *,
+    datar: DataR = Depends(),
+) -> AsyncGenerator[R, None]:
+    async with aclosing(
+        resolve_any_iterable(selected(self, datar, query))
+    ) as rows:
+        async for entity in rows:
+            yield project_read(entity, self.read_schema)
 
 
 async def get[E: Entitieable, R: Valuable | Entitieable, Statement](

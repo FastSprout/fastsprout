@@ -25,6 +25,10 @@ SCHEMA_OPERATIONS: dict[str, frozenset[DataSOperation]] = {
     "read_schema": frozenset(
         {
             "get",
+            "find_first",
+            "find_exactly_one",
+            "find_all",
+            "stream",
             "list",
             "create",
             "update",
