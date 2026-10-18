@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version from pyproject.toml, for example 0.1.2
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    container:
+      image: harbor.3dcra.net/github-proxy/astral-sh/uv:python3.12-bookworm-slim
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      GITLAB_TOKEN: ${{ secrets.GITLAB_RELEASE_TOKEN }}
+      GITLAB_PROJECT_API: https://gitlab.3dcra.eu/api/v4/projects/opensource%2Ffastsprout%2Ffastsprout
+      RELEASE_TAG: ${{ inputs.version }}
+    steps:
+      - name: Install release tools
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends git curl jq gh
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Verify version and source commit
+        run: |
+          version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          test "$RELEASE_TAG" = "$version"
+          : "${GITLAB_TOKEN:?Set the GITLAB_RELEASE_TOKEN repository secret}"
+          if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$GITHUB_SHA"
+          fi
+          curl --fail-with-body --silent --show-error \
+            --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+            "$GITLAB_PROJECT_API/repository/commits/$GITHUB_SHA" \
+            | jq --exit-status --arg sha "$GITHUB_SHA" '.id == $sha'
+          status="$(curl --silent --show-error --output gitlab-tag.json --write-out '%{http_code}' \
+            --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+            "$GITLAB_PROJECT_API/repository/tags/$RELEASE_TAG")"
+          if test "$status" != 404; then
+            test "$status" = 200
+            jq --exit-status --arg sha "$GITHUB_SHA" '.commit.id == $sha' gitlab-tag.json
+          fi
+
+      - name: Create Git tag and generate release notes
+        run: |
+          if ! git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            git tag "$RELEASE_TAG" "$GITHUB_SHA"
+          fi
+          uv tool run --from git-cliff==2.14.2 git-cliff \
+            --config cliff.toml --current --strip header --output release-notes.md
+          grep --fixed-strings "## $RELEASE_TAG (" release-notes.md
+          git push origin "refs/tags/$RELEASE_TAG"
+
+      - name: Publish GitLab release
+        run: |
+          status="$(curl --silent --show-error --output gitlab-release.json --write-out '%{http_code}' \
+            --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
+            "$GITLAB_PROJECT_API/releases/$RELEASE_TAG")"
+          jq --null-input --arg name "$RELEASE_TAG" --rawfile description release-notes.md \
+            '{name: $name, description: $description}' > release.json
+          if test "$status" = 404; then
+            jq --arg tag "$RELEASE_TAG" --arg sha "$GITHUB_SHA" \
+              '. + {tag_name: $tag, ref: $sha}' release.json > new-release.json
+            curl --fail-with-body --silent --show-error \
+              --header "PRIVATE-TOKEN: $GITLAB_TOKEN" --header 'Content-Type: application/json' \
+              --data @new-release.json "$GITLAB_PROJECT_API/releases" > published-release.json
+          else
+            test "$status" = 200
+            curl --fail-with-body --silent --show-error --request PUT \
+              --header "PRIVATE-TOKEN: $GITLAB_TOKEN" --header 'Content-Type: application/json' \
+              --data @release.json "$GITLAB_PROJECT_API/releases/$RELEASE_TAG" > published-release.json
+          fi
+          jq --exit-status --arg sha "$GITHUB_SHA" '.commit.id == $sha' published-release.json
+
+      - name: Publish GitHub release
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file release-notes.md
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --notes-file release-notes.md
+          fi
