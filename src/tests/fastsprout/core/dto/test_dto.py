@@ -18,6 +18,7 @@ from fastsprout.core import (
     derive_write_dto,
     dto,
 )
+from fastsprout.core.dto.conversion import project_read
 
 
 class User(BaseSchema):
@@ -66,6 +67,20 @@ def test_read_preserves_values_defaults_and_source(read: UserRead) -> None:
     read.tags.append("mine")
     assert other.tags == []
     assert other.id != read.id
+    # given
+    source = User(
+        email=read.email,
+        created_at=read.created_at,
+        password="secret",
+        password_hash="hash",
+    )
+    # when
+    projected = project_read(source, read_type)
+    # then
+    assert type(projected) is read_type
+    assert projected.email == source.email
+    assert "password" not in vars(projected)
+    assert "password_hash" not in vars(projected)
     read.email = "changed@example.com"
     assert read.email == "changed@example.com"
 

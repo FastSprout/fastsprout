@@ -1,0 +1,179 @@
+from enum import StrEnum
+from functools import partial
+from operator import attrgetter
+from typing import Annotated, ClassVar
+from uuid import UUID, uuid4
+
+from pydantic import Field as PydanticField
+from sqlmodel import Field as SQLField
+
+from fastsprout.actions.service.datas import DataSOperation, Page
+from fastsprout.core import (
+    BaseSchema,
+    Field,
+    IdentificatorType,
+    InternalField,
+    ReadDTO,
+    ReadField,
+    Schema,
+    WriteDTO,
+    WriteField,
+    dataclass,
+)
+from fastsprout.core.dto.conversion import supplied_names
+from fastsprout.core.types import AnyIterable
+from fastsprout.data import DataR, SimpleAsyncEntityStream, sql
+from fastsprout.data.capabilities.query import (
+    And,
+    BaseQuery,
+)
+from fastsprout.data.capabilities.query.predicate import evaluate
+from fastsprout.data.entity import Entitieable, Signpostable
+from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.data.utils.iterable import achain
+
+
+class LimitedPage[R](Page[R]):
+    limit: Annotated[int | None, PydanticField(ge=0, le=1000)] = 1
+
+
+class Status(StrEnum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+class Record(sql.SQLEntity[UUID]):
+    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+    name: Field[str]
+    score: Field[int] = Field(default=10)
+    note: Field[str | None] = Field(default="kept")
+    status: Field[Status] = Field(default=Status.ACTIVE)
+    password: WriteField[str] = WriteField(default="initial")
+    system_key: InternalField[str] = InternalField(default="system")
+
+
+class RecordRead(ReadDTO, Record):
+    def label(self) -> str:
+        return self.name.upper()
+
+
+class RecordWrite(WriteDTO, Record): ...
+
+
+class RecordCreate(BaseSchema):
+    name: str
+    score: int = 10
+
+
+class RecordUpdate(BaseSchema):
+    name: str
+    score: int
+    note: str | None = "replacement default"
+    status: Status = Status.ACTIVE
+    password: str = "changed"
+
+
+class RecordPatch(BaseSchema):
+    name: str | None = None
+    score: int = 999
+    note: str | None = None
+
+
+class RecordValidation:
+    def __init__(self) -> None:
+        self.calls: list[tuple[DataSOperation, DataR, frozenset[str]]] = []
+
+    async def __call__(
+        self,
+        operation: DataSOperation,
+        datar: DataR,
+        entity: Record | RecordCreate | IdentificatorType | None = None,
+        data: RecordUpdate | RecordPatch | None = None,
+        entities: AnyIterable[Record] = (),
+    ) -> None:
+        payload = data if data is not None else entity
+        inputs = (
+            [payload]
+            if isinstance(
+                payload, (Record, RecordCreate, RecordUpdate, RecordPatch)
+            )
+            else entities
+        )
+        async for item in achain(inputs):
+            self.calls.append(
+                (operation, datar, frozenset(supplied_names(item)))
+            )
+            if "score" in supplied_names(item) and item.score < 0:
+                raise ValueError("Score must be non-negative")
+            if "name" in supplied_names(item) and item.name is not None:
+                item.name = item.name.strip()
+
+
+@dataclass(kw_only=True)
+class MemoryRecord(Entitieable[UUID]):
+    __signpost__: ClassVar[Signpostable[None]]
+
+    id: ReadField[UUID] = ReadField(default_factory=uuid4)
+    name: Field[str]
+    score: Field[int] = Field(default=10)
+    password: WriteField[str] = WriteField(default="initial")
+    system_key: InternalField[str] = InternalField(default="system")
+
+
+@dataclass
+class MemoryCreate(Schema):
+    name: str
+
+
+@dataclass
+class MemoryPatch(Schema):
+    score: int
+
+
+class MemoryQuery(BaseQuery[MemoryRecord, str]):
+    def build(self) -> str:
+        return self.statement or ""
+
+
+class MemoryAbility:
+    entity: type[MemoryRecord] = MemoryRecord
+
+    def __init__(self) -> None:
+        self.items: dict[UUID, MemoryRecord] = {}
+        self.contexts: list[DataR] = []
+
+    def query_for(self, entity: type[MemoryRecord]) -> MemoryQuery:
+        assert entity is self.entity
+        return MemoryQuery(entity)
+
+    def stream(self, query: MemoryQuery) -> AsyncEntityStream[MemoryRecord]:
+        assert query.entity is self.entity
+        stream = SimpleAsyncEntityStream(
+            [
+                entity
+                for entity in self.items.values()
+                if query.statement is None or entity.name == query.statement
+            ]
+        ).filter(partial(evaluate, And(*query.conditions)))
+        for name, reverse in reversed(query.effective_orderings):
+            stream = stream.sort(attrgetter(name), reverse=reverse)
+        stream = stream.drop(query.offset_value)
+        return (
+            stream.take(query.limit_value)
+            if isinstance(query.limit_value, int)
+            else stream
+        )
+
+    async def find_first(self, query: MemoryQuery) -> MemoryRecord | None:
+        return await self.stream(query).first()
+
+    async def create(self, entity: MemoryRecord) -> MemoryRecord:
+        self.items[entity.id] = entity
+        return entity
+
+    async def update(self, entity: MemoryRecord) -> MemoryRecord:
+        self.items[entity.id] = entity
+        return entity
+
+    async def delete(self, entity: MemoryRecord) -> int:
+        return int(self.items.pop(entity.id, None) is not None)
