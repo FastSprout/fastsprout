@@ -1,4 +1,11 @@
+from __future__ import annotations
+
+from fastsprout.core.types.comparable import FilterValue
+from fastsprout.core.types.iterable import AnyIterable
+
+from .conditions import Between, Eq, Gt, Gte, In, Lt, Lte, Ne
 from .field_assigment import FieldAssignment
+from .field_predicate import FieldPredicate
 
 __all__ = ["FieldRef"]
 
@@ -23,6 +30,47 @@ class FieldRef[E, T, OrmCtor]:
 
     def set(self, value: T) -> FieldAssignment[T]:
         return FieldAssignment(self.name, value)
+
+    def eq[V: FilterValue](
+        self: FieldRef[E, V, OrmCtor], value: V
+    ) -> FieldPredicate[E]:
+        return FieldPredicate(self.entity_cls, self.name, Eq(value))
+
+    def ne[V: FilterValue](
+        self: FieldRef[E, V, OrmCtor], value: V
+    ) -> FieldPredicate[E]:
+        return FieldPredicate(self.entity_cls, self.name, Ne(value))
+
+    def gt[V: FilterValue](
+        self: FieldRef[E, V, OrmCtor], value: V
+    ) -> FieldPredicate[E]:
+        return FieldPredicate(self.entity_cls, self.name, Gt(value))
+
+    def gte[V: FilterValue](
+        self: FieldRef[E, V, OrmCtor], value: V
+    ) -> FieldPredicate[E]:
+        return FieldPredicate(self.entity_cls, self.name, Gte(value))
+
+    def lt[V: FilterValue](
+        self: FieldRef[E, V, OrmCtor], value: V
+    ) -> FieldPredicate[E]:
+        return FieldPredicate(self.entity_cls, self.name, Lt(value))
+
+    def lte[V: FilterValue](
+        self: FieldRef[E, V, OrmCtor], value: V
+    ) -> FieldPredicate[E]:
+        return FieldPredicate(self.entity_cls, self.name, Lte(value))
+
+    def in_[V: FilterValue](
+        self: FieldRef[E, V, OrmCtor], values: AnyIterable[V]
+    ) -> FieldPredicate[E]:
+        """Match membership; finite iterators are cached on first evaluation."""
+        return FieldPredicate(self.entity_cls, self.name, In(values))
+
+    def between[V: FilterValue](
+        self: FieldRef[E, V, OrmCtor], lower: V, upper: V
+    ) -> FieldPredicate[E]:
+        return FieldPredicate(self.entity_cls, self.name, Between(lower, upper))
 
     def __repr__(self) -> str:
         return f"<{self.entity_cls.__name__}.{self.name}>"

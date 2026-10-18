@@ -1,0 +1,33 @@
+from collections.abc import AsyncIterator
+from typing import assert_type
+from sqlmodel import Field as SQLField
+
+from fastsprout.core import Field, ReadField
+from fastsprout.core.fields.field_predicate import FieldPredicate
+from fastsprout.data.backend.sql import SQLEntity, SQLQuery
+from fastsprout.data.streams.protocols import AsyncEntityStream
+
+
+class Hero(SQLEntity[int]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+    age: Field[int]
+
+
+class Other(SQLEntity[int]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+
+async def field_conditions(stream: AsyncEntityStream[Hero], values: AsyncIterator[int]) -> None:
+    query = SQLQuery(Hero)
+    assert_type(Hero.name.eq("Batman"), FieldPredicate[Hero])
+    assert_type(query.where(query.Or(Hero.name.eq("Batman"), Hero.age.gte(5))), SQLQuery[Hero])
+    query.where(query.And(Hero.age.in_(values), Hero.age.between(1, 10)))
+    query.where(query.Xor(Hero.age.lt(5), Hero.age.gt(7)))
+    query.where(query.Nand(Hero.name.ne("Robin"), Hero.age.lte(20)))
+    assert_type(stream.filter(Hero.name.eq("Batman")), AsyncEntityStream[Hero])
+    Hero.name.eq(5)  # error: reportArgumentType; mypy: arg-type
+    Hero.age.in_(["bad"])  # error: reportArgumentType; mypy: list-item
+    Hero.age.between("bad", 10)  # error: reportArgumentType; mypy: arg-type
+    query.where(Other.name.eq("Batman"))  # error: reportArgumentType; mypy: arg-type

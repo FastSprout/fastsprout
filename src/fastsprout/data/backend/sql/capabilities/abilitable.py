@@ -1,6 +1,7 @@
+from contextlib import AbstractAsyncContextManager
 from typing import Any
 
-from sqlalchemy.sql.selectable import Select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastsprout.data.backend.protocols import DataAbilitable
 from fastsprout.data.backend.sql.entity import SQLEntity
@@ -18,14 +19,19 @@ from .upsertable import SQLUpsertable
 __all__ = ["SQLAbilitable"]
 
 
-class SQLAbilitable[E: SQLEntity[Any], Q: SQLQuery[SQLEntity[Any]]](  # pyright: ignore[reportGeneralTypeIssues, reportIncompatibleMethodOverride]
-    DataAbilitable[E, Select[tuple[E]], Q, SQLFinalizable],
+class SQLAbilitable[E: SQLEntity[Any]](
+    DataAbilitable[
+        E,
+        AbstractAsyncContextManager[AsyncSession],
+        SQLQuery[E],
+        SQLFinalizable,
+    ],
     SQLCreatable[E],
-    SQLDeletable[E, Q],
-    SQLFindable[E, Q],
-    SQLIterable[E, Q],
-    SQLStreamable[E, Q],
+    SQLDeletable[E],
+    SQLFindable[E],
+    SQLIterable[E],
+    SQLStreamable[E],
     SQLUpdatable[E],
     SQLUpsertable[E],
-    SQLUpdatableByQuery[E, Q],
+    SQLUpdatableByQuery[E],
 ): ...

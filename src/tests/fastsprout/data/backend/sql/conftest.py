@@ -1,7 +1,6 @@
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -18,6 +17,7 @@ from fastsprout.data.backend.sql import (
 from fastsprout.data.backend.sql.capabilities import SQLAbilitable
 from fastsprout.data.backend.sql.entity import SQLSignpost
 from fastsprout.data.backend.sql.streams import SQLEntityStream
+from fastsprout.data.capabilities.query import Gte, where
 
 
 class SearchField[T](Field[T]): ...
@@ -86,14 +86,19 @@ async def sql_session() -> AsyncIterator[AsyncSession]:
 
 
 @pytest.fixture
-def sql_ability(
+def sql_signpost(
     sql_session: AsyncSession,
-) -> SQLAbilitable[Hero, SQLQuery[Any]]:
+) -> SQLSignpost:
     @asynccontextmanager
     async def shared_session() -> AsyncIterator[AsyncSession]:
         yield sql_session
 
-    return SQLAbilitable(SQLSignpost(shared_session))
+    return SQLSignpost(shared_session)
+
+
+@pytest.fixture
+def sql_ability(sql_signpost: SQLSignpost) -> SQLAbilitable[Hero]:
+    return SQLAbilitable(sql_signpost)
 
 
 @pytest.fixture
@@ -101,8 +106,26 @@ def query() -> SQLQuery[Hero]:
     return SQLQuery(entity=Hero)
 
 
+async def matching_hero(hero: Hero) -> bool:
+    return hero.age >= 5
+
+
+@pytest.fixture(params=["native", "lambda", "async"])
+def selected_query(request: pytest.FixtureRequest) -> SQLQuery[Hero]:
+    query = SQLQuery(Hero)
+    if request.param == "native":
+        query.where(where(Hero.age, Gte(5)))
+    elif request.param == "lambda":
+        query.where(lambda hero: hero.age >= 5)
+    else:
+        query.where(matching_hero)
+    return query.order_by(Hero.id).offset(1).limit(2)
+
+
 @pytest.fixture
 def entity_stream(
-    sql_ability: SQLAbilitable[Hero, SQLQuery[Any]], query: SQLQuery[Hero]
+    sql_ability: SQLAbilitable[Hero], query: SQLQuery[Hero]
 ) -> SQLEntityStream[Hero]:
-    return sql_ability.stream(query)
+    stream = sql_ability.stream(query)
+    assert isinstance(stream, SQLEntityStream)
+    return stream

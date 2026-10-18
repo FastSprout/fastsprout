@@ -36,19 +36,17 @@ def schema_defaults[E: Entitieable](service: DataSable[E]) -> None:
     assert_type(service.create_schema, type[WriteDTO])
     assert_type(service.update_schema, type[WriteDTO])
     assert_type(service.patch_schema, type[WriteDTO])
-    assert_type(service.filters_schema, type[Schema])
 
 
 def reject_foreign_schemas[E: Entitieable](
-    create: DataSable[E, Schema, E, ForeignInput],  # error: reportInvalidTypeArguments; mypy: type-var
-    update: DataSable[E, Schema, E, CreateInput, ForeignInput],  # error: reportInvalidTypeArguments; mypy: type-var
-    patch: DataSable[E, Schema, E, CreateInput, UpdateInput, ForeignInput],  # error: reportInvalidTypeArguments; mypy: type-var
-    filters: DataSable[E, ForeignInput],  # error: reportInvalidTypeArguments; mypy: type-var
+    create: DataSable[E, E, ForeignInput],  # error: reportInvalidTypeArguments; mypy: type-var
+    update: DataSable[E, E, CreateInput, ForeignInput],  # error: reportInvalidTypeArguments; mypy: type-var
+    patch: DataSable[E, E, CreateInput, UpdateInput, ForeignInput],  # error: reportInvalidTypeArguments; mypy: type-var
 ) -> None: ...
 
 
 async def schema_inputs[E: Entitieable](
-    service: DataSable[E, Schema, E, CreateInput, UpdateInput, PatchInput],
+    service: DataSable[E, E, CreateInput, UpdateInput, PatchInput],
     entity: E,
     identifier: IdentificatorType,
 ) -> None:

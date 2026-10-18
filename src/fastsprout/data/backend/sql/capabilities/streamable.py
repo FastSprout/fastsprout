@@ -5,12 +5,13 @@ from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.backend.sql.streams.entity_stream import SQLEntityStream
 from fastsprout.data.capabilities.protocols import Streamable
+from fastsprout.data.streams.protocols import AsyncEntityStream
 
 __all__ = ["SQLStreamable"]
 
 
-class SQLStreamable[E: SQLEntity[Any], Q: SQLQuery](
-    Streamable[E, Q], SQLDataBackend
+class SQLStreamable[E: SQLEntity[Any]](
+    Streamable[E, SQLQuery[E]], SQLDataBackend
 ):
-    def stream(self, query: SQLQuery[E], /):
-        return SQLEntityStream(query._built_query, self._signpost)
+    def stream(self, query: SQLQuery[E], /) -> AsyncEntityStream[E]:
+        return SQLEntityStream(query, self._signpost)

@@ -1,7 +1,7 @@
 import pytest
 
 from fastsprout.core import hidden_lazy_await, lazy_await
-from fastsprout.core.types import AnyCallable, AnyIterable
+from fastsprout.core.types import AnyCallable, AnyCallableEmpty, AnyIterable
 
 __all__ = ["ANY_CALLABLES", "ANY_EMPTY_CALLABLES", "ANY_ITERABLES"]
 
@@ -48,7 +48,7 @@ ANY_CALLABLES: list[AnyCallable] = [
 ]
 
 
-ANY_EMPTY_CALLABLES: list[AnyCallable] = [
+ANY_EMPTY_CALLABLES: list[AnyCallableEmpty[None]] = [
     lambda: None,
     async_empty_lambda,
 ]

@@ -87,6 +87,18 @@ layers =
     exceptions | types | consts
 
 
+; === FastSprout-data-query-level layers ===
+[importlinter:contract:FastSprout-data-query-layers-architecture]
+name = FastSprout Data Query Layers Architecture
+type = layers
+containers =
+    fastsprout.data.capabilities.query
+layers =
+    base_query
+    predicate
+    operators
+
+
 ; === FastSprout-events-level layers ===
 [importlinter:contract:FastSprout-events-layers-architecture]
 name = FastSprout Events Layers Architecture

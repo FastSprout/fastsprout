@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator, Sequence
 from typing import Any, cast
 from uuid import uuid4
 
-from sqlalchemy import and_, column, update, values
+from sqlalchemy import and_, column, select, update, values
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.base import Mapped
 
@@ -12,6 +12,7 @@ from fastsprout.data.backend.sql.data_backend import SQLDataBackend
 from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.helpers import get_primary_key
 from fastsprout.data.backend.sql.query import SQLQuery
+from fastsprout.data.backend.sql.streams import SQLEntityStream
 from fastsprout.data.capabilities.protocols import (
     Updatable,
     UpdatableByQuery,
@@ -20,6 +21,7 @@ from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.events import UpdateEvent
 from fastsprout.data.streams.implementation import SimpleAsyncEntityStream
 from fastsprout.data.utils.collect import collect
+from fastsprout.data.utils.iterable import resolve_any_iterable
 
 __all__ = ["SQLUpdatable", "SQLUpdatableByQuery"]
 
@@ -103,10 +105,10 @@ class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLDataBackend):
                     yield item
 
 
-class SQLUpdatableByQuery[E: SQLEntity[Any], Q: SQLQuery[SQLEntity[Any]]](
-    UpdatableByQuery[E, Q], SQLDataBackend
+class SQLUpdatableByQuery[E: SQLEntity[Any]](
+    UpdatableByQuery[E, SQLQuery[E]], SQLDataBackend
 ):
-    async def update_by_query(  # pyright: ignore[reportIncompatibleMethodOverride]
+    async def update_by_query(
         self,
         query: SQLQuery[E],
         /,
@@ -116,38 +118,46 @@ class SQLUpdatableByQuery[E: SQLEntity[Any], Q: SQLQuery[SQLEntity[Any]]](
             return 0
 
         entity = query.entity
-        built_q = query._built_query
         pk: Mapped[Any] = entity.id.orm  # pyright: ignore[reportGeneralTypeIssues]
-        built_q_id = built_q.with_only_columns(pk).order_by(None)
-
-        async with self.transaction() as session:
-            result = await session.stream(
-                query._built_update.where(pk.in_(built_q_id))
-                .values(
-                    {
-                        cast(
-                            Mapped[Any], getattr(entity, field.name).orm
-                        ): field.value
-                        for field in assignments
-                    }
-                )
-                .returning(entity.__table__),
-                execution_options={"yield_per": DEFAULT_ITERATION_CHUNK_SIZE},
+        selections = (
+            resolve_any_iterable((query.build().with_only_columns(pk),))
+            if query.native_conditions
+            else (
+                select(pk).where(pk.in_([item.id for item in batch]))
+                async for batch in SQLEntityStream(
+                    query, self._signpost
+                ).chunked()
             )
-            rowcount = 0
-            async for chunk in result.mappings().partitions():
-                for row in chunk:
-                    item = entity.model_validate(
-                        {
-                            key: value
-                            for key, value in row.items()
-                            if isinstance(key, str)
-                        }
-                    )
+        )
+        rowcount = 0
+        async with self.transaction() as session:
+            async for built_q_id in selections:
+                result = await session.stream(
+                    select(entity).from_statement(
+                        update(entity.__table__)
+                        .where(pk.in_(built_q_id))
+                        .values(
+                            {
+                                cast(
+                                    Mapped[Any], getattr(entity, field.name).orm
+                                ): field.value
+                                for field in assignments
+                            }
+                        )
+                        .returning(entity.__table__)
+                    ),
+                    execution_options={
+                        "yield_per": DEFAULT_ITERATION_CHUNK_SIZE,
+                        "populate_existing": True,
+                    },
+                )
+                async for chunk in result.scalars().partitions():
                     if self.with_events:
                         await self._publish_to_bus(
-                            UpdateEvent[type(item)](entity=item)  # type: ignore[misc,operator]
+                            *(
+                                UpdateEvent[type(item)](entity=item)  # type: ignore[misc,operator]  # Mypy cannot express the runtime entity type in this subscription.
+                                for item in chunk
+                            )
                         )
-                rowcount += len(chunk)
-
-            return rowcount
+                    rowcount += len(chunk)
+        return rowcount

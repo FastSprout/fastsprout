@@ -25,20 +25,18 @@ from ..types import DataSOperation, Page
 __all__ = ["DataSable"]
 
 E = TypeVar("E", bound=Entitieable)
-F = TypeVar("F", bound=Schema, default=Schema)
 R = TypeVar("R", bound=Valuable | Entitieable, default=E)
 C = TypeVar("C", bound=Schema, default=WriteDTO)
 U = TypeVar("U", bound=Schema, default=WriteDTO)
 P = TypeVar("P", bound=Schema, default=WriteDTO)
 
 
-class DataSable(Protocol[E, F, R, C, U, P]):
+class DataSable(Protocol[E, R, C, U, P]):
     entity: type[E]
     read_schema: type[R]
     create_schema: type[C]
     update_schema: type[U]
     patch_schema: type[P]
-    filters_schema: type[F]
     page_schema: type[Page[R]]
     operations: frozenset[DataSOperation]
     dependencies: Sequence[DependsClass]

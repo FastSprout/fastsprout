@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator, Sequence
 from typing import Any
 
-from sqlalchemy import inspect
+from sqlalchemy import inspect, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Mapped
 
@@ -36,11 +36,7 @@ class SQLUpsertable[E: SQLEntity[Any]](Upsertable[E], SQLDataBackend):
                 mapper = inspect(entity_cls)
                 pk_keys = get_primary_key(entity_cls)
                 pk: Mapped[Any] = entity_cls.id.orm  # pyright: ignore[reportGeneralTypeIssues]
-                built_q_id = (
-                    self.query_for(entity_cls)
-                    ._built_select.with_only_columns(pk)
-                    .order_by(None)
-                )
+                built_q_id = select(pk).order_by(None)
 
                 mappings = [
                     {

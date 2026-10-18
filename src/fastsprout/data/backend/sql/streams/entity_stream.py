@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator, AsyncIterator, Hashable
 from contextlib import AbstractAsyncContextManager
+from functools import partial
 from typing import Any
 
 from sqlalchemy import func, or_, select
@@ -14,6 +15,8 @@ from fastsprout.core.types.protocols.ables import RichComparisonable
 from fastsprout.data.backend.implementation import BaseDataBackend
 from fastsprout.data.backend.sql.data_backend import SQLDataBackend
 from fastsprout.data.backend.sql.entity import SQLEntity, SQLSignpost
+from fastsprout.data.capabilities.query import And, FieldPredicate
+from fastsprout.data.capabilities.query.predicate import evaluate
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.entity import Entitieable, Signpostable
 from fastsprout.data.streams.implementation import (
@@ -28,8 +31,10 @@ from fastsprout.data.types import (
     GetterCallable,
     HashableAndValuable,
     MapperCallable,
+    PredicateCallable,
 )
 
+from ..query import SQLQuery, compile_predicate
 from .value_stream import SQLValueStream
 
 __all__ = ["SQLEntityStream"]
@@ -60,7 +65,7 @@ class SQLEntityStream[E: SQLEntity[Any]](
 
     def __init__(
         self,
-        stmt: Select[tuple[E]],
+        stmt: Select[tuple[E]] | SQLQuery[E],
         signpost: (
             SQLSignpost
             | Signpostable[AbstractAsyncContextManager[AsyncSession]]
@@ -68,13 +73,29 @@ class SQLEntityStream[E: SQLEntity[Any]](
         /,
     ) -> None:
         BaseDataBackend.__init__(self, signpost)
+        self.query: SQLQuery[E] | None = None
+        if isinstance(stmt, SQLQuery):
+            if not stmt.native_conditions:
+                self.query = stmt.copy()
+                stmt = stmt.unpaged()
+                stmt.conditions = ()
+            stmt = stmt.build()
         self._stmt = stmt
 
     def _clone(self, stmt: Select[tuple[E]]) -> "SQLEntityStream[E]":
         return SQLEntityStream(stmt, self._signpost)
 
     def __aiter__(self) -> AsyncIterator[E]:
-        return self.scalars(self._stmt)
+        if self.query is None:
+            return self.scalars(self._stmt)
+        stream = (
+            SimpleAsyncEntityStream(self.scalars(self._stmt))
+            .filter(partial(evaluate, And(*self.query.conditions)))
+            .drop(self.query.offset_value)
+        )
+        if isinstance(self.query.limit_value, int):
+            stream = stream.take(self.query.limit_value)
+        return aiter(stream)
 
     def join[F: Entitieable, Key: Hashable, LeftOrm, RightOrm](
         self,
@@ -85,6 +106,8 @@ class SQLEntityStream[E: SQLEntity[Any]](
         if (
             not isinstance(other, SQLEntityStream)
             or self._signpost is not other._signpost
+            or self.query is not None
+            or other.query is not None
         ):
             return super().join(other, on=on)
         left_field, right_field = on
@@ -119,14 +142,38 @@ class SQLEntityStream[E: SQLEntity[Any]](
 
         return JoinedStream.from_factory(rows)
 
-    def take(self, n: int) -> "SQLEntityStream[E]":
+    def take(self, n: int) -> SimpleAsyncEntityStream[E]:
+        if self.query is not None:
+            return super().take(n)
         return self._clone(self._stmt.limit(n))
 
-    def drop(self, n: int) -> "SQLEntityStream[E]":
+    def drop(self, n: int) -> SimpleAsyncEntityStream[E]:
+        if self.query is not None:
+            return super().drop(n)
         return self._clone(self._stmt.offset(n))
 
-    def distinct(self) -> "SQLEntityStream[E]":
+    def distinct(self) -> SimpleAsyncEntityStream[E]:
+        if self.query is not None:
+            return super().distinct()
         return self._clone(self._stmt.distinct())
+
+    def filter(
+        self, predicate: PredicateCallable[E]
+    ) -> SimpleAsyncEntityStream[E]:
+        unpaged = self._stmt.compare(self._stmt.limit(None).offset(None))
+        if (
+            self.query is None
+            and unpaged
+            and isinstance(predicate, FieldPredicate)
+        ):
+            condition = compile_predicate(
+                predicate,
+                self._stmt.column_descriptions[0]["entity"],
+                lambda name: self._stmt.selected_columns[name],
+            )
+            if condition is not None:
+                return self._clone(self._stmt.where(condition))
+        return SimpleAsyncEntityStream(self).filter(predicate)
 
     def sort[R: RichComparisonable[Any]](  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
@@ -134,7 +181,7 @@ class SQLEntityStream[E: SQLEntity[Any]](
         reverse: bool = False,
     ) -> AsyncEntityStream[E]:
         orm = _orm_of(key)  # pyright: ignore[reportArgumentType]
-        if orm is None:
+        if self.query is not None or orm is None:
             return SimpleAsyncEntityStream(self).sort(key, reverse=reverse)
         return self._clone(
             self._stmt.order_by(orm.desc() if reverse else orm.asc())
@@ -142,6 +189,8 @@ class SQLEntityStream[E: SQLEntity[Any]](
 
     @lazy_await
     async def count(self) -> int:
+        if self.query is not None:
+            return await super().count()
         sub = self._stmt.subquery()
         async with self.session() as session:
             result = await session.execute(
@@ -151,6 +200,8 @@ class SQLEntityStream[E: SQLEntity[Any]](
 
     @lazy_await
     async def first(self) -> E | None:
+        if self.query is not None:
+            return await super().first()
         async for item in self._clone(self._stmt.limit(1)):
             return item
         return None
@@ -159,7 +210,7 @@ class SQLEntityStream[E: SQLEntity[Any]](
         self, mapper: MapperCallable[E, K]
     ) -> AsyncValueStream[K]:
         orm = _orm_of(mapper)  # pyright: ignore[reportArgumentType]
-        if orm is None:
+        if self.query is not None or orm is None:
             return SimpleAsyncEntityStream(self).to_values(mapper)
         sub = self._stmt.subquery()
         return SQLValueStream(

@@ -1,44 +1,37 @@
 from collections.abc import Sequence
-from typing import Any, cast
+from typing import Any
+
+from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 
 from fastsprout.data.backend.sql.data_backend import SQLDataBackend
 from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.query import SQLQuery
+from fastsprout.data.backend.sql.streams import SQLEntityStream
 from fastsprout.data.capabilities.protocols import Findable
+from fastsprout.data.streams.implementation import SimpleAsyncEntityStream
 
 __all__ = ["SQLFindable"]
 
 
-class SQLFindable[E: SQLEntity[Any], Q: SQLQuery](
-    Findable[E, Q], SQLDataBackend
-):
+class SQLFindable[E: SQLEntity[Any]](Findable[E, SQLQuery[E]], SQLDataBackend):
     async def find_first(self, query: SQLQuery[E], /) -> E | None:
-        async with self.session() as session:
-            return cast(
-                E | None,
-                (await session.execute(query._built_query.limit(1)))
-                .scalars()
-                .first(),
-            )
+        return await SimpleAsyncEntityStream(
+            SQLEntityStream(query, self._signpost)
+        ).first()
 
     async def find_exactly_one(self, query: SQLQuery[E], /) -> E:
-        async with self.session() as session:
-            return cast(
-                E,
-                (await session.execute(query._built_query.limit(2)))
-                .scalars()
-                .one(),
+        rows = (
+            await SimpleAsyncEntityStream(
+                SQLEntityStream(query, self._signpost)
             )
+            .take(2)
+            .to_list()
+        )
+        if not rows:
+            raise NoResultFound("Query must match exactly one record")
+        if len(rows) != 1:
+            raise MultipleResultsFound("Query must match exactly one record")
+        return rows[0]
 
     async def find_all(self, query: SQLQuery[E], /) -> Sequence[E]:
-        async with self.session() as session:
-            return cast(
-                Sequence[E],
-                (
-                    await session.execute(
-                        query._built_query,
-                    )
-                )
-                .scalars()
-                .all(),
-            )
+        return await SQLEntityStream(query, self._signpost).to_list()

@@ -24,3 +24,4 @@ uv run --extra data-sql --extra events python examples/data/01_datar/01_smart_ro
 | [02_stream/01_joined_stream.py](02_stream/01_joined_stream.py) | Join three entity streams without a router or database. |
 | [02_stream/02_routed_join.py](02_stream/02_routed_join.py) | Join entities from two separate databases through their signposts. |
 | [02_stream/03_nested_joins.py](02_stream/03_nested_joins.py) | Compose a SQL join with another stream or an already joined stream. |
+| [02_stream/04_query_conditions.py](02_stream/04_query_conditions.py) | Build field conditions once and reuse them in Query and stream.filter. |
