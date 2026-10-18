@@ -31,6 +31,13 @@ its documentation and check the site:
 The generator runs examples and captures their output. Update the Python
 source rather than editing generated pages under docs/learn/examples/.
 
+The wiki CI job mirrors the built website, including its versioned pages,
+API reference, examples, and navigation. Edit the source documentation,
+not the wiki: synchronization replaces wiki content with the site export.
+Maintainers must configure a masked WIKI_PUSH_TOKEN CI variable with
+write_repository access to the project wiki. Protect it when publishing
+only from protected branches and tags.
+
 Submit a pull request against development. Keep each commit focused on one
 complete change, including its tests, examples, and documentation. Explain
 the behavior changed and the checks you ran.

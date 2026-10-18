@@ -168,6 +168,9 @@ def write_markdown_and_llms(
     source: Path, destination: Path, slug: str, config
 ) -> None:
     pages = copy_markdown(source, destination)
+    (destination / "navigation.json").write_text(
+        json.dumps(config["nav"], indent=2) + "\n", encoding="utf-8"
+    )
     write_llms(destination, slug, config, pages)
     write_full(
         destination,
