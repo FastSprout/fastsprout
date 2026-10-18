@@ -6,7 +6,7 @@ from sqlmodel import Field as SQLField
 
 from fastsprout.actions import DataS, DataSable, Page, Service, WriteOperation
 from fastsprout.actions.service.datas.implementation import commands, queries
-from fastsprout.core import BaseSchema, Depends, Field, IdentificatorType, InternalField, ReadDTO, ReadField, Schema, Undefined, dataclass
+from fastsprout.core import BaseSchema, Depends, Field, IdentificatorType, InternalField, ReadDTO, ReadField, Schema, Undefined, WriteDTO, dataclass
 from fastsprout.core.depends import DependsClass
 from fastsprout.core.types import AnyIterable
 from fastsprout.data import sql
@@ -220,3 +220,18 @@ async def async_mapping_types[Statement](
         assert_type(summary, HeroSummary)
     async for summary in contract.map(query, summarize_async):
         assert_type(summary, HeroSummary)
+
+
+class HeroWrite(WriteDTO, Hero): ...
+
+
+async def explicit_dto_types(payload: HeroWrite) -> None:
+    service = DataS(Hero, create=HeroWrite, read=HeroRead)
+    assert_type(service.create_schema, type[HeroWrite])
+    assert_type(service.read_schema, type[HeroRead])
+    created = await service.create(payload)
+    assert_type(created, HeroRead)
+    assert_type(created.name, str)
+    assert_type(created.id, UUID)
+    _ = payload.id  # error: reportAttributeAccessIssue; mypy: call-overload
+    _ = created.secret  # error: reportAttributeAccessIssue; mypy: call-overload

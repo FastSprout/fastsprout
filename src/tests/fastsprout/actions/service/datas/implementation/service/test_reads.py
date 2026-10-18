@@ -10,7 +10,7 @@ from fastsprout.core.depends.scope import dependency_resources
 from fastsprout.data import DataR, sql
 from fastsprout.data.utils.iterable import resolve_any_iterable
 
-from ...common import Record, RecordRead
+from ...common import Record, RecordRead, RecordWrite
 
 
 class TestReads:
@@ -142,3 +142,25 @@ class TestReads:
         assert count == empty.total == 3
         assert empty.items == []
         assert (query.offset_value, query.limit_value) == (1, 1)
+
+    async def test_explicit_write_and_read_dtos_preserve_visibility(
+        self, records: DataS[Record]
+    ) -> None:
+        # given
+        service = DataS(Record, create=RecordWrite, read=RecordRead)
+        payload = service.create_schema(name="Batman", password="secret")
+        # when
+        created = await service.create(payload)
+        stored = await records.get(created.id)
+        # then
+        assert isinstance(payload, RecordWrite)
+        assert "id" not in vars(payload)
+        assert isinstance(created, RecordRead)
+        assert created.name == "Batman"
+        assert stored is not None and stored.password == "secret"
+        with pytest.raises(AttributeError, match="not accessible"):
+            service.create_schema(id=created.id, name="Robin")
+        for name in ("password", "system_key"):
+            assert name not in vars(created)
+            with pytest.raises(AttributeError, match="not accessible"):
+                created.__getattribute__(name)
