@@ -1,6 +1,6 @@
 # 3. Event Group In Bus
 
-<!-- example-source: examples/events/02_advance_decorators_01_events_group_03_event_group_in_bus.py -->
+<!-- example-source: examples/events/02_advance_decorators/01_events_group/03_event_group_in_bus.py -->
 
 Publish an event group and consume its completed states.
 

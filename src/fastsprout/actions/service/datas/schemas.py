@@ -22,10 +22,21 @@ __all__ = [
 
 
 SCHEMA_OPERATIONS: dict[str, frozenset[DataSOperation]] = {
-    "read_schema": frozenset({"get", "list", "create", "update", "patch"}),
-    "create_schema": frozenset({"create"}),
-    "update_schema": frozenset({"update"}),
-    "patch_schema": frozenset({"patch"}),
+    "read_schema": frozenset(
+        {
+            "get",
+            "list",
+            "create",
+            "update",
+            "patch",
+            "bulk_create",
+            "bulk_update",
+            "bulk_patch",
+        }
+    ),
+    "create_schema": frozenset({"create", "bulk_create"}),
+    "update_schema": frozenset({"update", "bulk_update"}),
+    "patch_schema": frozenset({"patch", "bulk_patch"}),
 }
 
 

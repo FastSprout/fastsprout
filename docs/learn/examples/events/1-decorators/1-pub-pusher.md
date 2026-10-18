@@ -1,6 +1,6 @@
 # 1. Pub Pusher
 
-<!-- example-source: examples/events/01_decorators_01_pub_pusher.py -->
+<!-- example-source: examples/events/01_decorators/01_pub_pusher.py -->
 
 Publish an event returned by an action and look up its state.
 

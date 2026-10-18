@@ -8,13 +8,16 @@ from typing_extensions import TypeVar
 
 from fastsprout.core import IdentificatorType, Schema, UndefinedType
 from fastsprout.core.depends import DependsClass
+from fastsprout.core.types import AnyIterable, LazyAwait
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.router import DataR
+from fastsprout.data.streams.protocols import AsyncCommonStream
 from fastsprout.data.types import Valuable
 
 from ..types import DataSOperation, Page
 from .owners import (
+    CreateOwner,
     EntityOwner,
     PageOwner,
     PatchOwner,
@@ -110,3 +113,45 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
         *,
         datar: DataR = ...,
     ) -> Page[R]: ...
+
+    def bulk_create(
+        self: CreateOwner[E, R, C],
+        entities: AnyIterable[E | C],
+        /,
+        *,
+        datar: DataR = ...,
+    ) -> AsyncCommonStream[R]: ...
+
+    @overload
+    def bulk_update(
+        self: UpdateOwner[E, R, U],
+        entities: AnyIterable[E],
+        /,
+        *,
+        datar: DataR = ...,
+    ) -> AsyncCommonStream[R]: ...
+
+    @overload
+    def bulk_update(
+        self: UpdateOwner[E, R, U],
+        entities: AnyIterable[tuple[IdentificatorType, E | U]],
+        /,
+        *,
+        datar: DataR = ...,
+    ) -> AsyncCommonStream[R]: ...
+
+    def bulk_patch(
+        self: PatchOwner[E, R, P],
+        entities: AnyIterable[tuple[IdentificatorType, E | P]],
+        /,
+        *,
+        datar: DataR = ...,
+    ) -> AsyncCommonStream[R]: ...
+
+    def bulk_delete(
+        self: EntityOwner[E, R],
+        identifiers: AnyIterable[IdentificatorType],
+        /,
+        *,
+        datar: DataR = ...,
+    ) -> LazyAwait[int]: ...

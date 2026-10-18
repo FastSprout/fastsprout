@@ -1,6 +1,6 @@
 # 2. Sub Handler
 
-<!-- example-source: examples/events/01_decorators_02_sub_handler.py -->
+<!-- example-source: examples/events/01_decorators/02_sub_handler.py -->
 
 Subscribe a handler and wait for its event result.
 

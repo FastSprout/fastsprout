@@ -1,6 +1,6 @@
 # 1. Schedule Event
 
-<!-- example-source: examples/events/02_advance_decorators_01_schedule_event.py -->
+<!-- example-source: examples/events/02_advance_decorators/01_schedule_event.py -->
 
 Run a cron-scheduled publisher while the bus scheduler is active.
 

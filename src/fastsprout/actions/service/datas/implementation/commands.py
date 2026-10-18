@@ -8,10 +8,15 @@ from fastsprout.core import (
     Schema,
 )
 from fastsprout.core.dto.conversion import prepare_create, project_read
+from fastsprout.core.types import AnyIterable
 from fastsprout.core.types.protocols.identificable import Identificatable
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.router import DataR
+from fastsprout.data.streams.implementation.base_common_stream import (
+    BaseCommonStream,
+)
 from fastsprout.data.types import Valuable
+from fastsprout.data.utils.iterable import achain
 
 from ..protocols.owners import (
     CreateOwner,
@@ -19,12 +24,22 @@ from ..protocols.owners import (
     PatchOwner,
     UpdateOwner,
 )
+from .batches import batch_count, batch_stream
 from .payloads import (
     find_entity,
     prepare_write,
 )
 
-__all__ = ["create", "delete", "patch", "update"]
+__all__ = [
+    "bulk_create",
+    "bulk_delete",
+    "bulk_patch",
+    "bulk_update",
+    "create",
+    "delete",
+    "patch",
+    "update",
+]
 
 E = TypeVar("E", bound=Entitieable)
 R = TypeVar("R", bound=Valuable | Entitieable, default=E)
@@ -109,3 +124,103 @@ async def delete(
     if found is None:
         return 0
     return await datar.ability(self.entity).delete(found)
+
+
+@batch_stream
+async def bulk_create(
+    self: CreateOwner[E, R, C],
+    entities: AnyIterable[E | C],
+    /,
+    *,
+    datar: DataR = Depends(),
+) -> list[R]:
+    prepared = [
+        prepare_create(self.entity, self.create_schema, entity)
+        async for entity in achain(entities)
+    ]
+    created = await datar.ability(self.entity).bulk_create(prepared)
+    return [project_read(entity, self.read_schema) for entity in created]
+
+
+@overload
+def bulk_update(
+    self: UpdateOwner[E, R, U],
+    entities: AnyIterable[E],
+    /,
+    *,
+    datar: DataR = Depends(),
+) -> BaseCommonStream[R]: ...
+
+
+@overload
+def bulk_update(
+    self: UpdateOwner[E, R, U],
+    entities: AnyIterable[tuple[IdentificatorType, E | U]],
+    /,
+    *,
+    datar: DataR = Depends(),
+) -> BaseCommonStream[R]: ...
+
+
+@batch_stream
+async def bulk_update(
+    self: UpdateOwner[E, R, U],
+    entities: AnyIterable[E | tuple[IdentificatorType, E | U]],
+    /,
+    *,
+    datar: DataR = Depends(),
+) -> list[R]:
+    prepared: list[E] = []
+    async for item in achain(entities):
+        if isinstance(item, tuple):
+            key, data = item
+            entity = await prepare_write(
+                self.entity, key, data, self.update_schema, datar
+            )
+        else:
+            entity = await prepare_write(
+                self.entity, item.id, item, self.entity, datar
+            )
+        prepared.append(entity)
+    updated = await datar.ability(self.entity).bulk_update(prepared)
+    by_id = {entity.id: entity for entity in updated}
+    return [
+        project_read(by_id[entity.id], self.read_schema) for entity in prepared
+    ]
+
+
+@batch_stream
+async def bulk_patch(
+    self: PatchOwner[E, R, P],
+    entities: AnyIterable[tuple[IdentificatorType, E | P]],
+    /,
+    *,
+    datar: DataR = Depends(),
+) -> list[R]:
+    prepared = [
+        await prepare_write(
+            self.entity, key, data, self.patch_schema, datar, partial=True
+        )
+        async for key, data in achain(entities)
+    ]
+    updated = await datar.ability(self.entity).bulk_update(prepared)
+    by_id = {entity.id: entity for entity in updated}
+    return [
+        project_read(by_id[entity.id], self.read_schema) for entity in prepared
+    ]
+
+
+@batch_count
+async def bulk_delete(
+    self: EntityOwner[E, R],
+    identifiers: AnyIterable[IdentificatorType],
+    /,
+    *,
+    datar: DataR = Depends(),
+) -> int:
+    entities: list[E] = []
+    async for key in achain(identifiers):
+        found = await find_entity(self.entity, key, datar)
+        if found is not None:
+            entities.append(found)
+    return await datar.ability(self.entity).bulk_delete(entities)

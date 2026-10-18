@@ -1,6 +1,6 @@
 # 2. Simple List
 
-<!-- example-source: examples/events/02_advance_decorators_01_events_group_02_simple_list.py -->
+<!-- example-source: examples/events/02_advance_decorators/01_events_group/02_simple_list.py -->
 
 Publish several events returned by one action.
 

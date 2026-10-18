@@ -1,6 +1,6 @@
 # 2. Custom Event Bus
 
-<!-- example-source: examples/events/03_bus_02_custom_event_bus.py -->
+<!-- example-source: examples/events/03_bus/02_custom_event_bus.py -->
 
 Use a Bubus-backed bus through a Depends provider override.
 

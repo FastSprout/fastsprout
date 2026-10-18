@@ -123,6 +123,10 @@ class DataS(Service, DataSable[E, R, C, U, P, CreateSetting]):
     update = commands.update
     patch = commands.patch
     delete = commands.delete
+    bulk_create = commands.bulk_create
+    bulk_update = commands.bulk_update
+    bulk_patch = commands.bulk_patch
+    bulk_delete = commands.bulk_delete
 
     get = queries.get
     exists = queries.exists

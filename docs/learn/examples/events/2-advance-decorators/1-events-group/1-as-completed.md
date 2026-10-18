@@ -1,6 +1,6 @@
 # 1. As Completed
 
-<!-- example-source: examples/events/02_advance_decorators_01_events_group_01_as_completed.py -->
+<!-- example-source: examples/events/02_advance_decorators/01_events_group/01_as_completed.py -->
 
 Handle several event types and consume states as they complete.
 

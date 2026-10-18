@@ -1,6 +1,6 @@
 # 3. Pub Sub Handler
 
-<!-- example-source: examples/events/01_decorators_03_pub_sub_handler.py -->
+<!-- example-source: examples/events/01_decorators/03_pub_sub_handler.py -->
 
 Publish a second event from a subscribed handler.
 

@@ -1,6 +1,6 @@
 # 1. Middleware
 
-<!-- example-source: examples/events/03_bus_01_middleware.py -->
+<!-- example-source: examples/events/03_bus/01_middleware.py -->
 
 Run middleware for one event type and inspect its handler result.
 
