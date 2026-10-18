@@ -73,6 +73,40 @@ whether each part is necessary and can reuse existing code. Simplify or split
 the work into coherent stages where possible; 500 lines is a review trigger,
 not a target or permission to add more code.
 
+## Review and commit completeness
+
+During review and before each commit, answer these questions against the
+actual diff:
+
+1. Why does this requirement need this many changes?
+2. Can the change be simpler or smaller?
+3. What concrete purpose does each changed line serve?
+4. Does it reuse the existing implementation?
+5. Does it duplicate logic or protocols?
+6. Does each responsibility belong in its module and respect the architecture?
+7. Are changes in other layers necessary for this behavior?
+8. Does IDE typing remain precise without broad types, casts, or suppressions?
+9. Are existing capabilities and contracts preserved?
+10. Does iterable processing remain lazy, support `AnyIterable`, and avoid
+    loading the entire input into memory?
+11. Are chunk boundaries independent of transaction boundaries?
+12. Are new public behaviors demonstrated by runnable examples?
+13. Do tests reuse the existing structure, fixtures, and helpers, with
+    `# given`, `# when`, and `# then` sections?
+14. Do the relevant runtime tests, linters, and type checks pass?
+15. Does the staged diff contain only the agreed scope and all its dependencies?
+
+Mark a question not applicable only with a concrete reason. Resolve findings
+before treating the change as ready; report checks that fail or cannot run.
+
+Each commit must be a complete, independently usable change, not a fragment
+that needs a later commit to work. Include the contracts, implementation,
+imports, relevant tests, examples, and documentation needed for its scope.
+Split large work by complete behavior, not by leaving required layers or
+dependencies for later. Verify the staged version itself when it differs
+from the working tree; unstaged code must not conceal missing dependencies.
+Do not stage unrelated changes to make a partial commit work.
+
 ## No code generation
 
 Code generation is prohibited. Do not add Python code generators, `.pyi`
