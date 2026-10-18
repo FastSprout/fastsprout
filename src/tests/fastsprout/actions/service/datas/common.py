@@ -5,6 +5,8 @@ from typing import Annotated, ClassVar
 from uuid import UUID, uuid4
 
 from pydantic import Field as PydanticField
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlmodel import Field as SQLField
 
 from fastsprout.actions.service.datas import DataSOperation, Page
@@ -22,7 +24,7 @@ from fastsprout.core import (
 )
 from fastsprout.core.dto.conversion import supplied_names
 from fastsprout.core.types import AnyIterable
-from fastsprout.data import DataR, SimpleAsyncEntityStream, sql
+from fastsprout.data import DataR, Relationship, SimpleAsyncEntityStream, sql
 from fastsprout.data.capabilities.query import (
     And,
     BaseQuery,
@@ -177,3 +179,31 @@ class MemoryAbility:
 
     async def delete(self, entity: MemoryRecord) -> int:
         return int(self.items.pop(entity.id, None) is not None)
+
+
+class League(sql.SQLEntity[UUID]):
+    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+    name: Field[str]
+
+
+class Team(sql.SQLEntity[UUID]):
+    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+    name: Field[str]
+    league: Field[League | None] = Relationship()
+
+
+class TeamRecord(sql.SQLEntity[UUID]):
+    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+    name: Field[str]
+    team: Field[Team | None] = Relationship()
+
+
+def loaded_query[E: sql.SQLEntity](
+    source: type[E], key: UUID
+) -> sql.SQLQuery[E]:
+    return sql.SQLQuery(
+        source,
+        statement=select(source)
+        .where(source.__table__.c.id == key)
+        .options(selectinload("*")),
+    )

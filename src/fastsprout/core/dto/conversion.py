@@ -59,7 +59,11 @@ def writable_names(entity: type[Schema | EntityVisibility]) -> frozenset[str]:
 def supplied_names(payload: Schema | EntityVisibility) -> set[str]:
     if isinstance(payload, ReadDTO | WriteDTO | ReadWriteDTO):
         return set(vars(payload))
-    return set(getattr(payload, "model_fields_set", vars(payload)))
+    names = set(getattr(payload, "model_fields_set", vars(payload)))
+    non_model_names = (
+        vars(payload).keys() - getattr(type(payload), "model_fields", {}).keys()
+    )
+    return names | (non_model_names & writable_names(type(payload)))
 
 
 def check_write_names[E: Schema | EntityVisibility](

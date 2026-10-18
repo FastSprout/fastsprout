@@ -28,7 +28,17 @@ __all__ = ["SQLUpdatable", "SQLUpdatableByQuery"]
 
 class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLDataBackend):
     async def update(self, entity: E, /) -> E:
-        return (await self.bulk_update([entity]))[0]
+        """Update an existing entity with its configured ORM cascades."""
+        async with self.transaction() as session:
+            keys = tuple(
+                getattr(entity, key) for key in get_primary_key(type(entity))
+            )
+            if await session.get(type(entity), keys) is None:
+                raise LookupError(f"No {type(entity).__name__} with key {keys}")
+            updated = await session.merge(entity)
+            await session.flush()
+            await self.publish_update(updated)
+            return updated
 
     async def bulk_update(self, entities: AnyIterable[E], /) -> Sequence[E]:
         return await collect(self.iter_bulk_update)(entities)
@@ -98,11 +108,14 @@ class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLDataBackend):
                             if isinstance(key, str)
                         }
                     )
-                    if self.with_events:
-                        await self._publish_to_bus(
-                            UpdateEvent[type(item)](entity=item)  # type: ignore[misc,operator]
-                        )
+                    await self.publish_update(item)
                     yield item
+
+    async def publish_update(self, entity: E) -> None:
+        if self.with_events:
+            await self._publish_to_bus(
+                UpdateEvent[type(entity)](entity=entity)  # type: ignore[misc,operator]  # Mypy cannot express the runtime entity type in this subscription.
+            )
 
 
 class SQLUpdatableByQuery[E: SQLEntity[Any]](
