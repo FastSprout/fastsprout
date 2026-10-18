@@ -38,6 +38,27 @@ If the implementation is easy to explain, it may be a good idea.
 Namespaces are one honking great idea -- let's do more of those!
 ```
 
+## SOLID and reuse
+
+Before adding code, find and reuse the existing contracts and implementations.
+When behavior is missing, extend the owning implementation with the smallest
+compatible change. Do not copy its logic, create a parallel implementation,
+or rewrite shared contracts to fit a single caller.
+
+- **Single responsibility:** keep each component focused on one responsibility
+  in its owning layer.
+- **Open/closed:** prefer composition and existing extension points; modify
+  shared code only when the required behavior belongs to that shared contract.
+- **Liskov substitution:** implementations must preserve their contract's
+  accepted inputs, result types, and behavior, including async and lazy execution.
+- **Interface segregation:** depend on the smallest existing capability needed
+  by the caller; do not require unrelated methods or backend-specific features.
+- **Dependency inversion:** higher layers depend on shared protocols; concrete
+  backends implement those protocols without leaking into shared contracts.
+
+Apply these principles to concrete needs. Do not add abstractions, wrappers,
+or design patterns without a necessary use in the requested change.
+
 ## Small, purposeful changes
 
 Keep changes small, clear, and well designed. Every changed line must have a
