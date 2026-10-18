@@ -114,3 +114,31 @@ class TestReads:
             service.map(query, lambda row: row)
         with pytest.raises(AttributeError, match="disabled"):
             service.join(query, query, on=(Record.id, Record.id))
+
+    @pytest.mark.parametrize("native", [False, True])
+    async def test_list_total_and_count_ignore_pagination(
+        self, records: DataS[Record], native: bool
+    ) -> None:
+        # given
+        await records.bulk_create(
+            Record(name=str(score), score=score) for score in (20, 30, 40)
+        ).to_list()
+        query = (
+            sql.SQLQuery(Record)
+            .where(
+                Record.score.gte(20) if native else lambda row: row.score >= 20
+            )
+            .order_by(Record.score, reverse=True)
+            .offset(1)
+            .limit(1)
+        )
+        # when
+        page = await records.list(query)
+        count = await records.count(query)
+        empty = await records.list(query.copy().limit(0))
+        # then
+        assert [row.score for row in page.items] == [30]
+        assert (page.total, page.offset, page.limit) == (3, 1, 1)
+        assert count == empty.total == 3
+        assert empty.items == []
+        assert (query.offset_value, query.limit_value) == (1, 1)
