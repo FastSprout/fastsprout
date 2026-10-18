@@ -9,6 +9,7 @@ from typing_extensions import TypeVar
 
 from fastsprout.core import IdentificatorType, Schema, UndefinedType
 from fastsprout.core.depends import DependsClass
+from fastsprout.core.fields.field_assigment import FieldAssignment
 from fastsprout.core.types import AnyIterable, LazyAwait
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
@@ -184,3 +185,18 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
         *,
         datar: DataR = ...,
     ) -> AsyncCommonStream[R]: ...
+
+    async def update_by_query[Statement, Value](
+        self: QueryOwner[E, R],
+        query: BaseQuery[E, Statement],
+        /,
+        *assignments: FieldAssignment[Value],
+        datar: DataR = ...,
+    ) -> int: ...
+
+    async def delete_by_query[Statement](
+        self: QueryOwner[E, R],
+        query: BaseQuery[E, Statement],
+        *,
+        datar: DataR = ...,
+    ) -> int: ...

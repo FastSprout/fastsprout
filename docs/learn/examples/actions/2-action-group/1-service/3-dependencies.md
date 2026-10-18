@@ -88,6 +88,6 @@ Published: Receipt
 Access checked: Invoice
 Content checked: Invoice
 Archived: Invoice
-Access checked:
+Access checked: 
 Rejected: Document content is required
 ```

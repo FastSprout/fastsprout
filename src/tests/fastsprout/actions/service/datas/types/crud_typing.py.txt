@@ -158,3 +158,17 @@ async def query_reads[Statement](
         assert_type(item, HeroRead)
     await service.find_first(wrong)  # error: reportArgumentType; mypy: arg-type
     service.stream(wrong)  # error: reportArgumentType; mypy: arg-type
+
+async def query_writes[Statement](
+    service: DataS[Hero],
+    contract: DataSable[Hero],
+    query: BaseQuery[Hero, Statement],
+    wrong: BaseQuery[MemoryEntity, Statement],
+) -> None:
+    assert_type(await service.update_by_query(query, Hero.score.set(20)), int)
+    assert_type(await service.delete_by_query(query), int)
+    assert_type(await contract.update_by_query(query, Hero.score.set(20)), int)
+    assert_type(await contract.delete_by_query(query), int)
+    await service.update_by_query(wrong, Hero.score.set(20))  # error: reportArgumentType; mypy: arg-type
+    await service.delete_by_query(wrong)  # error: reportArgumentType; mypy: arg-type
+    await service.update_by_query(query, Hero.score.set("bad"))  # error: reportArgumentType; mypy: arg-type

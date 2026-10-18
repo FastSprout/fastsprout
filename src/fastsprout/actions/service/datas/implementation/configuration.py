@@ -30,6 +30,8 @@ DATAS_OPERATIONS: frozenset[DataSOperation] = frozenset(
         "update",
         "patch",
         "delete",
+        "update_by_query",
+        "delete_by_query",
         "get",
         "find_first",
         "find_exactly_one",

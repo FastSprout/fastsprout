@@ -115,6 +115,8 @@ class TestSchemaStates:
                 "count",
                 "delete",
                 "bulk_delete",
+                "update_by_query",
+                "delete_by_query",
             }
         )
         with pytest.raises(AttributeError, match="disabled"):
