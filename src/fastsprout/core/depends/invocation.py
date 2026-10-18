@@ -27,7 +27,8 @@ __all__ = ["DependencyOwner", "stream_dependencies", "with_dependencies"]
 
 @runtime_checkable
 class DependencyOwner(Protocol):
-    dependencies: Sequence[DependsClass]
+    @property
+    def dependencies(self) -> Sequence[DependsClass]: ...
 
 
 class InvocationBindings:

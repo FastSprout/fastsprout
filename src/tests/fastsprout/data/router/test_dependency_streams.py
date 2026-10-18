@@ -13,7 +13,7 @@ from .conftest import JoinOrder
 
 
 class IteratorAbility(
-    SQLIterable[JoinOrder, SQLQuery[JoinOrder]],
+    SQLIterable[JoinOrder],
     Abilitable[JoinOrder, SQLQuery[JoinOrder]],
 ):
     def stream(
