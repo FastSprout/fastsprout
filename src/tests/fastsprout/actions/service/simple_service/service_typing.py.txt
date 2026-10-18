@@ -1,0 +1,40 @@
+from typing import Literal, assert_type
+
+from fastsprout.actions import Service, action
+from fastsprout.core import Depends
+from fastsprout.core.depends import DependsClass
+
+
+@action
+async def render(content: str) -> str:
+    return content
+
+
+class Checks(Service):
+    @action
+    async def access(self, operation: Literal["create", "delete"]) -> bool:
+        return operation == "create"
+
+    render = render
+
+
+class InheritedChecks(Checks):
+    pass
+
+
+checks = Checks()
+assert_type(Checks.access.dependency, DependsClass)
+assert_type(checks.access.dependency, DependsClass)
+Depends(Checks.access)
+Depends(checks.access)
+
+
+async def usage() -> None:
+    assert_type(await Checks.access("create"), bool)
+    assert_type(await checks.access("delete"), bool)
+    assert_type(await InheritedChecks.access("create"), bool)
+    assert_type(await Checks.render("Invoice"), str)
+    assert_type(await checks.render("Invoice"), str)
+    await Checks.access("read")  # error: reportArgumentType; mypy: arg-type
+    await checks.access(1)  # error: reportArgumentType; mypy: arg-type
+    await checks.render(1)  # error: reportArgumentType; mypy: arg-type

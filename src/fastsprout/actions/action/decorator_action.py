@@ -3,14 +3,14 @@
 import inspect
 from collections.abc import Awaitable, Callable, Sequence
 from types import MethodType
-from typing import Self, get_type_hints, overload
+from typing import Self, TypeGuard, get_type_hints, overload
 
 from fastsprout.core.depends import DependsClass, inject_depends
-from fastsprout.core.depends.invocation import with_dependencies
-from fastsprout.core.types import AsyncFunction
+from fastsprout.core.types import AsyncFunction, AsyncMethod
+from fastsprout.core.types.schema import Schema
 
 from .class_action import Action
-from .function_action import FunctionAction
+from .function_action import FunctionAction, GroupFunctionAction, MethodAction
 
 __all__ = ["action", "decorate_action_group"]
 
@@ -34,24 +34,31 @@ class ActionGroupDependency[T]:
         return inject_depends.resolve(self.marker, self.annotation)
 
 
+def group_action[I: Schema, O: Schema, **P, R](
+    member: Action[I, O] | FunctionAction[P, R],
+) -> Callable[[I], Awaitable[O]] | FunctionAction[P, R]:
+    if isinstance(member, MethodAction):
+        return member
+    if isinstance(member, FunctionAction):
+        return GroupFunctionAction(
+            member.target,
+            dependencies=member.dependencies,
+            source=member.__wrapped__,
+        )
+    function = inspect.unwrap(member.__call__, stop=inspect.isfunction)
+    return GroupFunctionAction(
+        MethodType(function, member),
+        dependencies=member.dependencies,
+        source=member,
+    )
+
+
 def decorate_action_group[T](action_group: type[T]) -> type[T]:
     type.__setattr__(action_group, "__action_group__", True)
     annotations = get_type_hints(action_group)
     for name, member in vars(action_group).items():
-        if isinstance(member, Action):
-            call = member.__call__
-            function = inspect.unwrap(
-                call, stop=lambda method, original=call: method is not original
-            )
-            setattr(
-                action_group,
-                name,
-                FunctionAction(
-                    MethodType(function, member),
-                    dependencies=member.dependencies,
-                    source=member,
-                ),
-            )
+        if isinstance(member, Action | FunctionAction):
+            setattr(action_group, name, group_action(member))
             continue
         if isinstance(member, DependsClass):
             setattr(
@@ -64,9 +71,9 @@ def decorate_action_group[T](action_group: type[T]) -> type[T]:
             continue
         first = next(iter(inspect.signature(member).parameters), None)
         wrapped = (
-            with_dependencies(member)
+            MethodAction(member)
             if first == "self" and not inspect.ismethod(member)
-            else FunctionAction(member)
+            else GroupFunctionAction(member)
         )
         setattr(action_group, name, wrapped)
     return action_group
@@ -80,17 +87,40 @@ class ActionDecorator:
     def __call__[T](self, target: type[T]) -> type[T]: ...
 
     @overload
+    def __call__[Owner, **P, R](
+        self, target: AsyncMethod[Owner, P, R]
+    ) -> MethodAction[Owner, P, R]: ...
+
+    @overload
     def __call__[**P, R](
         self, target: AsyncFunction[P, R]
     ) -> FunctionAction[P, R]: ...
 
-    def __call__[T, **P, R](
-        self, target: type[T] | Callable[P, Awaitable[R]]
-    ) -> type[T] | FunctionAction[P, R]:
+    def __call__[T, Owner, **P, R](
+        self,
+        target: type[T] | AsyncMethod[Owner, P, R] | Callable[P, Awaitable[R]],
+    ) -> type[T] | MethodAction[Owner, P, R] | FunctionAction[P, R]:
         if isinstance(target, type):
             if self.dependencies:
                 type.__setattr__(target, "dependencies", self.dependencies)
             return decorate_action_group(target)
+        return self.function(target)
+
+    def function[Owner, **P, R](
+        self,
+        target: AsyncMethod[Owner, P, R] | Callable[P, Awaitable[R]],
+    ) -> MethodAction[Owner, P, R] | FunctionAction[P, R]:
+        def is_method(
+            candidate: AsyncMethod[Owner, P, R] | Callable[P, Awaitable[R]],
+        ) -> TypeGuard[AsyncMethod[Owner, P, R]]:
+            return (
+                inspect.iscoroutinefunction(candidate)
+                and next(iter(inspect.signature(candidate).parameters), None)
+                == "self"
+            )
+
+        if is_method(target):
+            return MethodAction(target, dependencies=self.dependencies)
         if not inspect.iscoroutinefunction(target):
             raise TypeError("@action requires an async function or class")
         return FunctionAction(target, dependencies=self.dependencies)
@@ -107,6 +137,14 @@ def action[T](
 
 
 @overload
+def action[Owner, **P, R](
+    target: AsyncMethod[Owner, P, R],
+    *,
+    dependencies: Sequence[DependsClass] = (),
+) -> MethodAction[Owner, P, R]: ...
+
+
+@overload
 def action[**P, R](
     target: AsyncFunction[P, R],
     *,
@@ -114,11 +152,16 @@ def action[**P, R](
 ) -> FunctionAction[P, R]: ...
 
 
-def action[T, **P, R](
-    target: type[T] | Callable[P, Awaitable[R]] | None = None,
+def action[T, Owner, **P, R](
+    target: type[T]
+    | AsyncMethod[Owner, P, R]
+    | Callable[P, Awaitable[R]]
+    | None = None,
     *,
     dependencies: Sequence[DependsClass] = (),
-) -> type[T] | FunctionAction[P, R] | ActionDecorator:
+) -> (
+    type[T] | MethodAction[Owner, P, R] | FunctionAction[P, R] | ActionDecorator
+):
     """Make a function or action_group participate in direct-call dependency injection."""
     decorator = ActionDecorator(dependencies)
     return decorator if target is None else decorator(target)

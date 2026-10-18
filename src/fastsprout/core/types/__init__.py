@@ -1,4 +1,4 @@
-from .callable import AnyCallable, AnyCallableEmpty, AsyncFunction
+from .callable import AnyCallable, AnyCallableEmpty, AsyncFunction, AsyncMethod
 from .comparable import FilterValue, OrderedValue
 from .identificable import (
     IdentificatorType,
@@ -15,6 +15,7 @@ __all__ = [
     "AnyCallableEmpty",
     "AnyIterable",
     "AsyncFunction",
+    "AsyncMethod",
     "Chunk",
     "FilterValue",
     "IDType",

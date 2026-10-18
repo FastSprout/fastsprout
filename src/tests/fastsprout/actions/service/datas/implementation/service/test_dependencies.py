@@ -1,10 +1,15 @@
 import pytest
 
-from fastsprout.actions import DataS, action
-from fastsprout.core import Depends, IdentificatorType
+from fastsprout.actions import DataS, Service, action
+from fastsprout.core import Depends, IdentificatorType, dataclass
 from fastsprout.data import DataR
 
 from ...common import Record
+
+
+@dataclass
+class Actor:
+    can_delete: bool
 
 
 class TestDependencyValidation:
@@ -41,3 +46,52 @@ class TestDependencyValidation:
         # then
         assert calls == [(created.id, datar)]
         assert await records.exists(created.id)
+
+    async def test_sync_and_async_dependencies_share_nested_async_providers(
+        self,
+        records: DataS[Record],
+    ) -> None:
+        # given
+        actors: list[Actor] = []
+        contexts: list[DataR] = []
+        seen: list[Actor] = []
+
+        async def current_actor() -> Actor:
+            actor = Actor(can_delete=True)
+            actors.append(actor)
+            return actor
+
+        dependency = Depends(current_actor)
+
+        def check_permission(actor: Actor = dependency) -> None:
+            seen.append(actor)
+            assert actor is actors[-1]
+
+        @action
+        async def check_account(
+            datar: DataR, actor: Actor = dependency
+        ) -> None:
+            contexts.append(datar)
+            seen.append(actor)
+            assert actor is actors[-1]
+
+        class AccountChecks(Service):
+            account = check_account
+
+        checks = AccountChecks()
+        service = DataS(
+            Record,
+            dependencies=[
+                Depends(current_actor),
+                Depends(check_permission),
+                checks.account.dependency,
+            ],
+        )
+        # when / then
+        async with DataR() as datar:
+            await service.create(Record(name="Batman"), datar=datar)
+            assert contexts == [datar]
+            assert seen == [actors[0], actors[0]]
+            assert len(actors) == 1
+            await service.create(Record(name="Robin"), datar=datar)
+        assert len(actors) == 2

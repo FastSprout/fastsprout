@@ -1,5 +1,6 @@
 import asyncio
 from typing import Annotated, assert_type
+from weakref import ref
 
 import pytest
 
@@ -197,3 +198,102 @@ async def test_concurrent_actions_resolve_cached_dependency_once() -> None:
     first, second = await parent()
     assert first is second
     assert calls == [first]
+
+
+class TestServiceDependencies:
+    @pytest.mark.parametrize("shared_instance", [False, True])
+    async def test_class_and_instance_methods_preserve_owner(
+        self, shared_instance: bool
+    ) -> None:
+        # given
+        instances: list[Service] = []
+        calls: list[tuple[Service, str, int]] = []
+
+        class Checks(Service):
+            def __init__(self, power: int = EXTRA_POWER) -> None:
+                super().__init__()
+                self.power = power
+                instances.append(self)
+
+            @action
+            async def access(self, operation: str) -> None:
+                calls.append((self, operation, self.power))
+
+            @action
+            async def audit(self, operation: str) -> None:
+                calls.append((self, operation, self.power))
+
+        checks = Checks(power=10) if shared_instance else None
+        access = checks.access if checks is not None else Checks.access
+        audit = checks.audit if checks is not None else Checks.audit
+
+        @action(
+            dependencies=[Depends(access), audit.dependency, access.dependency]
+        )
+        async def submit(operation: str) -> None:
+            pass
+
+        # when
+        await submit("create")
+        await submit("update")
+
+        # then
+        assert len(instances) == (1 if shared_instance else 2)
+        assert [call[1] for call in calls] == [
+            "create",
+            "create",
+            "update",
+            "update",
+        ]
+        assert [call[2] for call in calls] == [10 if shared_instance else 2] * 4
+        assert calls[0][0] is calls[1][0] is instances[0]
+        assert calls[2][0] is calls[3][0] is instances[-1]
+        assert (calls[0][0] is calls[2][0]) is shared_instance
+
+    async def test_bound_method_keeps_call_signature(self) -> None:
+        # given
+        class Checks(Service):
+            @action
+            async def access(self, payload: StrengthenHero) -> StrengthenHero:
+                return payload
+
+        checks = Checks()
+        reference = ref(checks)
+        payload = StrengthenHero(10)
+
+        # when
+        result = await checks.access(payload)
+        injected = await Checks.access(payload)
+
+        # then
+        assert_type(result, StrengthenHero)
+        assert_type(injected, StrengthenHero)
+        assert result is injected is payload
+        del checks
+        assert reference() is None
+
+    async def test_registered_provider_supplies_singleton(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # given
+        calls: list[Service] = []
+
+        class Checks(Service):
+            async def access(self) -> None:
+                calls.append(self)
+
+        checks = Checks()
+        monkeypatch.setitem(
+            inject_depends.dependency_providers, Checks, lambda: checks
+        )
+
+        @action(dependencies=[Depends(Checks.access)])
+        async def submit() -> None:
+            pass
+
+        # when
+        await submit()
+        await submit()
+
+        # then
+        assert calls == [checks, checks]
