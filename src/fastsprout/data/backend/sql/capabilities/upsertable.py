@@ -36,7 +36,11 @@ class SQLUpsertable[E: SQLEntity[Any]](Upsertable[E], SQLDataBackend):
                 mapper = inspect(entity_cls)
                 pk_keys = get_primary_key(entity_cls)
                 pk: Mapped[Any] = entity_cls.id.orm  # pyright: ignore[reportGeneralTypeIssues]
-                built_q_id = select(pk).order_by(None)
+                built_q_id = (
+                    select(pk)
+                    .where(pk.in_(item.id for item in chunk))
+                    .order_by(None)
+                )
 
                 mappings = [
                     {
