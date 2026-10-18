@@ -40,7 +40,7 @@ class SQLUpsertable[E: SQLEntity[Any]](Upsertable[E], SQLDataBackend):
 
                 mappings = [
                     {
-                        col.key: getattr(item, col.key)
+                        col.columns[0]: getattr(item, col.key)
                         for col in mapper.column_attrs
                     }
                     for item in chunk

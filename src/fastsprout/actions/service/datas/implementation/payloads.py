@@ -5,7 +5,7 @@ from fastsprout.core.dto.conversion import prepare_update
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.router import DataR
 
-__all__ = ["find_entity", "prepare_write"]
+__all__ = ["find_entity", "prepare_upsert", "prepare_write"]
 
 
 async def find_entity[E: Entitieable](
@@ -30,3 +30,14 @@ async def prepare_write[E: Entitieable, T: Schema | Entitieable](
     if stored is None:
         raise LookupError(f"No {source.__name__} with id {key}")
     return prepare_update(source, schema, data, stored, partial=partial)
+
+
+async def prepare_upsert[E: Entitieable](
+    source: type[E], entity: E, datar: DataR
+) -> E:
+    found = await find_entity(source, entity.id, datar)
+    return (
+        entity
+        if found is None
+        else prepare_update(source, source, entity, found)
+    )

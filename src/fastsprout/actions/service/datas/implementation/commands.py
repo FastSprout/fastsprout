@@ -35,6 +35,7 @@ from . import queries
 from .batches import batch_count, batch_stream
 from .payloads import (
     find_entity,
+    prepare_upsert,
     prepare_write,
 )
 
@@ -43,12 +44,14 @@ __all__ = [
     "bulk_delete",
     "bulk_patch",
     "bulk_update",
+    "bulk_upsert",
     "create",
     "delete",
     "delete_by_query",
     "patch",
     "update",
     "update_by_query",
+    "upsert",
 ]
 
 E = TypeVar("E", bound=Entitieable)
@@ -266,3 +269,30 @@ async def update_by_query[
     return await datar.ability(self.entity).update_by_query(
         queries.validated(self, datar, query), *assignments
     )
+
+
+async def upsert(
+    self: EntityOwner[E, R], entity: E, datar: DataR = Depends()
+) -> R:
+    prepared = await prepare_upsert(self.entity, entity, datar)
+    result = await datar.ability(self.entity).upsert(prepared)
+    return project_read(result, self.read_schema)
+
+
+@batch_stream
+async def bulk_upsert(
+    self: EntityOwner[E, R],
+    entities: AnyIterable[E],
+    /,
+    *,
+    datar: DataR = Depends(),
+) -> list[R]:
+    prepared = [
+        await prepare_upsert(self.entity, entity, datar)
+        async for entity in achain(entities)
+    ]
+    results = await datar.ability(self.entity).bulk_upsert(prepared)
+    by_id = {entity.id: entity for entity in results}
+    return [
+        project_read(by_id[entity.id], self.read_schema) for entity in prepared
+    ]

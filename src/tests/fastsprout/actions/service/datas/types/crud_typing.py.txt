@@ -172,3 +172,14 @@ async def query_writes[Statement](
     await service.update_by_query(wrong, Hero.score.set(20))  # error: reportArgumentType; mypy: arg-type
     await service.delete_by_query(wrong)  # error: reportArgumentType; mypy: arg-type
     await service.update_by_query(query, Hero.score.set("bad"))  # error: reportArgumentType; mypy: arg-type
+
+async def upsert_types(
+    service: DataS[Hero, HeroRead], contract: DataSable[Hero, HeroRead], entity: Hero,
+) -> None:
+    assert_type(await service.upsert(entity), HeroRead)
+    assert_type(await contract.upsert(entity), HeroRead)
+    async for row in service.bulk_upsert([entity]):
+        assert_type(row, HeroRead)
+    async for row in contract.bulk_upsert([entity]):
+        assert_type(row, HeroRead)
+    await service.upsert(HeroCreate(name="Batman"))  # error: reportArgumentType; mypy: arg-type

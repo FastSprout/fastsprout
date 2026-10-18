@@ -200,3 +200,15 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
         *,
         datar: DataR = ...,
     ) -> int: ...
+
+    async def upsert(
+        self: EntityOwner[E, R], entity: E, datar: DataR = ...
+    ) -> R: ...
+
+    def bulk_upsert(
+        self: EntityOwner[E, R],
+        entities: AnyIterable[E],
+        /,
+        *,
+        datar: DataR = ...,
+    ) -> AsyncCommonStream[R]: ...
