@@ -157,7 +157,7 @@ async def query_reads[Statement](
     async for item in contract.stream(query):
         assert_type(item, HeroRead)
     await service.find_first(wrong)  # error: reportArgumentType; mypy: arg-type
-    service.stream(wrong)  # error: reportArgumentType; mypy: arg-type
+    service.stream(wrong)  # error: reportCallIssue, reportArgumentType; mypy: arg-type
 
 async def query_writes[Statement](
     service: DataS[Hero],
@@ -169,9 +169,47 @@ async def query_writes[Statement](
     assert_type(await service.delete_by_query(query), int)
     assert_type(await contract.update_by_query(query, Hero.score.set(20)), int)
     assert_type(await contract.delete_by_query(query), int)
-    await service.update_by_query(wrong, Hero.score.set(20))  # error: reportArgumentType; mypy: arg-type
-    await service.delete_by_query(wrong)  # error: reportArgumentType; mypy: arg-type
+    assert_type(await service.update_by_query(Hero.score.gte(20), Hero.score.set(30)), int)
+    assert_type(await service.delete_by_query(Hero.score.gte(20)), int)
+    assert_type(await contract.update_by_query(Hero.score.gte(20), Hero.score.set(30)), int)
+    assert_type(await contract.delete_by_query(Hero.score.gte(20)), int)
+    await service.update_by_query(Other.name.eq("Robin"), Hero.score.set(20))  # error: reportCallIssue, reportArgumentType; mypy: arg-type
+    await service.delete_by_query(Other.name.eq("Robin"))  # error: reportCallIssue, reportArgumentType; mypy: arg-type
+    await contract.update_by_query(Other.name.eq("Robin"), Hero.score.set(20))  # error: reportCallIssue, reportArgumentType; mypy: arg-type
+    await contract.delete_by_query(Other.name.eq("Robin"))  # error: reportCallIssue, reportArgumentType; mypy: arg-type
+    assert_type(await service.update_by_query(Hero.score.gte(20), Hero.score.lt(40), Hero.score.set(30)), int)
+    assert_type(await service.delete_by_query(Hero.score.gte(20), Hero.score.lt(40)), int)
+    assert_type(await contract.update_by_query(query.where(Hero.score.gte(20)), Hero.score.set(30)), int)
+    assert_type(await contract.delete_by_query(query.where(Hero.score.gte(20))), int)
+    await service.update_by_query(Hero.score.gte(20), Other.name.eq("Robin"), Hero.score.set(30))  # error: reportCallIssue, reportArgumentType; mypy: arg-type
+    await service.delete_by_query(Hero.score.gte(20), Other.name.eq("Robin"))  # error: reportArgumentType; mypy: arg-type
+    await contract.update_by_query(Hero.score.gte(20), Other.name.eq("Robin"), Hero.score.set(30))  # error: reportCallIssue, reportArgumentType; mypy: arg-type
+    await contract.delete_by_query(Hero.score.gte(20), Other.name.eq("Robin"))  # error: reportArgumentType; mypy: arg-type
+    await service.update_by_query(query, Hero.score.gte(20), Hero.score.set(30))  # error: reportCallIssue, reportArgumentType; mypy: call-overload
+    await service.delete_by_query(query, Hero.score.gte(20))  # error: reportArgumentType; mypy: call-overload
+    await contract.update_by_query(query, Hero.score.gte(20), Hero.score.set(30))  # error: reportCallIssue, reportArgumentType; mypy: call-overload
+    await contract.delete_by_query(query, Hero.score.gte(20))  # error: reportArgumentType; mypy: call-overload
+    await service.update_by_query(wrong, Hero.score.set(20))  # error: reportCallIssue, reportArgumentType; mypy: arg-type
+    await service.delete_by_query(wrong)  # error: reportCallIssue, reportArgumentType; mypy: arg-type
     await service.update_by_query(query, Hero.score.set("bad"))  # error: reportArgumentType; mypy: arg-type
+
+def stream_predicate_types[Statement](
+    service: DataS[Hero, HeroRead], contract: DataSable[Hero, HeroRead],
+    query: BaseQuery[Hero, Statement],
+) -> None:
+    assert_type(service.stream(query), AsyncCommonStream[HeroRead])
+    assert_type(service.stream(Hero.score.gte(20)), AsyncCommonStream[HeroRead])
+    assert_type(service.stream(Hero.score.gte(20), Hero.name.eq("Robin")), AsyncCommonStream[HeroRead])
+    assert_type(contract.stream(query), AsyncCommonStream[HeroRead])
+    assert_type(contract.stream(Hero.score.gte(20)), AsyncCommonStream[HeroRead])
+    assert_type(contract.stream(Hero.score.gte(20), Hero.name.eq("Robin")), AsyncCommonStream[HeroRead])
+    service.stream(query, Hero.score.gte(20))  # error: reportArgumentType; mypy: call-overload
+    contract.stream(query, Hero.score.gte(20))  # error: reportArgumentType; mypy: call-overload
+    service.stream(Other.name.eq("Robin"))  # error: reportCallIssue, reportArgumentType; mypy: arg-type
+    contract.stream(Other.name.eq("Robin"))  # error: reportCallIssue, reportArgumentType; mypy: arg-type
+    service.stream(Hero.score.gte(20), Other.name.eq("Robin"))  # error: reportArgumentType; mypy: arg-type
+    contract.stream(Hero.score.gte(20), Other.name.eq("Robin"))  # error: reportArgumentType; mypy: arg-type
+
 
 async def upsert_types(
     service: DataS[Hero, HeroRead], contract: DataSable[Hero, HeroRead], entity: Hero,

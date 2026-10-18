@@ -10,6 +10,7 @@ from typing_extensions import TypeVar
 from fastsprout.core import IdentificatorType, Schema, UndefinedType
 from fastsprout.core.depends import DependsClass
 from fastsprout.core.fields.field_assigment import FieldAssignment
+from fastsprout.core.fields.field_predicate import FieldPredicate
 from fastsprout.core.fields.field_ref import FieldRef
 from fastsprout.core.types import AnyIterable, LazyAwait
 from fastsprout.data.capabilities.query import BaseQuery
@@ -180,6 +181,7 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
         datar: DataR = ...,
     ) -> builtins.list[R]: ...
 
+    @overload
     def stream[Statement](
         self: QueryOwner[E, R],
         query: BaseQuery[E, Statement],
@@ -187,6 +189,16 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
         datar: DataR = ...,
     ) -> AsyncCommonStream[R]: ...
 
+    @overload
+    def stream(
+        self: QueryOwner[E, R],
+        query: FieldPredicate[E],
+        /,
+        *predicates: FieldPredicate[E],
+        datar: DataR = ...,
+    ) -> AsyncCommonStream[R]: ...
+
+    @overload
     async def update_by_query[Statement, Value](
         self: QueryOwner[E, R],
         query: BaseQuery[E, Statement],
@@ -195,10 +207,29 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
         datar: DataR = ...,
     ) -> int: ...
 
+    @overload
+    async def update_by_query[Value](
+        self: QueryOwner[E, R],
+        query: FieldPredicate[E],
+        /,
+        *assignments: FieldAssignment[Value] | FieldPredicate[E],
+        datar: DataR = ...,
+    ) -> int: ...
+
+    @overload
     async def delete_by_query[Statement](
         self: QueryOwner[E, R],
         query: BaseQuery[E, Statement],
         *,
+        datar: DataR = ...,
+    ) -> int: ...
+
+    @overload
+    async def delete_by_query(
+        self: QueryOwner[E, R],
+        query: FieldPredicate[E],
+        /,
+        *predicates: FieldPredicate[E],
         datar: DataR = ...,
     ) -> int: ...
 

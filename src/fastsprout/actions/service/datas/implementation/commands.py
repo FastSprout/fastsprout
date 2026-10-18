@@ -2,20 +2,13 @@ from typing import overload
 
 from typing_extensions import TypeVar
 
-from fastsprout.core import (
-    Depends,
-    IdentificatorType,
-    Schema,
-)
+from fastsprout.core import Depends, IdentificatorType, Schema
 from fastsprout.core.dto.conversion import (
     prepare_create,
     project_read,
-    writable_names,
 )
-from fastsprout.core.fields.field_assigment import FieldAssignment
 from fastsprout.core.types import AnyIterable
 from fastsprout.core.types.protocols.identificable import Identificatable
-from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.router import DataR
 from fastsprout.data.streams.implementation.base_common_stream import (
@@ -28,16 +21,11 @@ from ..protocols.owners import (
     CreateOwner,
     EntityOwner,
     PatchOwner,
-    QueryOwner,
     UpdateOwner,
 )
-from . import queries
 from .batches import batch_count, batch_stream
-from .payloads import (
-    find_entity,
-    prepare_upsert,
-    prepare_write,
-)
+from .payloads import find_entity, prepare_upsert, prepare_write
+from .query_writes import delete_by_query, update_by_query
 
 __all__ = [
     "bulk_create",
@@ -237,38 +225,6 @@ async def bulk_delete(
         if found is not None:
             entities.append(found)
     return await datar.ability(self.entity).bulk_delete(entities)
-
-
-async def delete_by_query[E: Entitieable, R: Valuable | Entitieable, Statement](
-    self: QueryOwner[E, R],
-    query: BaseQuery[E, Statement],
-    *,
-    datar: DataR = Depends(),
-) -> int:
-    return await datar.ability(self.entity).delete_by_query(
-        queries.validated(self, datar, query)
-    )
-
-
-async def update_by_query[
-    E: Entitieable,
-    R: Valuable | Entitieable,
-    Statement,
-    Value,
-](
-    self: QueryOwner[E, R],
-    query: BaseQuery[E, Statement],
-    /,
-    *assignments: FieldAssignment[Value],
-    datar: DataR = Depends(),
-) -> int:
-    if any(
-        item.name not in writable_names(self.entity) for item in assignments
-    ):
-        raise AttributeError("Update field is not writable")
-    return await datar.ability(self.entity).update_by_query(
-        queries.validated(self, datar, query), *assignments
-    )
 
 
 async def upsert(

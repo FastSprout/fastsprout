@@ -3,6 +3,7 @@
 import builtins
 from collections.abc import AsyncGenerator
 from contextlib import aclosing
+from typing import overload
 
 from fastsprout.core import (
     Depends,
@@ -26,7 +27,10 @@ from fastsprout.data.router import DataR
 from fastsprout.data.streams.implementation.base_common_stream import (
     BaseCommonStream,
 )
-from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.data.streams.protocols import (
+    AsyncCommonStream,
+    AsyncEntityStream,
+)
 from fastsprout.data.types import Valuable
 from fastsprout.data.utils.callable import resolve_any_callable
 from fastsprout.data.utils.iterable import resolve_any_iterable
@@ -58,18 +62,23 @@ def validated[
 ](
     self: QueryOwner[E, R],
     datar: DataR,
-    query: BaseQuery[E, Statement] | None,
+    query: BaseQuery[E, Statement] | FieldPredicate[E] | None,
+    *predicates: FieldPredicate[E],
 ) -> BaseQuery[E, Statement]:
-    if query is not None and query.entity is not self.entity:
+    if isinstance(query, BaseQuery) and predicates:
+        raise TypeError("Use a query or field predicates, not both")
+    if isinstance(query, BaseQuery) and query.entity is not self.entity:
         raise TypeError("Query must select the CRUD entity")
     ability = datar.ability(self.entity)
+    if isinstance(query, FieldPredicate):
+        query = ability.query_for(self.entity).where(query)
     query = ability.query_for(self.entity) if query is None else query
     read = read_source(self.read_schema, self.entity)
     if any(
         name not in field_names(read, "read") for name, _ in query.orderings
     ):
         raise AttributeError("Sort field is not a public field")
-    query = query.copy()
+    query = query.copy().where(*predicates)
     query.conditions = tuple(
         public_condition(self.entity, read, condition)
         for condition in query.conditions
@@ -174,17 +183,35 @@ def selected[
     return datar.stream(validated(self, datar, query))
 
 
-@BaseCommonStream.as_stream
-@stream_dependencies
-async def stream[E: Entitieable, R: Valuable | Entitieable, Statement](
+@overload
+def stream[E: Entitieable, R: Valuable | Entitieable, Statement](
     self: QueryOwner[E, R],
     query: BaseQuery[E, Statement],
     *,
     datar: DataR = Depends(),
+) -> AsyncCommonStream[R]: ...
+
+
+@overload
+def stream[E: Entitieable, R: Valuable | Entitieable](
+    self: QueryOwner[E, R],
+    query: FieldPredicate[E],
+    /,
+    *predicates: FieldPredicate[E],
+    datar: DataR = Depends(),
+) -> AsyncCommonStream[R]: ...
+
+
+@BaseCommonStream.as_stream
+@stream_dependencies
+async def stream[E: Entitieable, R: Valuable | Entitieable, Statement](
+    self: QueryOwner[E, R],
+    query: BaseQuery[E, Statement] | FieldPredicate[E],
+    *predicates: FieldPredicate[E],
+    datar: DataR = Depends(),
 ) -> AsyncGenerator[R, None]:
-    async with aclosing(
-        resolve_any_iterable(selected(self, datar, query))
-    ) as rows:
+    query = validated(self, datar, query, *predicates)
+    async with aclosing(resolve_any_iterable(datar.stream(query))) as rows:
         async for entity in rows:
             yield project_read(entity, self.read_schema)
 

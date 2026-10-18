@@ -8,13 +8,83 @@ from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from fastsprout.actions import DataS
 from fastsprout.core import Depends, inject_depends
 from fastsprout.core.depends.scope import dependency_resources
+from fastsprout.core.fields.field_predicate import FieldPredicate
 from fastsprout.data import DataR, sql
 from fastsprout.data.utils.iterable import resolve_any_iterable
 
-from ...common import Record, RecordRead, RecordWrite
+from ...common import Record, RecordRead, RecordWrite, Team
 
 
 class TestReads:
+    @pytest.mark.parametrize("direct", [False, True])
+    @pytest.mark.parametrize("additional", [False, True])
+    async def test_stream_conditions_preserve_read_dtos(
+        self, records: DataS[Record], direct: bool, additional: bool
+    ) -> None:
+        # given
+        await records.bulk_create(
+            Record(name=name, score=score)
+            for name, score in (("Batman", 10), ("Robin", 20), ("Batgirl", 30))
+        ).to_list()
+        service = DataS(Record, read=RecordRead)
+        predicate = Record.score.gte(20)
+        predicates = (Record.name.eq("Robin"),) if additional else ()
+        query = sql.SQLQuery(Record).where(predicate, *predicates)
+        # when
+        rows = await (
+            service.stream(predicate, *predicates)
+            if direct
+            else service.stream(query)
+        ).to_list()
+        # then
+        assert {row.name for row in rows} == (
+            {"Robin"} if additional else {"Robin", "Batgirl"}
+        )
+        assert all(isinstance(row, RecordRead) for row in rows)
+        for row in rows:
+            with pytest.raises(AttributeError):
+                row.__getattribute__("system_key")
+        assert query.conditions == (predicate, *predicates)
+
+    @pytest.mark.parametrize("additional", [False, True])
+    @pytest.mark.parametrize(
+        "predicate, error, message",
+        [
+            (Team.name.eq("Batman"), TypeError, "belong to the service entity"),
+            (
+                Record.system_key.eq("system"),
+                AttributeError,
+                "not a public field",
+            ),
+        ],
+        ids=["foreign-entity", "internal-field"],
+    )
+    async def test_stream_field_guards(
+        self,
+        records: DataS[Record],
+        predicate: FieldPredicate[Record] | FieldPredicate[Team],
+        error: type[Exception],
+        message: str,
+        additional: bool,
+    ) -> None:
+        # given
+        first = Record.score.gte(0) if additional else predicate
+        rest = (predicate,) if additional else ()
+        # when / then
+        with pytest.raises(error, match=message):
+            await records.stream(first, *rest).to_list()
+        assert dependency_resources.get() is None
+
+    async def test_stream_rejects_query_with_separate_predicates(
+        self, records: DataS[Record]
+    ) -> None:
+        # given
+        query = sql.SQLQuery(Record)
+        # when / then
+        with pytest.raises(TypeError, match="query or field predicates"):
+            await records.stream(query, Record.score.gte(20)).to_list()
+        assert dependency_resources.get() is None
+
     async def test_read_dtos_preserve_query_order_and_pagination(
         self, records: DataS[Record]
     ) -> None:
@@ -48,6 +118,7 @@ class TestReads:
         assert await records.find_first(query) is None
         assert await records.find_all(query) == []
         assert await records.stream(query).to_list() == []
+        assert await records.stream(Record.score.gte(20)).to_list() == []
         with pytest.raises(NoResultFound):
             await records.find_exactly_one(query)
         await records.bulk_create(
@@ -56,12 +127,14 @@ class TestReads:
         with pytest.raises(MultipleResultsFound):
             await records.find_exactly_one(query)
 
+    @pytest.mark.parametrize("direct", [False, True])
     @pytest.mark.parametrize("stop_early", [False, True])
     async def test_stream_is_lazy_and_closes_dependency_scope(
         self,
         records: DataS[Record],
         monkeypatch: pytest.MonkeyPatch,
         stop_early: bool,
+        direct: bool,
     ) -> None:
         # given
         await records.bulk_create(
@@ -85,7 +158,11 @@ class TestReads:
         monkeypatch.setitem(inject_depends.dependency_providers, DataR, provide)
         service = DataS(Record, dependencies=[Depends(check)])
         # when
-        stream = service.stream(sql.SQLQuery(Record).order_by(Record.name))
+        stream = (
+            service.stream(Record.score.eq(10), Record.name.ne("missing"))
+            if direct
+            else service.stream(sql.SQLQuery(Record).order_by(Record.name))
+        )
         assert lifecycle == []
         async with aclosing(resolve_any_iterable(stream)) as rows:
             assert (await anext(rows)).name == "a"
@@ -111,6 +188,8 @@ class TestReads:
             await service.find_all(query)
         with pytest.raises(AttributeError, match="disabled"):
             service.stream(query)
+        with pytest.raises(AttributeError, match="disabled"):
+            service.stream(Record.score.gte(20))
         with pytest.raises(AttributeError, match="disabled"):
             service.map(query, lambda row: row)
         with pytest.raises(AttributeError, match="disabled"):
