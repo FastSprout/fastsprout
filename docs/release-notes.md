@@ -1,1 +1,1 @@
-# Release Notes
+--8<-- "CHANGELOG.txt"

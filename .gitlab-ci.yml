@@ -80,6 +80,22 @@ python-quality:
       - UV_PYTHON: ["3.12", "3.13", "3.14"]
   image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
 
+changelog:
+  stage: static-analysis
+  image:
+    name: harbor.3dcra.net/github-proxy/orhunp/git-cliff:2.14.2
+    entrypoint: [""]
+  variables:
+    GIT_DEPTH: "0"
+    GIT_STRATEGY: clone
+  script:
+    - git fetch origin --tags
+    - git-cliff --config cliff.toml --output CHANGELOG.txt
+  artifacts:
+    expose_as: Changelog
+    paths:
+      - CHANGELOG.txt
+
 type-coverage:
   stage: static-analysis
   retry: *retry_nonrelease_job

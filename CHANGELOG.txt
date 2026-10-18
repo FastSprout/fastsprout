@@ -1,0 +1,268 @@
+# Changelog
+
+Generated from Git history by GitLab CI. Do not edit entries manually.
+
+## Unreleased
+
+### Actions
+
+#### Changes
+
+- demonstrate injected and singleton composite services ([529a0b1](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/529a0b13bb2f914f0d5b7ee1f2a1b5e92568fb3d))
+- demonstrate cursor pagination and chunked streams ([c0eb44f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/c0eb44f380f2417e6a5f8aa5428c6884029ecd6d))
+- demonstrate action dependencies for validation ([ace7a0c](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/ace7a0c9a1496b2ca9a2467113a08e38bd2efef8))
+- demonstrate primary key existence checks ([2d2401f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/2d2401fb643c3b2350b471935027f8681521206d))
+- demonstrate explicit read and write DTOs ([692f6ac](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/692f6ac37bcb0f4dc560e141566ca4e1d9e8a427))
+- demonstrate DataS operation controls ([d9805d9](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/d9805d930f8d6662d320f6824602727a8ca72ccb))
+- demonstrate query pagination and async predicates ([ddb3b8c](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/ddb3b8ce7147141a8f08bc2ddf436e0812529d6f))
+- organize service package and tests ([fd95d71](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/fd95d7191bee24ae341328cb5d84e3f867a4a6b3))
+- change structure to make more simple lin-imports config ([a1680d6](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/a1680d6e22d07a339ff7d74436de441dd2cf8cc4))
+
+#### Features
+
+- accept field predicates in query writes and streams ([d436ba7](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/d436ba7f985c966ab276cbb311288457bc577945))
+- resolve service methods as dependencies ([4998346](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/499834639ba653895a8ec653ca33daff0fd03038))
+- add DataS joins and async mapping ([e3b04aa](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/e3b04aa4188751b9d83a9a96df65c9dc74e62aa6))
+- add DataS upsert operations ([402ec48](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/402ec48799ff0b67feed928b17a27efa589fecfc))
+- add DataS query write operations ([a5b6bae](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/a5b6baea98246e9e9237f85ee9fbaeeb0f046706))
+- add DataS query reads and lazy stream ([850edea](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/850edeaa29c0c292a8dcbd171bb57dbcb59e1ab8))
+- add chunked DataS bulk operations ([f1bbd09](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/f1bbd0924c506d6ee87d1fff7a8e103e5940ba36))
+- add DataS CRUD with explicit schemas ([d941047](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/d9410470c3749bb5cbad820cf34dce067b484989))
+- add typed DataS protocols ([af1a290](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/af1a290f4e9ace146536b40701447dd5e25d788a))
+- support action dependencies and dependency shortcuts ([c266b94](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/c266b94f184fcec2210473bedea2e0081a8802e5))
+- add lazy streaming workflows with typed branches ([bab756b](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/bab756b9c31fa6218e6994709ea489210984dc1a))
+- add class and function actions with composable services ([91940bd](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/91940bdee27fa9302344966d930481df1bb825c9))
+
+#### Fixes
+
+- keep yield dependencies alive throughout workflows ([18862fe](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/18862fe62fae6f4403571ef95eaea912a9cd61d9))
+
+### Core
+
+#### Changes
+
+- decouple DTO metadata from decorators and organize tests ([e9cf028](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/e9cf02817190103e25e30e93630c40f968d93ac0))
+- add unit tests for read dto ([8d13c31](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/8d13c318e60138ab6896618e9bceed5ffd7f385f))
+- align DTO and SQL descriptor names and exports ([bc3f070](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/bc3f07001fb77232c766af023f9f4492d002f504))
+- use public field descriptor factory ([994081b](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/994081bcf4a406c3c0032ae6261c5a72d2db9849))
+- change to common Schema ([6c52817](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/6c5281764773d08e3ab0b9bfd45a9069d51eb238))
+
+#### Features
+
+- support async chunk replacement in dependencies ([e783aaf](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/e783aaff17b13d3f750f67c48df9188b7f3aae2e))
+- support yield dependencies in async invocations ([074d932](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/074d9322e9761c19860ffc203c7c4af3aa925e91))
+- add opt-in extra DTO fields ([d5396e1](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/d5396e1ca10186a54ff522582e35c650c9d380b1))
+- add DTO derivation helpers ([d96b11e](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/d96b11e6211552c942c30a8583410a91de54ca80))
+- add dependency scopes and typed context ([571b40a](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/571b40ac842ab5fffa0d08bbca01e8e5c30e5017))
+
+#### Fixes
+
+- respect action and DTO import layers ([cbb8d4a](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/cbb8d4ade23a7d1d7f0c8e8cefc6d7a1e4385078))
+- change conftest to new rules ([a15c90f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/a15c90fb6442a16d000cc9f1986d3ec0b16bffd3))
+- align field descriptors, visibility and defaults ([164d417](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/164d4176ca5f12b710938d761a8d0faed02ff35c))
+
+### Data
+
+#### Changes
+
+- share SQL scalar streaming ([7f8b5f3](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/7f8b5f31e5447020e91b004fe28c37773ad53b25))
+- share the entity base across model types ([aa154bf](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/aa154bf0a3cd5400f0715d02e2c6b47bf9761cd6))
+- add common stream protocols for streams ([01ebe5f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/01ebe5f57d21a238929a0c7dd6fc79f4bf7bc8a0))
+- centralize async iterator cleanup ([2a88880](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/2a88880b30c945c50bb1d7ba25ef7ae36f1d6a86))
+- make entity identifiers read-only in DTOs ([fd12055](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/fd12055c4c806bd153eddde30c2ddff224d7751e))
+
+#### Features
+
+- support nested entity updates through ORM cascades ([037f194](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/037f19469a4397c405d505334d78f6a5940f7009))
+- add composable query conditions and typed field predicates ([850e73c](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/850e73c1cae75cc99859155bdac0ae8a3abb7f2c))
+- add composable backend stream joins ([4efad04](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/4efad043fd78e25f07a3a81e0ec9d8d5deda8949))
+- add transactional DataR dependency provider ([1bd1e3f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/1bd1e3f5f7992e352ac90c4c239aefe564e39f1e))
+- add Relationship ([d678f47](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/d678f4731c3866c643c0968c37485538243fbf5d))
+- add dependencies to router operations and lazy reads ([1182662](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/118266288071a465e4609ea51f4297a77d62a3bf))
+
+#### Fixes
+
+- bound upsert event lookup to current chunk ([c79db4e](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/c79db4e68bd30117f57676cb012f8f2ef795259c))
+- correct SQL bulk updates and publish events after commit ([3b6a08f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/3b6a08fb376359cd0ce8bf6e839ed5994d8c8087))
+- bulk_create change to AnyIterable ([2416b48](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/2416b485b1f90f2a33db123ddaf562809e7fd78b))
+- keep SQL backend dependencies optional ([e85b53f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/e85b53f50854ae62e2c1135670558a85365ae59a))
+- add SQLSignpost to import ([9999536](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/9999536f4dbd4d8a2291362b40ac3918fc23c4e2))
+
+### Documentation
+
+#### Changes
+
+- add contributor setup and validation guide ([e14189c](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/e14189c922170f2b76f9d8e09deb111d2fe6fc2f))
+- require review questions and complete commits ([229ac44](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/229ac4462db87b38d21e7d50f6953a8841edacad))
+- add SOLID and code reuse guidelines ([11096cc](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/11096cc1d5df59ad6f16d0bcd7f8a35818b373ed))
+- include the full Zen of Python in source guidelines ([73fb2d6](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/73fb2d6341591616ad52d59c2b822409e513dd35))
+- add rele for 500 lines of code for production code ([2ae7716](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/2ae77168b1d9f748e121dcce76c3ab663b104ca2))
+- scope agent rules and exclude them from publishing ([008e7b3](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/008e7b3cb79a5d4860e7a3cb2881b97425ef4fb9))
+- define reusable test structure and reference suites ([bfea8b9](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/bfea8b9bc91ba7486d1de4204f489bd043229d2b))
+- skip __init__.py in examples gen ([78ded98](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/78ded9822e3dce4bf937992dd8680244d10a74d3))
+- restruct to more readable ([0683a2b](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/0683a2bdcc065b31b83acf5128aeec3ddc613f6b))
+- mark server-generated IDs as read-only ([f9fd52f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/f9fd52f9f0cbf912500af798541433df2810551e))
+- rafactor naming structure ([70c55dc](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/70c55dc7ead9733f7fca2019e86f2a793ff4064e))
+
+### Events
+
+#### Changes
+
+- rename publish result helper ([deea03b](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/deea03b79cbc6c4558b3ceca2c219e1162f58ce4))
+
+### Other
+
+#### Changes
+
+- cover dataclass defaults, non-null IDs and async bulk input ([b624821](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/b624821e8de7957ce8d8bff9d8584d13fca27a6b))
+- add __all__ in tests ([8d3b58d](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/8d3b58dcfbbfe6370abd389a4d8b036027279d2b))
+- add example testing ([e9a825f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/e9a825ff946f82d2eea95da08e3ff0169154ea0c))
+- remove asserts from examples ([bb1d9d8](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/bb1d9d8113a619ca9c15952d6d0168e670c3c7b5))
+- add __all__ in __init__ ([b9765de](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/b9765deb72311de909befc2fb642d2c3a6588b98))
+- fix events structure ([43ba801](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/43ba801d2bcb3b762e3b48f7eb1e06a78baf41fe))
+- add event layer in import linter config ([233538f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/233538fd54d8ac78fc9cf5274cd5221d5f1877bd))
+- Show total PyPI downloads in README ([6dc47c6](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/6dc47c63051e987b8d34cbc7628eec1d95d257be))
+- Fix package README logo and point links to GitHub ([75011ed](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/75011edc7418bf26575e59786bc959dd2bec6697))
+
+#### Fixes
+
+- align dependency owner and SQL iterable contracts ([2dc7fea](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/2dc7fea96ed4b277a5884694a00d71d134c00c0c))
+- change fields ([44aaa26](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/44aaa263e6fefd5937ce110d12ce969ba7b76473))
+- annotate schema configuration and SQL signpost ([56d1430](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/56d1430abc82632a2fdd507d8829ba8012900974))
+
+### Tooling
+
+#### Changes
+
+- add context layer in core ([d1da778](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/d1da7785ace78df8f0b46d2ac149f43584143277))
+- add core and actions lint imports rule ([e0be996](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/e0be996117cc04ff6239e2ef5d7124a5d25f9eda))
+- enforce public names, exports and package structure ([9b65e26](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/9b65e26542e1abc5697a11dbd26bf990156bcdfa))
+- add 100% tests and typed cov checker ([df0f719](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/df0f719d708967f75581429b3551897e23c2dac7))
+- add typed dataclass for anyone ([30fc315](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/30fc315093f68395366be29899b45798882d0930))
+- add __all__ checker in pylint ([81c74ef](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/81c74ef4ce867cd41bca19130fad1b591cf8abbc))
+- add actions layer ([e7645bd](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/e7645bd59e3acd78f0ff8c69463835b80c14a460))
+## 0.1.1 (2026-09-28)
+
+### Documentation
+
+#### Changes
+
+- render README cleanly on GitLab ([82e813d](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/82e813d937ec56e01c188e7aaadd44a9bb89aa36))
+
+### Other
+
+#### Fixes
+
+- update uv lock ([1b92210](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/1b92210ac901c149d16d029301447a3c5e190dd9))
+- 0.1.1 for pypi ([eacb998](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/eacb99837c898646df67a319bd48e595be7e20c5))
+## 0.1.0 (2026-09-28)
+
+### Core
+
+#### Changes
+
+- remove custom mypy plugin ([4b81747](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/4b81747cb2d3b31183d9b1cbad9dba20d13ffcd6))
+
+#### Features
+
+- derive DTOs with field visibility ([5d0c551](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/5d0c5516082f3504a58365089fae9ad129c45887))
+
+### Data
+
+#### Fixes
+
+- preserve SQL entity types and align typing tests ([1f2b4cc](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/1f2b4cc003d849f9e9ed9d86f6d263651ff7d4ca))
+- preserve SQL entity types and align typing tests ([c014cdf](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/c014cdf713b9f7599769eb199b022c29af98983b))
+- preserve SQL fields and resolve import cycle ([26b35d0](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/26b35d069d1fe17f63cff20bafa28abadc0b28b0))
+
+### Documentation
+
+#### Changes
+
+- keep Google verification asset in assets directory ([52e7972](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/52e7972531aa8fa91623c94bdefc638197d11c8a))
+- render readable landing page at site root ([121db05](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/121db0511f3fc919647b2d8940cfcf8dfee49b44))
+- publish complete llms documentation export ([fd35321](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/fd35321753de16fba4598ae1e643a7b71fe55c31))
+- build without Google Fonts and add site verification ([eb64443](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/eb64443da3bf65d337e50f4dc242097da5b3d98c))
+- make README the landing page and show example results ([d2fc90b](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/d2fc90b0af4a006c5ac97ce0a16c0dff9546dd34))
+- build versioned FastSprout documentation site ([0d54d43](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/0d54d4333e50db1a3904a11af7ec2a204c668b21))
+- update core examples ([b76131f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/b76131ffcc21b79ce80c934035d2090fa30dd2bf))
+- add readme generator ([674406b](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/674406b70b0bf8c2bc7711e680979ec866195227))
+- update core examples ([11ddece](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/11ddecee07f995a224c13d517f75263c3431a5d6))
+- add DTO and SQL inheritance examples ([c394354](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/c3943540c81942987a92e1c91c4307a574028da2))
+
+### Other
+
+#### Changes
+
+- share SQL fixtures and type checker helpers ([fefb106](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/fefb106221ce3321d88cfa3214f6411a0f29f780))
+- remove readme content ([9d62c29](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/9d62c29beddb1b514ba231f91399c7b558ce6930))
+- add statement ([c474759](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/c4747598766b92a339d1c78e1084a8dc9af10dcf))
+- add event listener after datar ([e4e5014](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/e4e50144328d2f22fae4b2e1274c799d788aa12e))
+- add support event in data layer ([a8edf98](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/a8edf98c79a81aaa163f337a027013d7b4da5719))
+- add depends injection ([ea154d2](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/ea154d220824e12c4cd6e3c5a72aecf882c2f942))
+- add nullable action ([4adc0d8](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/4adc0d81bfb9853e63f10ddafe4fd896322d5ad1))
+- add datar example ([16069d5](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/16069d573845a0aa87f4d2ec130407a32a557890))
+- remove soft deletable ([2a111bf](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/2a111bf73825f3e861d3f7c5d46da13b74ce5bf7))
+- remove dto from docs ([b1e4720](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/b1e472039a1fcf5d5d3025b7fb0e5e2df1e3a1f6))
+- add to project architecture ([c0a6083](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/c0a6083bf3c78554febe72821e2e7ea9a9cea83e))
+- add deps for events ([9dcf19b](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/9dcf19b15b4ebed541ed427cb38771b70ddfa3e6))
+- share SQL fixtures and type checker helpers ([e02474d](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/e02474d1bd85d157f24bc848f4a92ab682b825db))
+- remove readme content ([6642cb1](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/6642cb10a498f36e7cafc6c0c356bb78be75e1ac))
+- add statement ([43b5138](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/43b51384d59c24bcb51c91783897b4f357308069))
+- add base conceptions of DataR ([224a109](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/224a10951f66d0c564559a50be48685d62590c6b))
+- move internal field attrs to _descriptor ([db79690](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/db79690cf1f6fe8364b7e9b1bb96b4594b495db5))
+- add role C0415 for local import ([6f3a40a](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/6f3a40abfe03c75eaa5ade03c42a46386ca7f096))
+- add Backendable ([49d0d35](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/49d0d353de9f0c9657a512a397a475140310b3e7))
+- add layers to import linter ([c3d618f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/c3d618fc8f7a5a4613c62661f28762bbd5cca55a))
+- remove unit of work ([1df794e](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/1df794efcdef1688dd629a801fcb7ddfed711e01))
+- change level of sql capabilities ([9da21c2](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/9da21c2d74f784c63e5d22ea4e17ec9265911f8c))
+- add sql impl for stream ([a473e26](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/a473e2605ad0ef5500dc481bc7bd0ca8654a30d1))
+- add sql to __init__ ([d63a876](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/d63a876fec72256888e8bb5efc34b44990428a51))
+- add base impl for sql data backend ([62a976d](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/62a976da2c16d5bfb31d28edb5e4aa1b1a5480d5))
+- change to sqldatabackend ([13910a9](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/13910a9c01bb89a6cde5e6e6597beba92fed0008))
+- add base impl in sql query ([9b1d921](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/9b1d921132dfa41507d5e64d481dc528d2c7b356))
+- remove unsed attrs in base data backend ([edac55f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/edac55f4fa8904e314932d086a0d12b83f036c26))
+- add base query methods ([83ed6f5](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/83ed6f5df342c6cd9ebf3f701c34894e2d041175))
+- rerevert change in protocolo and remove gettable ([2e888f9](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/2e888f9b740afd079303c71b634b5cab96b6ad0b))
+- remove chunk_size ([5e35476](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/5e3547655c8b5e8f28c69e5b2c2cd05cf7b0b79b))
+- change to item ([05fedb4](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/05fedb4f4e6a437e1ada1d1b4e75b6f52e2ae5f6))
+- change to async_session ([462bc54](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/462bc5458223ce2fb7a25bc9349934456a02d941))
+- change to backend ([6efad01](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/6efad01a63c027f553560d47a7adcde03f913c7e))
+- change extras structure ([255468b](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/255468b4dd6e25120609627a08a25fceafac27fa))
+- remove bad init ([68dcf50](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/68dcf50585fd14178b34835bf71f808659423aa7))
+- add uow ([7ea253d](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/7ea253dbdc6521808c308cd0d6e96fbf1231c2d5))
+- remove py.typed ([d38766a](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/d38766ae6a571f230433c2c3d4551c8d1bb958c9))
+- add simple impl ([eb8d6e5](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/eb8d6e5a54254b26a5c4a78f81cff656c00d2fa3))
+- move from fs-core and fs-data to monolith ([ec8ca0e](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/ec8ca0e86a96c6d6faa88e993346717d32713e45))
+- Initial commit ([d55439f](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/d55439f1b7c6faa7c58c0b25c7c376be845eb4a7))
+
+#### Features
+
+- add joined stream ([8407ab9](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/8407ab9b31fb87be665cdc5c10ef9863b4507ba6))
+- add events impl ([e184761](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/e184761b00bd76ae25107b305ea4a8c40de84a6c))
+- add joined stream ([b0b424b](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/b0b424bcb312e6b4dddb971cd46f436809a1f7e9))
+- add DataR ([ac00ad8](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/ac00ad8b95dbad1d4d04196f2cb18664088b1c13))
+
+#### Fixes
+
+- TypeError: Boolean value of this clause is not defined ([a7e1e88](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/a7e1e882d1aa1cf7e373fb801e455bf55220f6f8))
+- datar example ([580b720](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/580b72009aebbd4d4ec7435b61e15c8b1a45a55e))
+- From a field bound to the entity class ([0d9ba57](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/0d9ba571cf3286de4106d366e5bbd94d0df15451))
+- TypeError: Boolean value of this clause is not defined ([1920a19](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/1920a19514355b2ac8637edcb0e9404777ee7446))
+- Found 1 error ([22b8b23](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/22b8b23f3eb8be4ad5f3a568c5696a894406eca0))
+- change to ..base ([6a642ad](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/6a642ad9468fbb9572a16c7777ac9122cc3fd880))
+- fix typing add SQLQuery[E] ([ff7ef71](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/ff7ef7144afee6d9bbe0d2ef7caa969d488c54f5))
+- fix sql entity ([bd0ca9a](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/bd0ca9aefce1b9560fe0e3a1f3f44211688cd766))
+- now primary key found and if does not exist it is going to be error ([e7baf5c](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/e7baf5cb0ed1a1f45a8201a4e1dd6bb0603c013b))
+- add validation for abc class for sql adapter ([8070a72](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/8070a724d6099f1c3720edda0837f12c29508ead))
+- PrimaryKey return Field[ID] ([6483d58](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/6483d58a15ed8b003ff6c195cf82798fcc6adc35))
+- now sqlentity works ([bfdd574](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/bfdd5741202567a6d919ab90515e36928e8f7148))
+- use common error ([57eb73c](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/57eb73ceeebb03f9bd44352208e2c23ca3e3c611))
+- reportAssignmentType ([0a92f72](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/0a92f727717396f0df1790cc290055ca02cbe131))
+
+### Tooling
+
+#### Changes
+
+- retry transient image pulls in non-release jobs ([705c317](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/705c3178a9168c225afb41381029f15ddceeebd0))
+- add sqlmodel to ci ([d7fb7f7](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/commit/d7fb7f7446e28cba5fda9d2ab5aa7deddb332daa))

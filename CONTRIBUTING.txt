@@ -35,6 +35,13 @@ Submit a pull request against development. Keep each commit focused on one
 complete change, including its tests, examples, and documentation. Explain
 the behavior changed and the checks you ran.
 
+CHANGELOG.txt is generated from Git history by the changelog CI job.
+Do not edit entries manually. Use descriptive commit subjects with the layer
+as their scope, for example feat(actions): add a service operation. Entries
+are grouped by layer, then Features, Fixes, or Changes. To preview locally:
+
+    uv tool run --from git-cliff==2.14.2 git-cliff --config cliff.toml --output CHANGELOG.txt
+
 For security reports, follow SECURITY.md instead of opening a public issue
 with vulnerability details. Contributions use the repository's Apache-2.0
 license; see LICENSE.

@@ -21,7 +21,8 @@ add the data or events extras when your application needs them.
 [Runnable examples](https://github.com/FastSprout/fastsprout/tree/development/examples) ·
 [API reference](https://github.com/FastSprout/fastsprout/tree/development/src/fastsprout) ·
 [Source](https://github.com/FastSprout/fastsprout) ·
-[Contributing](https://github.com/FastSprout/fastsprout/blob/development/CONTRIBUTING.txt)
+[Contributing](https://github.com/FastSprout/fastsprout/blob/development/CONTRIBUTING.txt) ·
+[Changelog](https://github.com/FastSprout/fastsprout/blob/development/CHANGELOG.txt)
 
 ## Install
 
