@@ -66,10 +66,10 @@ def install_schema[S](
     return SCHEMA_OPERATIONS[name] if schema is None else frozenset()
 
 
-def configure_schemas[E, S](
+def configure_schemas[E, Setting: type | UndefinedType | None](
     target: Service,
     source: type[E],
-    overrides: Mapping[str, SchemaSetting[S]],
+    overrides: Mapping[str, Setting],
 ) -> frozenset[DataSOperation]:
     return frozenset().union(
         *(

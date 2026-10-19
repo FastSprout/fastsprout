@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import ClassVar, assert_type
 from uuid import UUID
 
@@ -6,6 +6,8 @@ from sqlmodel import Field as SQLField
 
 from fastsprout.actions import DataS, DataSable, Page, Service, WriteOperation
 from fastsprout.actions.service.datas.implementation import commands, queries
+from fastsprout.actions.service.datas.schemas import configure_schemas
+from fastsprout.actions.service.datas.types import DataSOperation, SchemaSetting
 from fastsprout.core import BaseSchema, Depends, Field, IdentificatorType, InternalField, ReadDTO, ReadField, Schema, Undefined, WriteDTO, dataclass
 from fastsprout.core.depends import DependsClass
 from fastsprout.core.types import AnyIterable
@@ -13,6 +15,7 @@ from fastsprout.data import sql
 from fastsprout.data import DataR
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable, Signpostable
+from fastsprout.data.types import Valuable
 from fastsprout.data.streams.protocols import AsyncCommonStream
 from fastsprout.data.streams.implementation.base_common_stream import BaseCommonStream
 
@@ -314,3 +317,18 @@ async def exact_match_conditions[Statement](
     await contract.find_exactly_one(Other.name.eq("Batman"))  # error: reportArgumentType; mypy: arg-type
     await service.find_exactly_one(Hero.name.eq("Batman"), Other.name.eq("Batman"))  # error: reportArgumentType; mypy: arg-type
     await contract.find_exactly_one(Hero.name.eq("Batman"), Other.name.eq("Batman"))  # error: reportArgumentType; mypy: arg-type
+
+
+
+def mixed_schema_configuration[
+    E: Entitieable,
+    R: Valuable | Entitieable,
+    C: Schema | Entitieable,
+    U: Schema | Entitieable,
+    P: Schema | Entitieable,
+](
+    service: Service,
+    entity: type[E],
+    settings: Mapping[str, SchemaSetting[R | C | U | P]],
+) -> None:
+    assert_type(configure_schemas(service, entity, settings), frozenset[DataSOperation])
