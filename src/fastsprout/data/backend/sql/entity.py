@@ -4,7 +4,6 @@ from typing import (
     Any,
     ClassVar,
     Generic,
-    TypeVar,
     dataclass_transform,
     get_args,
 )
@@ -17,6 +16,7 @@ from sqlalchemy.orm import registry as sa_registry
 from sqlmodel import Field as SQLPydField
 from sqlmodel import SQLModel, Table
 from sqlmodel.main import RelationshipInfo, SQLModelMetaclass
+from typing_extensions import TypeVar
 
 from fastsprout.core import Field, InternalField, ReadField, Schema
 from fastsprout.core.dto import is_dto_base
@@ -43,6 +43,12 @@ __all__ = [
 ]
 
 IDT = TypeVar("IDT", bound=IdentificatorType)
+SourceT = TypeVar(
+    "SourceT",
+    bound=Signpostable[AbstractAsyncContextManager[AsyncSession]],
+    default=Signpostable[AbstractAsyncContextManager[AsyncSession]],
+    covariant=True,
+)
 
 SQL_ENTITY_REGISTRY = sa_registry(metadata=MetaData())
 
@@ -148,6 +154,9 @@ class TypedSQLMeta(SQLModelMetaclass):
     def __init__(cls, name, bases, namespace, **kwargs):  # noqa: N805  # metaclass
         if any(is_dto_base(base) for base in bases):
             return
+        # SQLModel drops this keyword before delegating to Pydantic.
+        if metadata := kwargs.get("__pydantic_generic_metadata__"):
+            cls.__pydantic_generic_metadata__ = metadata
         super().__init__(name, bases, namespace, **kwargs)
         if hasattr(cls, "__table__"):
             model_fields = getattr(cls, "model_fields", {})
@@ -184,10 +193,13 @@ class SQLEntity(
     Schema,
     HasOrm[Mapped[Any]],
     Entitieable[IDT],
-    Generic[IDT],  # noqa: UP046  # SQLModel/pydantic can't build multi-level PEP 695 generics
+    # SQLModel requires legacy generics for inherited model parameters.
+    Generic[IDT, SourceT],
     metaclass=TypedSQLMeta,
     registry=SQL_ENTITY_REGISTRY,
 ):
+    """SQL entity with an optional signpost type checked on declaration."""
+
     if TYPE_CHECKING:
         __table__: ClassVar[Table]
 
@@ -196,3 +208,20 @@ class SQLEntity(
     ]
 
     id: ReadField[IDT]
+
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
+        for base in cls.__mro__:
+            metadata = vars(base).get("__pydantic_generic_metadata__", {})
+            arguments = metadata.get("args", ())
+            if len(arguments) == 2 and metadata.get("origin") is SQLEntity:
+                source = arguments[1]
+                if (
+                    source is not Any
+                    and isinstance(source, type)
+                    and hasattr(cls, "__signpost__")
+                    and not isinstance(cls.__signpost__, source)
+                ):
+                    raise TypeError(
+                        f"{cls.__name__}.__signpost__ must be an instance of {source.__name__}"
+                    )

@@ -1,6 +1,7 @@
 """Build field conditions once and reuse them in Query and stream.filter.
 
 Query exposes And, Or, Xor, and Nand. Field methods check their value types.
+Hero declares CRM as its source type; SQLQuery preserves the Hero type.
 An iterator passed to in_ is read on first evaluation and cached for reuse;
 it must be finite, and its values occupy memory until the condition is freed.
 """
@@ -16,7 +17,17 @@ from fastsprout.data import DataR
 from fastsprout.data.backend.sql import SQLEntity, SQLQuery, SQLSignpost
 
 
-class Hero(SQLEntity[int]):
+class CRM(SQLSignpost): ...
+
+
+engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+factory = async_sessionmaker(engine, expire_on_commit=False)
+backend = CRM(factory)
+
+
+class Hero(SQLEntity[int, CRM]):
+    __signpost__ = backend
+
     id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str]
     power: Field[int]
@@ -29,9 +40,6 @@ async def selected_powers() -> AsyncIterator[int]:
 
 
 async def main() -> None:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    factory = async_sessionmaker(engine, expire_on_commit=False)
-    Hero.__signpost__ = SQLSignpost(factory)
     try:
         async with engine.begin() as connection:
             await connection.run_sync(Hero.__table__.create)

@@ -1,0 +1,65 @@
+from typing import Any, assert_type
+
+from sqlmodel import Field as SQLField
+
+from fastsprout.core import Field, ReadDTO, ReadField
+from fastsprout.core.fields.field_predicate import FieldPredicate
+from fastsprout.data.backend.sql import SQLEntity, SQLQuery, SQLSignpost
+from fastsprout.data.backend.sql.capabilities import SQLAbilitable
+
+
+class CRM(SQLSignpost): ...
+class ERP(SQLSignpost): ...
+
+
+class Hero(SQLEntity[int, CRM]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+
+class Other(SQLEntity[int, ERP]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+
+class Team(SQLEntity[int, CRM]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+
+class DynamicSource(SQLEntity[int, Any]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+
+class InvalidSource(SQLEntity[int, str]): ...  # error: reportInvalidTypeArguments; mypy: type-var
+
+
+class HeroRead(ReadDTO, Hero): ...
+
+
+def crm_entity[E: SQLEntity[int, CRM]](entity: type[E]) -> type[E]:
+    return entity
+
+
+def crm_query[E: SQLEntity[int, CRM]](query: SQLQuery[E]) -> SQLQuery[E]:
+    return query
+
+
+assert_type(crm_entity(Hero), type[Hero])
+assert_type(crm_entity(Team), type[Team])
+assert_type(crm_entity(DynamicSource), type[DynamicSource])
+assert_type(crm_entity(HeroRead), type[HeroRead])
+assert_type(crm_query(SQLQuery(Hero)), SQLQuery[Hero])
+assert_type(crm_query(SQLQuery(Team)), SQLQuery[Team])
+assert_type(SQLQuery(DynamicSource), SQLQuery[DynamicSource])
+assert_type(Hero.name.eq("Batman"), FieldPredicate[Hero])
+crm_entity(Other)  # error: reportArgumentType; mypy: type-var
+crm_query(SQLQuery(Other))  # error: reportArgumentType; mypy: type-var
+
+
+def routed(ability: SQLAbilitable[Hero]) -> None:
+    query = crm_query(ability.query_for())
+    assert_type(query.entity, type[Hero])
+    assert_type(query.where(query.Or(Hero.name.eq("Batman"))), SQLQuery[Hero])
+    query.where(query.Or(Hero.name.eq("Batman"), Other.name.eq("Robin")))  # error: reportArgumentType; mypy: arg-type
