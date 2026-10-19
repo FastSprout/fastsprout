@@ -1,0 +1,68 @@
+from fractions import Fraction
+from typing import assert_type
+from uuid import UUID
+
+from fastsprout.core import BaseSchema
+from fastsprout.core.fields.field_ref import FieldRef
+from fastsprout.data.entity import BaseEntity
+from fastsprout.data.capabilities.query import BaseQuery
+from fastsprout.data.capabilities.query import And, Eq, FieldPredicate, Gte, In, Or, where
+
+
+class Hero(BaseEntity[UUID]):
+    name: str
+    power: int
+    ratio: Fraction
+
+
+class Search(BaseSchema):
+    power: In[int] | Gte[int] | Or[int]
+
+
+power = FieldRef[Hero, int, None]("power", Hero, None)
+name = FieldRef[Hero, str, None]("name", Hero, None)
+ratio = FieldRef[Hero, Fraction, None]("ratio", Hero, None)
+
+assert_type(In[int]([10, 20]), In[int])
+assert_type(Or[int](Gte(50), Eq(10)), Or[int])
+assert_type(where(power, In([10, 20])), FieldPredicate[Hero])
+assert_type(where(power, And(Gte(10), Eq(20))), FieldPredicate[Hero])
+assert_type(where(ratio, Gte(Fraction(1, 2))), FieldPredicate[Hero])
+
+Search(power=In([10, 20]))
+Search(power=Or[int](Gte(50), Eq(10)))
+In[int](["wrong"])  # error: reportArgumentType; mypy: list-item
+where(power, In(["wrong"]))  # error: reportArgumentType; mypy: misc
+where(name, Eq(10))  # error: reportArgumentType; mypy: misc
+where(ratio, Eq("wrong"))  # error: reportArgumentType; mypy: misc
+
+
+class Query(BaseQuery[Hero, str]):
+    def build(self) -> str:
+        return ""
+
+
+query = Query(Hero)
+assert_type(query.order_by(ratio), Query)
+assert_type(query.where(where(power, In([10, 20]))).offset(1).limit(10), Query)
+assert_type(query.where(Or(where(name, Eq("Batman")), lambda hero: hero.power >= 50)), Query)
+assert_type(query.where(Or(where(name, Eq("Batman")), where(power, Gte(50)))), Query)
+def missing_field(hero: Hero) -> bool:
+    return hero.name.missing > 0  # error: reportAttributeAccessIssue; mypy: attr-defined
+
+
+query.where(missing_field)
+query.where(42)  # error: reportArgumentType; mypy: arg-type
+
+
+async def powerful(hero: Hero) -> bool:
+    return hero.power >= 50
+
+
+async def wrong_result(hero: Hero) -> int:
+    return hero.power
+
+
+assert_type(query.where(powerful), Query)
+assert_type(query.where(Or(where(name, Eq("Batman")), powerful)), Query)
+query.where(wrong_result)  # error: reportArgumentType; mypy: arg-type

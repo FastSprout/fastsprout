@@ -203,11 +203,11 @@ class TestDependencyValidation:
         assert calls == ["prepare", "reject"]
         assert await records.count() == 0
 
+    @when_then("delete dependencies receive the key and can reject")
     async def test_delete_dependencies_receive_the_key_and_can_reject(
         self,
         records: DataS[Record],
     ) -> None:
-        # given
         created = await records.create(Record(name="Batman"))
         calls: list[tuple[IdentificatorType, DataR]] = []
 
@@ -229,19 +229,17 @@ class TestDependencyValidation:
         service = DataS(
             Record, dependencies=[check_key.dependency, Depends(reject)]
         )
-        # when
         async with DataR() as datar:
             with pytest.raises(PermissionError, match="Cannot delete"):
                 await service.delete(created.id, datar=datar)
-        # then
         assert calls == [(created.id, datar)]
         assert await records.exists(created.id)
 
+    @when_then("sync and async dependencies share nested async providers")
     async def test_sync_and_async_dependencies_share_nested_async_providers(
         self,
         records: DataS[Record],
     ) -> None:
-        # given
         actors: list[Actor] = []
         contexts: list[DataR] = []
         seen: list[Actor] = []
@@ -277,7 +275,6 @@ class TestDependencyValidation:
                 checks.account.dependency,
             ],
         )
-        # when / then
         async with DataR() as datar:
             await service.create(Record(name="Batman"), datar=datar)
             assert contexts == [datar]

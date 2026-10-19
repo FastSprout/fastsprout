@@ -62,11 +62,11 @@ def actor_name() -> str:
     return "Batman"
 
 
-ACTOR = Depends(actor_name)
+_ACTOR = Depends(actor_name)
 
 
 async def check_actor(
-    entity: Hero, /, *, datar: DataR, actor: str = ACTOR
+    entity: Hero, /, *, datar: DataR, actor: str = _ACTOR
 ) -> None:
     assert_type(entity.name, str)
     assert_type(actor, str)
@@ -171,6 +171,43 @@ async def non_sql_checks(
     assert_type(await custom.list(), Page[MemoryRead])
     await custom.create(HeroCreate(name="Batman"))  # error: reportArgumentType; mypy: arg-type
 
+
+class HeroSummary(BaseSchema):
+    label: str
+
+
+class SelectedActions(Service):
+    entity = Hero
+    read_schema = HeroRead
+    create_schema = HeroCreate
+    chunk_size = 10
+
+    create = commands.create
+    bulk_create = commands.bulk_create
+    find_first = queries.find_first
+
+
+async def selection_checks[Statement](query: BaseQuery[Hero, Statement], other: BaseQuery[Other, Statement]) -> None:
+    selected = SelectedActions()
+    assert_type(await selected.create(HeroCreate(name="Batman")), HeroRead)
+    assert_type(await selected.find_first(query), HeroRead | None)
+    assert_type(selected.bulk_create([HeroCreate(name="Batman")]), BaseCommonStream[HeroRead])
+    await selected.create(HeroPatch(score=1))  # error: reportArgumentType; mypy: arg-type
+    service = DataS(Hero, read=HeroRead)
+    assert_type(await service.get(query), HeroRead | None)
+    assert_type(await service.exists(query), bool)
+    assert_type(await service.find_first(query), HeroRead | None)
+    assert_type(await service.find_exactly_one(query), HeroRead)
+    assert_type(await service.find_all(query), list[HeroRead])
+    assert_type(service.stream(query), AsyncCommonStream[HeroRead])
+    async for item in service.stream(query):
+        assert_type(item, HeroRead)
+    async for summary in service.map(query, lambda hero: HeroSummary(label=hero.name)):
+        assert_type(summary, HeroSummary)
+    async for hero, related in service.join(query, other, on=(Hero.id, Other.id)):
+        assert_type(hero, HeroRead)
+        assert_type(related, Other)
+
 async def query_reads[Statement](
     service: DataS[Hero, HeroRead],
     contract: DataSable[Hero, HeroRead],
@@ -253,10 +290,6 @@ async def upsert_types(
     await service.upsert(HeroCreate(name="Batman"))  # error: reportArgumentType; mypy: arg-type
 
 
-class HeroSummary(BaseSchema):
-    label: str
-
-
 async def selection_types[Left, Right](
     service: DataS[Hero, HeroRead],
     contract: DataSable[Hero, HeroRead],
@@ -332,22 +365,3 @@ def mixed_schema_configuration[
     settings: Mapping[str, SchemaSetting[R | C | U | P]],
 ) -> None:
     assert_type(configure_schemas(service, entity, settings), frozenset[DataSOperation])
-
-
-class SelectedActions(Service):
-    entity = Hero
-    read_schema = HeroRead
-    create_schema = HeroCreate
-    chunk_size = 10
-
-    create = commands.create
-    bulk_create = commands.bulk_create
-    find_first = queries.find_first
-
-
-async def selected_action_types[Statement](query: BaseQuery[Hero, Statement]) -> None:
-    selected = SelectedActions()
-    assert_type(await selected.create(HeroCreate(name="Batman")), HeroRead)
-    assert_type(await selected.find_first(query), HeroRead | None)
-    assert_type(selected.bulk_create([HeroCreate(name="Batman")]), BaseCommonStream[HeroRead])
-    await selected.create(HeroPatch(score=1))  # error: reportArgumentType; mypy: arg-type

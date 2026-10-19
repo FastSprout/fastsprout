@@ -30,12 +30,36 @@ from fastsprout.data import DataR, Relationship, SimpleAsyncEntityStream, sql
 from fastsprout.data.capabilities.query import (
     And,
     BaseQuery,
+    Eq,
     Expression,
+    Filter,
+    Gt,
+    Gte,
+    In,
+    Lt,
+    Lte,
+    Ne,
+    Or,
 )
 from fastsprout.data.capabilities.query.predicate import evaluate
 from fastsprout.data.entity import Entitieable, Signpostable
 from fastsprout.data.streams.protocols import AsyncEntityStream
 from fastsprout.data.utils.iterable import achain
+
+FILTER_CASES: tuple[tuple[Filter[int], set[int]], ...] = (
+    (Eq(20), {20}),
+    (Ne(20), {30, 40}),
+    (Gt(20), {30, 40}),
+    (Gte(20), {20, 30, 40}),
+    (Lt(30), {20}),
+    (Lte(30), {20, 30}),
+    (In([20, 40]), {20, 40}),
+    (In([]), set()),
+    (And(Gte(20), Lt(40)), {20, 30}),
+    (Or(Eq(20), And(Gte(30), Lt(40))), {20, 30}),
+    (And(), {20, 30, 40}),
+    (Or(), set()),
+)
 
 
 class LimitedPage[R](Page[R]):
