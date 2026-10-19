@@ -7,6 +7,7 @@ from fastsprout.actions import DataS, WriteOperation
 from fastsprout.core import Depends
 from fastsprout.core.depends import DependsClass
 from fastsprout.data import DataR
+from fastsprout.testing.core import when_then
 
 from ...common import (
     Record,
@@ -22,6 +23,9 @@ class ValidatedRecords(DataS[Record]):
 
 
 class TestValidation:
+    @when_then(
+        "validation failure stops later dependencies and prevents persistence"
+    )
     @pytest.mark.parametrize(
         "write, operation",
         [
@@ -37,16 +41,17 @@ class TestValidation:
         write: Literal["create", "update", "entity_update", "patch"],
         operation: WriteOperation,
     ) -> None:
-        # given
+        def after_validation() -> None:
+            raise AssertionError("Dependency chain continued after rejection")
+
         validation = RecordValidation()
         service = DataS(
             Record,
             create=RecordCreate,
             update=RecordUpdate,
             patch=RecordPatch,
-            dependencies=[Depends(validation)],
+            dependencies=[Depends(validation), Depends(after_validation)],
         )
-        # when / then
         async with DataR() as datar:
             created = await records.create(
                 Record(name="Batman", score=42), datar=datar
@@ -104,15 +109,14 @@ class TestValidation:
             ("patch", datar, frozenset({"score"})),
         ]
 
+    @when_then("replacing dependencies preserves the inherited validator")
     async def test_validation_can_be_inherited_and_replaced(
         self,
         records: DataS[Record],
     ) -> None:
-        # given
         service = ValidatedRecords()
         original = service.dependencies[0].dependency
         assert isinstance(original, RecordValidation)
-        # when / then
         async with DataR() as datar:
             with pytest.raises(ValueError, match="non-negative"):
                 await service.create(
@@ -121,9 +125,9 @@ class TestValidation:
             replacement = RecordValidation()
             service = ValidatedRecords(dependencies=[Depends(replacement)])
             await service.create(Record(name="Batman", score=10), datar=datar)
-        assert service.dependencies[0].dependency is replacement
         assert len(replacement.calls) == 1
         assert len(original.calls) == 1
+        assert service.dependencies[0].dependency is replacement
 
     async def test_validation_hook_normalizes_input(
         self,
