@@ -31,6 +31,7 @@ from fastsprout.data.streams.implementation import (
 )
 from fastsprout.data.types import PredicateCallable
 from fastsprout.events import EventBus
+from fastsprout.testing.core import when_then
 
 from .conftest import Hero
 
@@ -138,17 +139,29 @@ class TestSQLAbilitable:
 
         assert await sql_ability.bulk_update([]) == []
 
+    @when_then("updating a missing entity never inserts it")
+    @pytest.mark.parametrize("capability", [SQLAbilitable, SQLUpdatable])
+    async def test_update_missing_entity_does_not_insert(
+        self,
+        capability: type[SQLUpdatable[Hero]],
+        sql_signpost: SQLSignpost,
+        sql_session: AsyncSession,
+    ) -> None:
+        ability = capability(sql_signpost)
+        with pytest.raises(LookupError, match="No Hero"):
+            await ability.update(Hero(id=100, name="Missing"))
+        assert await sql_session.get(Hero, 100) is None
+
+    @when_then("bulk deletion removes only the selected entities")
     async def test_bulk_delete(
         self,
         sql_ability: SQLAbilitable[Hero],
         query: SQLQuery[Hero],
-    ):
-        # given
-        found = await sql_ability.stream(query).sort(Hero.id).to_list()
-        # when
+    ) -> None:
+        query.order_by(Hero.id)
+        found = await sql_ability.stream(query).to_list()
         deleted = await sql_ability.bulk_delete(found[:4])
-        remaining = await sql_ability.stream(query).sort(Hero.id).to_list()
-        # then
+        remaining = await sql_ability.stream(query).to_list()
         assert deleted == 4
         assert [hero.id for hero in remaining] == list(range(4, 10))
 
