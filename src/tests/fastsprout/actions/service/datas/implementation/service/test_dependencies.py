@@ -5,7 +5,7 @@ from fastsprout.core import Depends, IdentificatorType, dataclass
 from fastsprout.data import DataR
 from fastsprout.testing.core import when_then
 
-from ...common import Record
+from ...common import Record, RecordCreate
 
 
 @dataclass
@@ -14,6 +14,44 @@ class Actor:
 
 
 class TestDependencyValidation:
+    @when_then("dependencies check and normalize the payload in order")
+    async def test_dependencies_run_checks_and_normalization_in_order(
+        self,
+        records: DataS[Record],
+    ) -> None:
+        calls: list[str] = []
+
+        async def normalize(
+            entity: RecordCreate,
+        ) -> None:
+            calls.append("model")
+            entity.name = entity.name.strip()
+
+        def check_name(entity: RecordCreate) -> None:
+            calls.append("name")
+            assert entity.name == " Batman "
+
+        async def check_database(datar: DataR) -> None:
+            calls.append("database")
+            assert await records.count(datar=datar) == 0
+
+        service = DataS(
+            Record,
+            create=RecordCreate,
+            dependencies=[
+                Depends(check_name),
+                Depends(check_database),
+                Depends(normalize),
+            ],
+        )
+        async with DataR() as datar:
+            created = await service.create(
+                RecordCreate(name=" Batman "), datar=datar
+            )
+            assert created.name == "Batman"
+            assert calls == ["name", "database", "model"]
+            assert await records.count(datar=datar) == 1
+
     @when_then(
         "a rejected dependency stops execution and rolls back its writes"
     )
