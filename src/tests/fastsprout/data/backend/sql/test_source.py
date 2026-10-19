@@ -31,7 +31,10 @@ class TestSQLSource:
         "a scoped entity keeps its source through inherited query execution"
     )
     async def test_inherited_source(
-        self, crm: CRM, sql_session: AsyncSession
+        self,
+        crm: CRM,
+        sql_session: AsyncSession,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         class ScopedHero(CRMModel):
             __signpost__ = crm
@@ -48,6 +51,14 @@ class TestSQLSource:
             assert (found.id, found.name) == (1, "Batman")
             assert query.entity is ScopedHero
             assert ScopedHero.__signpost__ is crm
+
+        monkeypatch.setattr(ScopedHero, "__signpost__", CRM(crm.factory))
+        assert query.build().column_descriptions[0]["entity"] is ScopedHero
+        monkeypatch.setattr(ScopedHero, "__signpost__", ERP(crm.factory))
+        with pytest.raises(
+            TypeError, match="__signpost__ must be an instance of CRM"
+        ):
+            query.build()
 
     @when_then(
         "direct source declarations retain the existing query constructor"

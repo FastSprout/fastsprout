@@ -40,6 +40,7 @@ __all__ = [
     "SQLEntity",
     "SQLSignpost",
     "TypedSQLMeta",
+    "validate_source",
 ]
 
 IDT = TypeVar("IDT", bound=IdentificatorType)
@@ -211,17 +212,22 @@ class SQLEntity(
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
-        for base in cls.__mro__:
-            metadata = vars(base).get("__pydantic_generic_metadata__", {})
-            arguments = metadata.get("args", ())
-            if len(arguments) == 2 and metadata.get("origin") is SQLEntity:
-                source = arguments[1]
-                if (
-                    source is not Any
-                    and isinstance(source, type)
-                    and hasattr(cls, "__signpost__")
-                    and not isinstance(cls.__signpost__, source)
-                ):
-                    raise TypeError(
-                        f"{cls.__name__}.__signpost__ must be an instance of {source.__name__}"
-                    )
+        validate_source(cls)
+
+
+def validate_source(entity: type[SQLEntity[IDT, SourceT]]) -> None:
+    """Check the current signpost against the entity's declared source type."""
+    for base in entity.__mro__:
+        metadata = vars(base).get("__pydantic_generic_metadata__", {})
+        arguments = metadata.get("args", ())
+        if len(arguments) == 2 and metadata.get("origin") is SQLEntity:
+            source = arguments[1]
+            if (
+                source is not Any
+                and isinstance(source, type)
+                and hasattr(entity, "__signpost__")
+                and not isinstance(entity.__signpost__, source)
+            ):
+                raise TypeError(
+                    f"{entity.__name__}.__signpost__ must be an instance of {source.__name__}"
+                )

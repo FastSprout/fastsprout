@@ -1,6 +1,6 @@
 from collections.abc import Callable, Sequence
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from sqlalchemy import and_, false, func, not_, or_, select, true
 from sqlalchemy.sql import ColumnElement
@@ -24,8 +24,7 @@ from fastsprout.data.capabilities.query.operators import (
     ComparisonKind,
 )
 
-if TYPE_CHECKING:
-    from fastsprout.data.backend.sql.entity import SQLEntity
+from .entity import SQLEntity, validate_source
 
 __all__ = ["SQLQuery", "compile_predicate"]
 
@@ -44,6 +43,7 @@ class SQLQuery[E: SQLEntity[Any]](BaseQuery[E, Select[tuple[E]]]):
         )
 
     def build(self) -> Select[tuple[E]]:
+        validate_source(self.entity)
         statement = (
             self.statement
             if self.statement is not None
