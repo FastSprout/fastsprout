@@ -46,7 +46,13 @@ SCHEMA_OPERATIONS: dict[str, frozenset[DataSOperation]] = {
         {"create", "bulk_create", "upsert", "bulk_upsert"}
     ),
     "update_schema": frozenset(
-        {"update", "bulk_update", "update_by_query", "upsert", "bulk_upsert"}
+        {
+            "update",
+            "bulk_update",
+            "upsert",
+            "bulk_upsert",
+            "update_by_query",
+        }
     ),
     "patch_schema": frozenset({"patch", "bulk_patch"}),
 }

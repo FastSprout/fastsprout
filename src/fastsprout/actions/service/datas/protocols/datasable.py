@@ -16,7 +16,9 @@ from fastsprout.core.types import AnyIterable, LazyAwait
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.router import DataR
-from fastsprout.data.streams.protocols import AsyncCommonStream
+from fastsprout.data.streams.protocols import (
+    AsyncCommonStream,
+)
 from fastsprout.data.types import MapperCallable, Valuable
 
 from ..types import DataSOperation, Page
@@ -92,31 +94,9 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
         datar: DataR = ...,
     ) -> int: ...
 
-    async def get[Statement](
-        self: QueryOwner[E, R],
-        identifier: IdentificatorType | BaseQuery[E, Statement],
-        datar: DataR = ...,
-    ) -> R | None: ...
-
-    async def exists[Statement](
-        self: QueryOwner[E, R],
-        identifier: IdentificatorType | BaseQuery[E, Statement],
-        datar: DataR = ...,
-    ) -> bool: ...
-
-    async def count[Statement](
-        self: QueryOwner[E, R],
-        query: BaseQuery[E, Statement] | None = ...,
-        *,
-        datar: DataR = ...,
-    ) -> int: ...
-
-    async def list[Statement](
-        self: PageOwner[E, R],
-        query: BaseQuery[E, Statement] | None = ...,
-        *,
-        datar: DataR = ...,
-    ) -> Page[R]: ...
+    async def upsert(
+        self: EntityOwner[E, R], entity: E, datar: DataR = ...
+    ) -> R: ...
 
     def bulk_create(
         self: CreateOwner[E, R, C],
@@ -152,6 +132,14 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
         datar: DataR = ...,
     ) -> AsyncCommonStream[R]: ...
 
+    def bulk_upsert(
+        self: EntityOwner[E, R],
+        entities: AnyIterable[E],
+        /,
+        *,
+        datar: DataR = ...,
+    ) -> AsyncCommonStream[R]: ...
+
     def bulk_delete(
         self: EntityOwner[E, R],
         identifiers: AnyIterable[IdentificatorType],
@@ -159,44 +147,6 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
         *,
         datar: DataR = ...,
     ) -> LazyAwait[int]: ...
-
-    async def find_first[Statement](
-        self: QueryOwner[E, R],
-        query: BaseQuery[E, Statement],
-        *,
-        datar: DataR = ...,
-    ) -> R | None: ...
-
-    async def find_exactly_one[Statement](
-        self: QueryOwner[E, R],
-        query: BaseQuery[E, Statement] | FieldPredicate[E],
-        *predicates: FieldPredicate[E],
-        datar: DataR = ...,
-    ) -> R: ...
-
-    async def find_all[Statement](
-        self: QueryOwner[E, R],
-        query: BaseQuery[E, Statement],
-        *,
-        datar: DataR = ...,
-    ) -> builtins.list[R]: ...
-
-    @overload
-    def stream[Statement](
-        self: QueryOwner[E, R],
-        query: BaseQuery[E, Statement],
-        *,
-        datar: DataR = ...,
-    ) -> AsyncCommonStream[R]: ...
-
-    @overload
-    def stream(
-        self: QueryOwner[E, R],
-        query: FieldPredicate[E],
-        /,
-        *predicates: FieldPredicate[E],
-        datar: DataR = ...,
-    ) -> AsyncCommonStream[R]: ...
 
     @overload
     async def update_by_query[Statement, Value](
@@ -233,15 +183,67 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
         datar: DataR = ...,
     ) -> int: ...
 
-    async def upsert(
-        self: EntityOwner[E, R], entity: E, datar: DataR = ...
+    async def get[Statement](
+        self: QueryOwner[E, R],
+        identifier: IdentificatorType | BaseQuery[E, Statement],
+        datar: DataR = ...,
+    ) -> R | None: ...
+
+    async def exists[Statement](
+        self: QueryOwner[E, R],
+        identifier: IdentificatorType | BaseQuery[E, Statement],
+        datar: DataR = ...,
+    ) -> bool: ...
+
+    async def count[Statement](
+        self: QueryOwner[E, R],
+        query: BaseQuery[E, Statement] | None = ...,
+        *,
+        datar: DataR = ...,
+    ) -> int: ...
+
+    async def list[Statement](
+        self: PageOwner[E, R],
+        query: BaseQuery[E, Statement] | None = ...,
+        *,
+        datar: DataR = ...,
+    ) -> Page[R]: ...
+
+    async def find_first[Statement](
+        self: QueryOwner[E, R],
+        query: BaseQuery[E, Statement],
+        *,
+        datar: DataR = ...,
+    ) -> R | None: ...
+
+    async def find_exactly_one[Statement](
+        self: QueryOwner[E, R],
+        query: BaseQuery[E, Statement] | FieldPredicate[E],
+        *predicates: FieldPredicate[E],
+        datar: DataR = ...,
     ) -> R: ...
 
-    def bulk_upsert(
-        self: EntityOwner[E, R],
-        entities: AnyIterable[E],
-        /,
+    async def find_all[Statement](
+        self: QueryOwner[E, R],
+        query: BaseQuery[E, Statement],
         *,
+        datar: DataR = ...,
+    ) -> builtins.list[R]: ...
+
+    @overload
+    def stream[Statement](
+        self: QueryOwner[E, R],
+        query: BaseQuery[E, Statement],
+        *,
+        datar: DataR = ...,
+    ) -> AsyncCommonStream[R]: ...
+
+    @overload
+    def stream(
+        self: QueryOwner[E, R],
+        query: FieldPredicate[E],
+        /,
+        *predicates: FieldPredicate[E],
         datar: DataR = ...,
     ) -> AsyncCommonStream[R]: ...
 

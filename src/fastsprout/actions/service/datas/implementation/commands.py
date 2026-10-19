@@ -130,6 +130,14 @@ async def delete(
     return await datar.ability(self.entity).delete(found)
 
 
+async def upsert(
+    self: EntityOwner[E, R], entity: E, datar: DataR = Depends()
+) -> R:
+    prepared = await prepare_upsert(self.entity, entity, datar)
+    result = await datar.ability(self.entity).upsert(prepared)
+    return project_read(result, self.read_schema)
+
+
 @batch_stream
 async def bulk_create(
     self: CreateOwner[E, R, C],
@@ -215,30 +223,6 @@ async def bulk_patch(
     ]
 
 
-@batch_count
-async def bulk_delete(
-    self: EntityOwner[E, R],
-    identifiers: AnyIterable[IdentificatorType],
-    /,
-    *,
-    datar: DataR = Depends(),
-) -> int:
-    entities: list[E] = []
-    async for key in achain(identifiers):
-        found = await find_entity(self.entity, key, datar)
-        if found is not None:
-            entities.append(found)
-    return await datar.ability(self.entity).bulk_delete(entities)
-
-
-async def upsert(
-    self: EntityOwner[E, R], entity: E, datar: DataR = Depends()
-) -> R:
-    prepared = await prepare_upsert(self.entity, entity, datar)
-    result = await datar.ability(self.entity).upsert(prepared)
-    return project_read(result, self.read_schema)
-
-
 @batch_stream
 async def bulk_upsert(
     self: EntityOwner[E, R],
@@ -256,3 +240,19 @@ async def bulk_upsert(
     return [
         project_read(by_id[entity.id], self.read_schema) for entity in prepared
     ]
+
+
+@batch_count
+async def bulk_delete(
+    self: EntityOwner[E, R],
+    identifiers: AnyIterable[IdentificatorType],
+    /,
+    *,
+    datar: DataR = Depends(),
+) -> int:
+    entities: list[E] = []
+    async for key in achain(identifiers):
+        found = await find_entity(self.entity, key, datar)
+        if found is not None:
+            entities.append(found)
+    return await datar.ability(self.entity).bulk_delete(entities)

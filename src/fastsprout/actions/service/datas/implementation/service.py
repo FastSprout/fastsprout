@@ -125,8 +125,8 @@ class DataS(Service, DataSable[E, R, C, U, P, CreateSetting]):
     delete = commands.delete
     upsert = commands.upsert
     bulk_upsert = commands.bulk_upsert
-    update_by_query = commands.update_by_query
     delete_by_query = commands.delete_by_query
+    update_by_query = commands.update_by_query
     bulk_create = commands.bulk_create
     bulk_update = commands.bulk_update
     bulk_patch = commands.bulk_patch
@@ -136,7 +136,6 @@ class DataS(Service, DataSable[E, R, C, U, P, CreateSetting]):
     exists = queries.exists
     count = queries.count
     list = queries.list
-
     find_first = queries.find_first
     find_exactly_one = queries.find_exactly_one
     find_all = queries.find_all
