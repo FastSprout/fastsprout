@@ -15,6 +15,8 @@ Group related tests in classes. In ordinary tests, mark setup, execution, and
 assertions with `# given`, `# when`, and `# then`; use `# when / then` for
 expected exceptions. BDD decorators (`@given`, `@when`, `@then`, `@when_then`)
 already identify the phases; do not add phase comments inside those functions.
+Pylint checks phase decorator conflicts, missing type annotations, and
+redundant phase comments in BDD functions.
 Extend existing tests and parametrize related cases before adding a new test
 or file. Reuse fixtures, models, and helpers from `conftest.py` and `common.py`
 instead of duplicating setup. Extract shared setup when it is reused, without

@@ -119,7 +119,7 @@ reportCallIssue = false
 
 [tool.pylint.main]
 init-hook = "import sys; sys.path.insert(0, '.')"
-load-plugins = ["tools.pylint.exports", "tools.pylint.dataclasses", "tools.pylint.names"]
+load-plugins = ["tools.pylint.exports", "tools.pylint.dataclasses", "tools.pylint.names", "tools.pylint.testing"]
 
 [tool.pylint.messages_control]
 disable = ["all"]
@@ -132,6 +132,9 @@ enable = [
     "private-module-name",
     "missing-package-init",
     "stdlib-dataclass",
+    "conflicting-test-phases",
+    "untyped-test-phase",
+    "redundant-test-phase-comment",
     "invalid-all-format",
     "invalid-all-object",
     "undefined-all-variable",

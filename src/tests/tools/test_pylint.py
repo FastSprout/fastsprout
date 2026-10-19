@@ -5,6 +5,7 @@ from pylint.lint import Run
 from pylint.reporters import CollectingReporter
 
 import tools.pylint.names as names
+from fastsprout.testing.core import when_then
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -150,3 +151,79 @@ def test_public_alias_cannot_hide_import_outside_all(package: Path) -> None:
     path = package / "alias_case.py"
     path.write_text("from typing import _ProtocolMeta as ProtocolMeta\n")
     assert lint(path) == [("import-outside-all", 1)]
+
+
+class TestTestingPhases:
+    @when_then("BDD declarations follow their phase and typing contracts")
+    @pytest.mark.parametrize(
+        "declaration, expected",
+        [
+            ("@given('context')\ndef context() -> int: return 1", []),
+            (
+                "@when('change')\nasync def changed(value: int) -> int: return value",
+                [],
+            ),
+            (
+                "@then('result')\ndef test_value(value: int) -> None: assert value == 1",
+                [],
+            ),
+            (
+                "class Cases:\n    @given('context')\n    def context(self) -> int: return 1",
+                [],
+            ),
+            (
+                "@given('context')\n@when('change')\ndef context() -> int: return 1",
+                [("conflicting-test-phases", 4)],
+            ),
+            (
+                "@given('context')\ndef context(): return 1",
+                [("untyped-test-phase", 3)],
+            ),
+            (
+                "@when('change')\ndef changed(value, /, *, count: int) -> int: return count",
+                [("untyped-test-phase", 3)],
+            ),
+            (
+                "@then('result')\ndef test_value(*items, **extras) -> None: pass",
+                [("untyped-test-phase", 3), ("untyped-test-phase", 3)],
+            ),
+            (
+                "@given('context')\ndef context() -> int:\n    # given\n    return 1",
+                [("redundant-test-phase-comment", 4)],
+            ),
+            (
+                "@when_then('result')\nasync def test_value() -> None:\n    # when / then\n    pass",
+                [("redundant-test-phase-comment", 4)],
+            ),
+            (
+                "@given('context')\ndef context() -> str:\n    return '''\n    # given\n    '''",
+                [],
+            ),
+            (
+                "from fastsprout.testing.core import given as arrange\n@arrange('context')\ndef context(): return 1",
+                [("untyped-test-phase", 4)],
+            ),
+            (
+                "import fastsprout.testing.core as testing\n@testing.then('result')\ndef test_value(): pass",
+                [("untyped-test-phase", 4)],
+            ),
+            (
+                "from hypothesis import given\n@given()\ndef test_value():\n    # given\n    pass",
+                [],
+            ),
+            (
+                "def given(value): return value\n@given\ndef test_value():\n    # given\n    pass",
+                [],
+            ),
+        ],
+    )
+    def test_declarations(
+        self, package: Path, declaration: str, expected: list[tuple[str, int]]
+    ) -> None:
+        path = package / "phases_case.py"
+        path.write_text(
+            "from fastsprout.testing.core import given, when, then, when_then\n"
+            + declaration
+            + "\n"
+        )
+        assert lint(path) == expected
