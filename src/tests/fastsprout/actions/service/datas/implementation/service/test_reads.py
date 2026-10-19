@@ -11,33 +11,39 @@ from fastsprout.core.depends.scope import dependency_resources
 from fastsprout.core.fields.field_predicate import FieldPredicate
 from fastsprout.data import DataR, sql
 from fastsprout.data.utils.iterable import resolve_any_iterable
-from fastsprout.testing.core import when_then
+from fastsprout.testing.core import given, when_then
 
 from ...common import Record, RecordRead, RecordWrite, Team
 
 
 class TestReads:
-    @pytest.mark.parametrize("direct", [False, True])
-    @pytest.mark.parametrize("additional", [False, True])
-    async def test_stream_conditions_preserve_read_dtos(
-        self, records: DataS[Record], direct: bool, additional: bool
-    ) -> None:
-        # given
+    @given("three heroes with distinct scores and a read DTO")
+    async def read_records(
+        self, records: DataS[Record]
+    ) -> DataS[Record, RecordRead]:
         await records.bulk_create(
             Record(name=name, score=score)
             for name, score in (("Batman", 10), ("Robin", 20), ("Batgirl", 30))
         ).to_list()
-        service = DataS(Record, read=RecordRead)
+        return DataS(Record, read=RecordRead)
+
+    @when_then("stream conditions preserve the read DTO")
+    @pytest.mark.parametrize("direct", [False, True])
+    @pytest.mark.parametrize("additional", [False, True])
+    async def test_stream_conditions_preserve_read_dtos(
+        self,
+        read_records: DataS[Record, RecordRead],
+        direct: bool,
+        additional: bool,
+    ) -> None:
         predicate = Record.score.gte(20)
         predicates = (Record.name.eq("Robin"),) if additional else ()
         query = sql.SQLQuery(Record).where(predicate, *predicates)
-        # when
         rows = await (
-            service.stream(predicate, *predicates)
+            read_records.stream(predicate, *predicates)
             if direct
-            else service.stream(query)
+            else read_records.stream(query)
         ).to_list()
-        # then
         assert {row.name for row in rows} == (
             {"Robin"} if additional else {"Robin", "Batgirl"}
         )
@@ -90,24 +96,19 @@ class TestReads:
     @when_then("Query and direct predicates preserve the read DTO")
     @pytest.mark.parametrize("direct", [False, True])
     async def test_read_dtos_preserve_query_order_and_pagination(
-        self, records: DataS[Record], direct: bool
+        self, read_records: DataS[Record, RecordRead], direct: bool
     ) -> None:
-        service = DataS(Record, read=RecordRead)
-        await records.bulk_create(
-            Record(name=name, score=score)
-            for name, score in (("Batman", 10), ("Robin", 20), ("Batgirl", 30))
-        ).to_list()
         query = sql.SQLQuery(Record).order_by(Record.score).offset(1).limit(1)
-        first = await service.find_first(query)
+        first = await read_records.find_first(query)
         only = await (
-            service.find_exactly_one(
+            read_records.find_exactly_one(
                 Record.name.eq("Robin"), Record.score.eq(20)
             )
             if direct
-            else service.find_exactly_one(query)
+            else read_records.find_exactly_one(query)
         )
-        all_rows = await service.find_all(query)
-        streamed = await service.stream(query).to_list()
+        all_rows = await read_records.find_all(query)
+        streamed = await read_records.stream(query).to_list()
         assert first is not None
         for row in (first, only, *all_rows, *streamed):
             assert isinstance(row, RecordRead)

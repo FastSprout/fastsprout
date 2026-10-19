@@ -11,6 +11,7 @@ from sqlalchemy.pool import StaticPool
 from fastsprout.actions import DataS
 from fastsprout.core import inject_depends
 from fastsprout.data import DataR, provide_datar, sql
+from fastsprout.testing.core import given
 
 from .common import League, Record, Team, TeamRecord
 
@@ -31,7 +32,7 @@ async def sql_engine() -> AsyncIterator[AsyncEngine]:
         await engine.dispose()
 
 
-@pytest.fixture
+@given("an empty SQL-backed data service")
 async def records(sql_engine: AsyncEngine) -> DataS[Record]:
     Record.__signpost__ = sql.SQLSignpost(
         async_sessionmaker(sql_engine, expire_on_commit=False)
@@ -41,7 +42,7 @@ async def records(sql_engine: AsyncEngine) -> DataS[Record]:
     return DataS(Record)
 
 
-@pytest.fixture
+@given("a SQL-backed data service with related entities")
 async def team_records(sql_engine: AsyncEngine) -> DataS[TeamRecord]:
     backend = sql.SQLSignpost(
         async_sessionmaker(sql_engine, expire_on_commit=False)

@@ -18,6 +18,7 @@ from fastsprout.data.backend.sql.capabilities import SQLAbilitable
 from fastsprout.data.backend.sql.entity import SQLSignpost
 from fastsprout.data.backend.sql.streams import SQLEntityStream
 from fastsprout.data.capabilities.query import Gte, where
+from fastsprout.testing.core import given
 
 
 class SearchField[T](Field[T]): ...
@@ -71,7 +72,7 @@ def sql_session_factory() -> Iterator[sessionmaker[Session]]:
         engine.dispose()
 
 
-@pytest.fixture
+@given("a SQL session containing ten heroes")
 async def sql_session() -> AsyncIterator[AsyncSession]:
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     try:
@@ -85,7 +86,7 @@ async def sql_session() -> AsyncIterator[AsyncSession]:
         await engine.dispose()
 
 
-@pytest.fixture
+@given("a signpost sharing the prepared SQL session")
 def sql_signpost(
     sql_session: AsyncSession,
 ) -> SQLSignpost:
