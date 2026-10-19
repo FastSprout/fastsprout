@@ -34,6 +34,10 @@ class FieldRef[E, T, OrmCtor](Eqable["FieldRef[E, T, OrmCtor]"]):
     def set(self, value: T) -> FieldAssignment[T]:
         return FieldAssignment(self.name, value)
 
+    def __call__(self, entity: E) -> T:
+        """Read this field as a synchronous stream getter."""
+        return getattr(entity, self.name)
+
     def eq[V: FilterValue](
         self: FieldRef[E, V, OrmCtor], value: V
     ) -> FieldPredicate[E]:

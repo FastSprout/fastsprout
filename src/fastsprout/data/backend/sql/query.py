@@ -22,7 +22,7 @@ from fastsprout.data.types import PredicateCallable
 
 from .data_backend import SQLDataBackend
 from .entity import SQLEntity, SQLSource, validate_source
-from .predicates import compile_predicate, row_filter
+from .predicates import compile_predicate, native_conditions, row_filter
 
 __all__ = ["SQLJoinedQuery", "SQLQuery", "compile_predicate"]
 
@@ -38,15 +38,7 @@ class SQLQuery(BaseQuery[E, Select[tuple[E]]], Generic[E, SourceT]):
 
     @property
     def native_conditions(self) -> bool:
-        condition: Expression[E] = And(*self.conditions)
-        return (
-            compile_predicate(
-                condition,
-                self.entity,
-                lambda name: self.entity.__table__.c[name],
-            )
-            is not None
-        )
+        return native_conditions(self)
 
     def build(self) -> Select[tuple[E]]:
         validate_source(self.entity, self.source)
@@ -93,9 +85,7 @@ class SQLJoinedQuery[S: SQLSource, P: FieldPredicate, E: SQLEntity[Any], *Ts](
 
     @property
     def native_conditions(self) -> bool:
-        root = SQLQuery(
-            self.entity, conditions=self.conditions
-        ).native_conditions
+        root = native_conditions(self)
         condition: Filter[P | PredicateCallable[E]] = And(*self.row_conditions)
         joined = compile_predicate(
             condition,

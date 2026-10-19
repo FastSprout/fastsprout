@@ -5,18 +5,20 @@ from uuid import uuid4
 from sqlalchemy import and_, column, select, update, values
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.base import Mapped
+from sqlalchemy.sql import Select
 
 from fastsprout.core.fields.field_assigment import FieldAssignment
 from fastsprout.core.types import AnyIterable
 from fastsprout.data.backend.sql.data_backend import SQLDataBackend
-from fastsprout.data.backend.sql.entity import SQLEntity, SQLSource
+from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.helpers import get_primary_key
-from fastsprout.data.backend.sql.query import SQLQuery
+from fastsprout.data.backend.sql.predicates import native_conditions
 from fastsprout.data.backend.sql.streams import SQLEntityStream
 from fastsprout.data.capabilities.protocols import (
     Updatable,
     UpdatableByQuery,
 )
+from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.events import UpdateEvent
 from fastsprout.data.streams.implementation import SimpleAsyncEntityStream
@@ -119,11 +121,11 @@ class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLDataBackend):
 
 
 class SQLUpdatableByQuery[E: SQLEntity[Any]](
-    UpdatableByQuery[E, SQLQuery[E]], SQLDataBackend
+    UpdatableByQuery[E, BaseQuery[E, Select[tuple[E]]]], SQLDataBackend
 ):
-    async def update_by_query[S: SQLSource](
+    async def update_by_query(
         self,
-        query: SQLQuery[E, S],
+        query: BaseQuery[E, Select[tuple[E]]],
         /,
         *assignments: FieldAssignment[Any],
     ) -> int:
@@ -134,7 +136,7 @@ class SQLUpdatableByQuery[E: SQLEntity[Any]](
         pk: Mapped[Any] = entity.id.orm  # pyright: ignore[reportGeneralTypeIssues]
         selections = (
             resolve_any_iterable((query.build().with_only_columns(pk),))
-            if query.native_conditions
+            if native_conditions(query)
             else (
                 select(pk).where(pk.in_([item.id for item in batch]))
                 async for batch in SQLEntityStream(

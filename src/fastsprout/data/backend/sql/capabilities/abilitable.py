@@ -2,6 +2,7 @@ from contextlib import AbstractAsyncContextManager
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
 from fastsprout.core import Undefined, UndefinedType
 from fastsprout.data.backend.protocols import DataAbilitable
@@ -9,6 +10,7 @@ from fastsprout.data.backend.sql.data_backend import SQLDataBackend
 from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.finalizer import SQLFinalizable
 from fastsprout.data.backend.sql.query import SQLQuery
+from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Signpostable
 from fastsprout.events import EventBus
 
@@ -27,8 +29,9 @@ class SQLAbilitable[E: SQLEntity[Any]](
     DataAbilitable[
         E,
         AbstractAsyncContextManager[AsyncSession],
-        SQLQuery[E],
+        BaseQuery[E, Select[tuple[E]]],
         SQLFinalizable,
+        SQLQuery[E],
     ],
     SQLCreatable[E],
     SQLDeletable[E],
@@ -39,6 +42,8 @@ class SQLAbilitable[E: SQLEntity[Any]](
     SQLUpsertable[E],
     SQLUpdatableByQuery[E],
 ):
+    entity: type[E] | UndefinedType
+
     def __init__(
         self,
         signpost: Signpostable[AbstractAsyncContextManager[AsyncSession]],

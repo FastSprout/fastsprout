@@ -1,23 +1,29 @@
 from collections.abc import AsyncIterator, Sequence
 from typing import Any
 
+from sqlalchemy.sql import Select
+
 from fastsprout.data.backend.sql.data_backend import SQLDataBackend
-from fastsprout.data.backend.sql.entity import SQLEntity, SQLSource
-from fastsprout.data.backend.sql.query import SQLQuery
+from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.streams import SQLEntityStream
 from fastsprout.data.capabilities.protocols import Iterable
+from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 
 __all__ = ["SQLIterable"]
 
 
-class SQLIterable[E: SQLEntity[Any]](Iterable[E, SQLQuery[E]], SQLDataBackend):
-    def iter[S: SQLSource](self, query: SQLQuery[E, S], /) -> AsyncIterator[E]:
+class SQLIterable[E: SQLEntity[Any]](
+    Iterable[E, BaseQuery[E, Select[tuple[E]]]], SQLDataBackend
+):
+    def iter(
+        self, query: BaseQuery[E, Select[tuple[E]]], /
+    ) -> AsyncIterator[E]:
         return aiter(SQLEntityStream(query, self._signpost))
 
-    def iter_per[S: SQLSource](
+    def iter_per(
         self,
-        query: SQLQuery[E, S],
+        query: BaseQuery[E, Select[tuple[E]]],
         /,
         *,
         chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,

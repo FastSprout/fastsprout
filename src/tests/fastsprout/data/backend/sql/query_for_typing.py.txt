@@ -1,10 +1,15 @@
 from typing import assert_type
+from sqlalchemy.sql import Select
 
 from fastsprout.core import Field
+from fastsprout.core.fields.field_predicate import FieldPredicate
 from fastsprout.data import DataR
 from fastsprout.data.backend.sql import SQLEntity, SQLQuery, SQLSignpost
 from fastsprout.data.backend.sql.capabilities import SQLAbilitable
 from fastsprout.data.capabilities.protocols import Abilitable
+from fastsprout.data.capabilities.query import BaseQuery
+from fastsprout.data.entity import Entitieable
+from fastsprout.data.streams.protocols import AsyncEntityStream, AsyncValueStream
 
 
 class Hero(SQLEntity[int]):
@@ -23,6 +28,13 @@ def queries(ability: SQLAbilitable[Hero], signpost: SQLSignpost) -> None:
     assert_type(protocol.query_for(), SQLQuery[Hero])
     assert_type(protocol.query_for(Hero), SQLQuery[Hero])
     assert_type(ability.query_for().where(Hero.name.eq("Batman")), SQLQuery[Hero])
+    query: BaseQuery[Hero, Select[tuple[Hero]]] = ability.query_for()
+    shared: Abilitable[Hero, BaseQuery[Hero, Select[tuple[Hero]]], SQLQuery[Hero]] = ability
+    assert_type(shared.query_for(), SQLQuery[Hero])
+    assert_type(shared.stream(query), AsyncEntityStream[Hero])
+    assert_type(ability.stream(query), AsyncEntityStream[Hero])
+    assert_type(ability.stream(query).sort(Hero.name), AsyncEntityStream[Hero])
+    assert_type(ability.stream(query).to_values(Hero.name), AsyncValueStream[str])
     ability.query_for(Team)  # error: reportArgumentType; mypy: arg-type
     protocol.query_for(Team)  # error: reportArgumentType; mypy: arg-type
 
@@ -32,3 +44,7 @@ def routed(datar: DataR) -> None:
     assert_type(ability.query_for().entity, type[Hero])
     assert_type(ability.query_for(Hero).entity, type[Hero])
     ability.query_for(Team)  # error: reportArgumentType; mypy: arg-type
+
+
+def generic_identity[E: Entitieable[int]](source: type[E], key: int) -> None:
+    assert_type(source.id.eq(key), FieldPredicate[E])

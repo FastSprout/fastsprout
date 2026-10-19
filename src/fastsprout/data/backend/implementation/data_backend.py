@@ -43,6 +43,6 @@ class BaseDataBackend[T, F: Finalizable](Backendable[T, F], ABC):
         if isinstance(self._signpost, BoundSignpost):
             self._signpost.context.check()
 
-    async def _publish_to_bus[E: Eventable](self, /, *events: E) -> None:
+    async def _publish_to_bus(self, /, *events: Eventable) -> None:
         if self.__bus is not None:
             await self.__bus.publish(*events)

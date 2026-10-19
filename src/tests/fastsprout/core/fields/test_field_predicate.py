@@ -72,6 +72,11 @@ class TestFieldPredicate:
     def record(self, value: int) -> Record:
         return Record(value=value)
 
+    @then("a field reference reads its declared value as a stream getter")
+    @pytest.mark.parametrize("value", [0, 7])
+    def test_getter(self, record: Record, value: int) -> None:
+        assert Record.value(record) == value
+
     @when("the record is checked against an inclusive range")
     async def within_range(self, record: Record) -> bool:
         return await Record.value.between(5, 10)(record)

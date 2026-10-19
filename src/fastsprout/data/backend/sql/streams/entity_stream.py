@@ -1,13 +1,13 @@
-from collections.abc import AsyncIterator, Hashable
+from collections.abc import AsyncIterator, Awaitable, Callable, Hashable
 from contextlib import AbstractAsyncContextManager
 from functools import partial
 from typing import Any
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased
-from sqlalchemy.sql import Select
-from sqlmodel import Column
+from sqlalchemy.orm import QueryableAttribute, aliased
+from sqlalchemy.sql import ColumnElement, Select, Selectable
+from sqlalchemy.sql.elements import KeyedColumnElement
 
 from fastsprout.core import lazy_await
 from fastsprout.core.fields.field_ref import FieldRef
@@ -18,7 +18,12 @@ from fastsprout.data.backend.sql.data_backend import (
     prepare_query,
 )
 from fastsprout.data.backend.sql.entity import SQLEntity, SQLSignpost
-from fastsprout.data.capabilities.query import And, BaseQuery, FieldPredicate
+from fastsprout.data.capabilities.query import (
+    And,
+    BaseQuery,
+    Expression,
+    FieldPredicate,
+)
 from fastsprout.data.capabilities.query.predicate import evaluate
 from fastsprout.data.entity import Entitieable, Signpostable
 from fastsprout.data.streams.implementation import (
@@ -36,22 +41,23 @@ from fastsprout.data.types import (
     PredicateCallable,
 )
 
-from ..entity import SQLSource
-from ..query import SQLQuery, compile_predicate
+from ..predicates import compile_predicate, native_conditions
 from .value_stream import SQLValueStream
 
-__all__ = ["SQLEntityStream"]
+__all__ = ["SQLEntityStream", "get_column"]
 
 
-def _orm_of[T: HashableAndValuable](
-    getter: FieldRef[SQLEntity[Any], T, Column[T | Any]],
-) -> Column[T] | None:
-    """SQL-expressible column for a getter, or None for Python callables.
-
-    Class-level field access (`Hero.name`) yields a FieldRef carrying the
-    mapped attribute; arbitrary lambdas cannot be pushed down to SQL.
-    """
-    return getter.orm if isinstance(getter, FieldRef) else None
+def get_column[E, T](
+    getter: Callable[[E], T | Awaitable[T]], statement: Selectable
+) -> ColumnElement[T] | None:
+    if not isinstance(getter, FieldRef):
+        return None
+    column = getter.orm
+    if isinstance(column, QueryableAttribute):
+        column = column.__clause_element__()
+    if isinstance(column, KeyedColumnElement):
+        return statement.corresponding_column(column)
+    return None
 
 
 class SQLEntityStream[E: SQLEntity[Any]](
@@ -66,9 +72,9 @@ class SQLEntityStream[E: SQLEntity[Any]](
     a server-side cursor — rows are never fully buffered.
     """
 
-    def __init__[S: SQLSource](
+    def __init__(
         self,
-        stmt: Select[tuple[E]] | SQLQuery[E, S],
+        stmt: Select[tuple[E]] | BaseQuery[E, Select[tuple[E]]],
         signpost: (
             SQLSignpost
             | Signpostable[AbstractAsyncContextManager[AsyncSession]]
@@ -77,19 +83,20 @@ class SQLEntityStream[E: SQLEntity[Any]](
     ) -> None:
         BaseDataBackend.__init__(self, signpost)
         self.query: BaseQuery[E, Select[tuple[E]]] | None = None
-        if isinstance(stmt, SQLQuery):
-            stmt, self.query = prepare_query(stmt, stmt.native_conditions)
-        self._stmt = stmt
+        if isinstance(stmt, BaseQuery):
+            stmt, self.query = prepare_query(stmt, native_conditions(stmt))
+        self.statement = stmt
 
-    def _clone(self, stmt: Select[tuple[E]]) -> "SQLEntityStream[E]":
+    def clone(self, stmt: Select[tuple[E]]) -> "SQLEntityStream[E]":
         return SQLEntityStream(stmt, self._signpost)
 
     def __aiter__(self) -> AsyncIterator[E]:
         if self.query is None:
-            return self.scalars(self._stmt)
+            return self.scalars(self.statement)
+        condition: Expression[E] = And(*self.query.conditions)
         stream = (
-            SimpleAsyncEntityStream(self.scalars(self._stmt))
-            .filter(partial(evaluate, And(*self.query.conditions)))
+            SimpleAsyncEntityStream(self.scalars(self.statement))
+            .filter(lambda entity: evaluate(condition, entity))
             .drop(self.query.offset_value)
         )
         if isinstance(self.query.limit_value, int):
@@ -110,8 +117,8 @@ class SQLEntityStream[E: SQLEntity[Any]](
         ):
             return super().join(other, on=on)
         left_field, right_field = on
-        left_select = self._stmt.subquery()
-        right_select = other._stmt.subquery()
+        left_select = self.statement.subquery()
+        right_select = other.statement.subquery()
         left = aliased(left_field.entity_cls, left_select)
         right = aliased(right_field.entity_cls, right_select)
         left_column = left_select.c[left_field.name]
@@ -129,22 +136,24 @@ class SQLEntityStream[E: SQLEntity[Any]](
     def take(self, n: int) -> SimpleAsyncEntityStream[E]:
         if self.query is not None:
             return super().take(n)
-        return self._clone(self._stmt.limit(n))
+        return self.clone(self.statement.limit(n))
 
     def drop(self, n: int) -> SimpleAsyncEntityStream[E]:
         if self.query is not None:
             return super().drop(n)
-        return self._clone(self._stmt.offset(n))
+        return self.clone(self.statement.offset(n))
 
     def distinct(self) -> SimpleAsyncEntityStream[E]:
         if self.query is not None:
             return super().distinct()
-        return self._clone(self._stmt.distinct())
+        return self.clone(self.statement.distinct())
 
     def filter(
         self, predicate: PredicateCallable[E]
     ) -> SimpleAsyncEntityStream[E]:
-        unpaged = self._stmt.compare(self._stmt.limit(None).offset(None))
+        unpaged = self.statement.compare(
+            self.statement.limit(None).offset(None)
+        )
         if (
             self.query is None
             and unpaged
@@ -152,11 +161,11 @@ class SQLEntityStream[E: SQLEntity[Any]](
         ):
             condition = compile_predicate(
                 predicate,
-                self._stmt.column_descriptions[0]["entity"],
-                lambda name: self._stmt.selected_columns[name],
+                self.statement.column_descriptions[0]["entity"],
+                lambda name: self.statement.selected_columns[name],
             )
             if condition is not None:
-                return self._clone(self._stmt.where(condition))
+                return self.clone(self.statement.where(condition))
         return SimpleAsyncEntityStream(self).filter(predicate)
 
     def sort[R: RichComparisonable[Any]](  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -164,18 +173,20 @@ class SQLEntityStream[E: SQLEntity[Any]](
         key: GetterCallable[E, R],
         reverse: bool = False,
     ) -> AsyncEntityStream[E]:
-        orm = _orm_of(key)  # pyright: ignore[reportArgumentType]
-        if self.query is not None or orm is None:
+        column = (
+            None if self.query is not None else get_column(key, self.statement)
+        )
+        if column is None:
             return SimpleAsyncEntityStream(self).sort(key, reverse=reverse)
-        return self._clone(
-            self._stmt.order_by(orm.desc() if reverse else orm.asc())
+        return self.clone(
+            self.statement.order_by(column.desc() if reverse else column.asc())
         )
 
     @lazy_await
     async def count(self) -> int:
         if self.query is not None:
             return await super().count()
-        sub = self._stmt.subquery()
+        sub = self.statement.subquery()
         async with self.session() as session:
             result = await session.execute(
                 select(func.count()).select_from(sub)
@@ -186,17 +197,15 @@ class SQLEntityStream[E: SQLEntity[Any]](
     async def first(self) -> E | None:
         if self.query is not None:
             return await super().first()
-        async for item in self._clone(self._stmt.limit(1)):
+        async for item in self.clone(self.statement.limit(1)):
             return item
         return None
 
     def to_values[K: HashableAndValuable](  # pyright: ignore[reportIncompatibleMethodOverride]
         self, mapper: MapperCallable[E, K]
     ) -> AsyncValueStream[K]:
-        orm = _orm_of(mapper)  # pyright: ignore[reportArgumentType]
-        if self.query is not None or orm is None:
+        sub = self.statement.subquery()
+        column = None if self.query is not None else get_column(mapper, sub)
+        if column is None:
             return SimpleAsyncEntityStream(self).to_values(mapper)
-        sub = self._stmt.subquery()
-        return SQLValueStream(
-            select(sub.c[orm.key]).select_from(sub), self._signpost
-        )
+        return SQLValueStream(select(column).select_from(sub), self._signpost)

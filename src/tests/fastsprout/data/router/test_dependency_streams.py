@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy.sql import Select
 
 import fastsprout.data.router.implementation.datar as router
 from fastsprout.core import Depends
@@ -7,6 +8,7 @@ from fastsprout.data.backend.sql import SQLQuery
 from fastsprout.data.backend.sql.capabilities.iterable import SQLIterable
 from fastsprout.data.backend.sql.streams.entity_stream import SQLEntityStream
 from fastsprout.data.capabilities.protocols import Abilitable
+from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.streams.protocols import AsyncEntityStream
 
 from .conftest import JoinOrder
@@ -14,10 +16,10 @@ from .conftest import JoinOrder
 
 class IteratorAbility(
     SQLIterable[JoinOrder],
-    Abilitable[JoinOrder, SQLQuery[JoinOrder]],
+    Abilitable[JoinOrder, BaseQuery[JoinOrder, Select[tuple[JoinOrder]]]],
 ):
     def stream(
-        self, query: SQLQuery[JoinOrder], /
+        self, query: BaseQuery[JoinOrder, Select[tuple[JoinOrder]]], /
     ) -> AsyncEntityStream[JoinOrder]:
         return SimpleAsyncEntityStream(super().iter(query))
 

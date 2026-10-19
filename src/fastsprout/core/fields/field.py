@@ -129,6 +129,11 @@ class Field(Generic[T, FieldOwner]):  # default type parameter on Python 3.12
             owner: type[E],
         ) -> FieldRef[E, T, Mapped[T]]: ...
 
+        @overload
+        def __get__[E: Readable](
+            self: "Field[T, Readable]", instance: None, owner: type[E]
+        ) -> FieldRef[E, T, None]: ...
+
     @overload
     def __get__[OrmCtor](
         self: "Field[T, object]", instance: None, owner: type[HasOrm[OrmCtor]]

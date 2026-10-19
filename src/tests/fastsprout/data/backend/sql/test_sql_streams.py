@@ -1,6 +1,55 @@
+import pytest
+from sqlalchemy import Column, String
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import Field as SQLField
+
+from fastsprout.core import Field, ReadField
+from fastsprout.data.backend.sql import SQLEntity, SQLQuery, SQLSignpost
 from fastsprout.data.backend.sql.streams import SQLEntityStream
+from fastsprout.testing.core import given, when_then
 
 from .conftest import Hero
+
+
+class NamedColumnEntity(SQLEntity[int, SQLSignpost]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    display_name: Field[str] = SQLField(sa_column=Column("stored_name", String))
+
+
+class TestMappedFieldGetters:
+    @given("a stream whose field and SQL column have different names")
+    async def named_stream(
+        self, sql_session: AsyncSession, sql_signpost: SQLSignpost
+    ) -> SQLEntityStream[NamedColumnEntity]:
+        sql_signpost.bind(NamedColumnEntity)
+        await sql_session.run_sync(
+            lambda session: NamedColumnEntity.__table__.create(
+                session.connection()
+            )
+        )
+        sql_session.add_all(
+            NamedColumnEntity(id=index, display_name=name)
+            for index, name in enumerate(("Ada", "Lin"), start=1)
+        )
+        await sql_session.flush()
+        return SQLEntityStream(SQLQuery(NamedColumnEntity), sql_signpost)
+
+    @pytest.mark.parametrize("native", [False, True])
+    @when_then("field getters sort and project in SQL and Python")
+    async def test_field_getters(
+        self, named_stream: SQLEntityStream[NamedColumnEntity], native: bool
+    ) -> None:
+        stream = (
+            named_stream
+            if native
+            else named_stream.filter(lambda row: row.id > 0)
+        )
+        values = await (
+            stream.sort(NamedColumnEntity.display_name, reverse=True)
+            .to_values(NamedColumnEntity.display_name)
+            .to_list()
+        )
+        assert values == ["Lin", "Ada"]
 
 
 class TestSQLEntityStream:

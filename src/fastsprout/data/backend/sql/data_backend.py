@@ -150,6 +150,6 @@ class SQLDataBackend(
             finally:
                 self.__waited_events.clear()
 
-    async def _publish_to_bus[E: Eventable](self, /, *events: E) -> None:
+    async def _publish_to_bus(self, /, *events: Eventable) -> None:
         self.__waited_events.extend(events)
         await asyncio.sleep(0)

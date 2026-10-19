@@ -1,9 +1,9 @@
 from collections.abc import AsyncIterator, Sequence
 from typing import Any
 
-from sqlalchemy import inspect, select
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Mapped, class_mapper
 
 from fastsprout.core.types import AnyIterable
 from fastsprout.data.backend.sql.data_backend import SQLDataBackend
@@ -33,7 +33,7 @@ class SQLUpsertable[E: SQLEntity[Any]](Upsertable[E], SQLDataBackend):
             stream = SimpleAsyncEntityStream(entities)
             async for chunk in stream.chunked():
                 entity_cls = type(chunk[0])
-                mapper = inspect(entity_cls)
+                mapper = class_mapper(entity_cls)
                 pk_keys = get_primary_key(entity_cls)
                 pk: Mapped[Any] = entity_cls.id.orm  # pyright: ignore[reportGeneralTypeIssues]
                 built_q_id = (
