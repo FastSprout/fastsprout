@@ -16,7 +16,42 @@ class Actor:
     can_delete: bool
 
 
+class CheckDelete:
+    async def __call__(
+        self, identifier: IdentificatorType, /, *, datar: DataR
+    ) -> None:
+        assert await DataS(Record).exists(identifier, datar=datar)
+
+
+class GuardedRecords(DataS[Record]):
+    dependencies = (Depends(CheckDelete()),)
+
+
 class TestDependencyValidation:
+    @when_then("a callable dependency checks the key before deletion")
+    async def test_callable_class_and_successful_delete(
+        self,
+        records: DataS[Record],
+    ) -> None:
+        created = await records.create(Record(name="Batman"))
+        service = DataS(Record, dependencies=[Depends(CheckDelete())])
+        assert await service.delete(created.id) == 1
+        assert await records.exists(created.id) is False
+
+    @when_then("overriding dependencies preserves inherited configuration")
+    async def test_dependency_configuration_is_inherited_and_replaceable(
+        self,
+        records: DataS[Record],
+    ) -> None:
+        created = await records.create(Record(name="Batman"))
+        inherited = GuardedRecords()
+        assert isinstance(inherited.dependencies[0].dependency, CheckDelete)
+        original = inherited.dependencies
+        overridden = GuardedRecords(dependencies=[])
+        assert overridden.dependencies is not original
+        assert await overridden.delete(created.id) == 1
+        assert inherited.dependencies is original
+
     @when_then("a disabled operation never runs its dependencies")
     async def test_disabled_operation_does_not_run_dependencies(
         self,
