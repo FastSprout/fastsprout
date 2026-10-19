@@ -98,6 +98,9 @@ async def joined_sources(datar: DataR) -> None:
 
 
 def scoped_joins(source: CRM) -> None:
+    source.bind(Hero)
+    source.bind(Team)
+    source.bind(Other)  # error: reportArgumentType; mypy: arg-type
     query = SQLQuery(Hero, source=source)
     assert_type(query, SQLQuery[Hero, CRM])
     joined = query.join(Team, Hero.id == Team.id)

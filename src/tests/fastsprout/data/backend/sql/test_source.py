@@ -27,6 +27,23 @@ class TestSQLSource:
     def crm(self, sql_signpost: SQLSignpost) -> CRM:
         return CRM(sql_signpost.factory)
 
+    @pytest.mark.parametrize("source_type", [CRM, ERP, SQLSignpost])
+    @when_then("source binding validates before replacing class metadata")
+    def test_bind(self, crm: CRM, source_type: type[SQLSignpost]) -> None:
+        class Bound(CRMModel, table=False):
+            __signpost__ = crm
+
+        candidate = source_type(crm.factory)
+        if isinstance(candidate, CRM):
+            candidate.bind(Bound)
+            assert Bound.__signpost__ is candidate
+        else:
+            with pytest.raises(
+                TypeError, match="__signpost__ must be an instance of CRM"
+            ):
+                candidate.bind(Bound)
+            assert Bound.__signpost__ is crm
+
     @when_then(
         "a scoped entity keeps its source through inherited query execution"
     )
@@ -36,8 +53,9 @@ class TestSQLSource:
         sql_session: AsyncSession,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        class ScopedHero(CRMModel):
-            __signpost__ = crm
+        class ScopedHero(CRMModel): ...
+
+        crm.bind(ScopedHero)
 
         await sql_session.run_sync(
             lambda session: ScopedHero.__table__.create(session.connection())

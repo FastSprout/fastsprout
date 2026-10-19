@@ -4,6 +4,7 @@ from typing import (
     Any,
     ClassVar,
     Generic,
+    Self,
     dataclass_transform,
     get_args,
 )
@@ -42,6 +43,7 @@ __all__ = [
     "SQLSource",
     "TypedSQLMeta",
     "validate_source",
+    "validate_source_type",
 ]
 
 type SQLSource = Signpostable[AbstractAsyncContextManager[AsyncSession]]
@@ -193,7 +195,13 @@ class TypedSQLMeta(SQLModelMetaclass):
             setattr(cls, fname, descriptor)
 
 
-class SQLSignpost(Signpost[AbstractAsyncContextManager[AsyncSession]]): ...
+class SQLSignpost(Signpost[AbstractAsyncContextManager[AsyncSession]]):
+    def bind[ID: IdentificatorType](
+        self, entity: "type[SQLEntity[ID, Self]]"
+    ) -> None:
+        """Assign this signpost after checking the entity's declared source."""
+        validate_source_type(entity, self)
+        entity.__signpost__ = self
 
 
 class SQLEntity(
@@ -228,6 +236,14 @@ def validate_source(
     """Check the current signpost against the entity's declared source type."""
     if source is not None and entity.__signpost__ is not source:
         raise TypeError("SQL queries require their declared signpost")
+    if hasattr(entity, "__signpost__"):
+        validate_source_type(entity, entity.__signpost__)
+
+
+def validate_source_type(
+    entity: type[SQLEntity[IDT, SourceT]], source: SQLSource
+) -> None:
+    """Validate a candidate before changing the entity's source binding."""
     for base in entity.__mro__:
         metadata = vars(base).get("__pydantic_generic_metadata__", {})
         arguments = metadata.get("args", ())
@@ -236,8 +252,7 @@ def validate_source(
             if (
                 source_type is not Any
                 and isinstance(source_type, type)
-                and hasattr(entity, "__signpost__")
-                and not isinstance(entity.__signpost__, source_type)
+                and not isinstance(source, source_type)
             ):
                 raise TypeError(
                     f"{entity.__name__}.__signpost__ must be an instance of {source_type.__name__}"
