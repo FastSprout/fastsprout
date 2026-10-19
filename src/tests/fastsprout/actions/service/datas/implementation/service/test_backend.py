@@ -4,14 +4,17 @@ import pytest
 
 from fastsprout.actions import DataS
 from fastsprout.data import DataR
+from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.testing.core import given, when_then
 
 from ...common import (
     MemoryAbility,
+    MemoryQuery,
     MemoryRecord,
 )
 
 
-@pytest.fixture
+@given("an in-memory backend shared by ability and stream routing")
 def memory_backend(monkeypatch: pytest.MonkeyPatch) -> MemoryAbility:
     backend = MemoryAbility()
 
@@ -21,20 +24,25 @@ def memory_backend(monkeypatch: pytest.MonkeyPatch) -> MemoryAbility:
         backend.contexts.append(datar)
         return backend
 
+    def stream(
+        datar: DataR, query: MemoryQuery
+    ) -> AsyncEntityStream[MemoryRecord]:
+        return ability(datar, query.entity).stream(query)
+
     monkeypatch.setattr(DataR, "ability", ability)
+    monkeypatch.setattr(DataR, "stream", stream)
     return backend
 
 
 class TestBackend:
+    @when_then("CRUD and paginated reads use the same non-SQL backend context")
     async def test_non_sql_crud_uses_entity_and_one_context(
         self,
         memory_backend: MemoryAbility,
     ) -> None:
-        # given
         service = DataS(MemoryRecord)
         assert service.read_schema is MemoryRecord
         assert service.create_schema is MemoryRecord
-        # when / then
         async with DataR() as datar:
             created = await service.create(
                 service.create_schema(name="Batman"), datar=datar
@@ -59,6 +67,13 @@ class TestBackend:
                 datar=datar,
             )
             assert (patched.name, patched.score) == ("Robin", 99)
+            query = MemoryQuery(MemoryRecord).where(MemoryRecord.score.gte(20))
+            page = await service.list(query, datar=datar)
+            assert page.total == await service.count(query, datar=datar) == 1
+            assert [(row.id, row.score) for row in page.items] == [
+                (created.id, 99)
+            ]
             assert await service.delete(created.id, datar=datar) == 1
             assert await service.delete(created.id, datar=datar) == 0
+            assert await service.count(datar=datar) == 0
             assert all(context is datar for context in memory_backend.contexts)
