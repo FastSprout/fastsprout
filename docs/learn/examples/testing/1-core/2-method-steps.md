@@ -43,8 +43,11 @@ class CartCases:
         return cart
 
     @then("the cart contains {count:d} products")
-    @pytest.mark.parametrize("product_name", ["book", "pen"])
-    @pytest.mark.parametrize("count", [1])
+    @pytest.mark.steps(
+        ('the user adds "book"', "the cart contains 1 products"),
+        ('the user adds "pen"', "the cart contains 1 products"),
+        ids=("book", "pen"),
+    )
     def test_cart_count(self, added: Cart, count: int) -> None:
         assert len(added.products) == count
 
@@ -61,8 +64,8 @@ class TestCheckedCart(CartCases):
 
 ```text
 
-examples/testing/01_core/02_method_steps.py::TestCart::test_cart_count[1-book] PASSED [ 25%]
-examples/testing/01_core/02_method_steps.py::TestCart::test_cart_count[1-pen] PASSED [ 50%]
-examples/testing/01_core/02_method_steps.py::TestCheckedCart::test_cart_count[1-book] PASSED [ 75%]
-examples/testing/01_core/02_method_steps.py::TestCheckedCart::test_cart_count[1-pen] PASSED [100%]
+examples/testing/01_core/02_method_steps.py::TestCart::test_cart_count[book] PASSED [ 25%]
+examples/testing/01_core/02_method_steps.py::TestCart::test_cart_count[pen] PASSED [ 50%]
+examples/testing/01_core/02_method_steps.py::TestCheckedCart::test_cart_count[book] PASSED [ 75%]
+examples/testing/01_core/02_method_steps.py::TestCheckedCart::test_cart_count[pen] PASSED [100%]
 ```

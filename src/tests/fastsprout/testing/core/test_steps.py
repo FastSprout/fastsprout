@@ -26,8 +26,18 @@ class BaseCartCases:
         return cart
 
     @then("the cart contains {count:d} products")
-    @pytest.mark.parametrize("product_name", ["book", "pen"])
-    @pytest.mark.parametrize("count", [1])
+    @pytest.mark.steps(
+        (
+            "the user has an empty cart",
+            'the user adds "book"',
+            "the cart contains 1 products",
+        ),
+        (
+            "the user has an empty cart",
+            'the user adds "pen"',
+            "the cart contains 1 products",
+        ),
+    )
     def test_cart_count(
         self, cart: CartContext, added: CartContext, count: int
     ) -> None:

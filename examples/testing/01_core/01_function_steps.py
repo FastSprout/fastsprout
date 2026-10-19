@@ -1,4 +1,8 @@
-"""Let pytest resolve typed function steps through fixture dependencies."""
+"""Parse step texts into typed pytest parameters.
+
+Use `{name}` for strings, `{name:d}` for integers, and `{name:f}` for floats.
+Fixture dependencies determine execution order.
+"""
 
 import pytest
 
@@ -23,7 +27,10 @@ async def added(context: CartContext, product_name: str) -> CartContext:
 
 
 @then("the cart contains {count:d} products")
-@pytest.mark.parametrize("product_name", ["book", "pen"])
-@pytest.mark.parametrize("count", [1])
+@pytest.mark.steps(
+    ('the user adds "book"', "the cart contains 1 products"),
+    ('the user adds "pen"', "the cart contains 1 products"),
+    ids=("book", "pen"),
+)
 def test_cart_count(added: CartContext, count: int) -> None:
     assert len(added.products) == count

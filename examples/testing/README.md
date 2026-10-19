@@ -12,6 +12,6 @@ uv run --extra testing pytest -p fastsprout.testing.core.plugin -o addopts= exam
 
 | File | Shows |
 | --- | --- |
-| [01_core/01_function_steps.py](01_core/01_function_steps.py) | Let pytest resolve typed function steps through fixture dependencies. |
+| [01_core/01_function_steps.py](01_core/01_function_steps.py) | Parse step texts into typed pytest parameters. |
 | [01_core/02_method_steps.py](01_core/02_method_steps.py) | Write pytest cases once and inherit them for different providers. |
 | [01_core/03_properties.py](01_core/03_properties.py) | Run typed Hypothesis properties through pytest. |

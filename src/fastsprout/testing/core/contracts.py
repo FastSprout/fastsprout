@@ -19,10 +19,12 @@ from weakref import WeakKeyDictionary
 from typeguard import CollectionCheckStrategy, ForwardRefPolicy, check_type
 from typing_extensions import TypeForm
 
+from fastsprout.core import dataclass
 from fastsprout.core.types.protocols.ables import Hashable
 
 __all__ = [
     "FIXTURE_CONTRACTS",
+    "StepContract",
     "check_arguments",
     "check_result",
     "checked",
@@ -32,7 +34,16 @@ __all__ = [
     "resolve_alias",
 ]
 
-FIXTURE_CONTRACTS: WeakKeyDictionary[Hashable, Signature] = WeakKeyDictionary()
+
+@dataclass(frozen=True)
+class StepContract:
+    signature: Signature
+    description: str
+
+
+FIXTURE_CONTRACTS: WeakKeyDictionary[Hashable, StepContract] = (
+    WeakKeyDictionary()
+)
 
 
 def resolve_alias[T](annotation: TypeForm[T]) -> TypeForm[T]:

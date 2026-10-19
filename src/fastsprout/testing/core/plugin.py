@@ -1,6 +1,6 @@
 """Validate typed fixtures and test arguments through public pytest hooks."""
 
-from collections.abc import Generator, Sequence
+from collections.abc import Generator, Iterator, Sequence
 from inspect import (
     getsourcefile,
     isasyncgenfunction,
@@ -26,11 +26,13 @@ from .contracts import (
     checked_async,
     checked_signature,
 )
+from .parameters import STEP_PARAMETERS, parameter_key, parameterize
 
 __all__ = [
     "pytest_collection_modifyitems",
     "pytest_configure",
     "pytest_fixture_setup",
+    "pytest_generate_tests",
     "pytest_runtest_call",
 ]
 
@@ -62,12 +64,18 @@ def fixture_identity(function: Hashable) -> Hashable:
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
+        "steps(*cases, ids=None): Match step texts and parametrize their named fields.",
+    )
+    config.addinivalue_line(
+        "markers",
         "fastsprout_typed: Require typed providers and test parameters.",
     )
 
 
 def fixture_names(item: pytest.Function) -> set[str]:
-    parameters: set[str] = set()
+    parameters = set(
+        item.config.stash.get(STEP_PARAMETERS, {}).get(parameter_key(item), ())
+    )
     for marker in item.iter_markers("parametrize"):
         indirect = marker.kwargs.get("indirect", False)
         if indirect is True:
@@ -82,16 +90,21 @@ def fixture_names(item: pytest.Function) -> set[str]:
     return set(item.fixturenames) - parameters
 
 
-def register_fixtures(item: pytest.Function) -> None:
+def fixture_functions(item: pytest.Function) -> Iterator[Hashable]:
     resolver = item.config.pluginmanager.get_plugin("funcmanage")
     if not isinstance(resolver, FixtureResolver):
         raise pytest.UsageError("Pytest fixture resolver is unavailable")
-    fixtures = item.config.stash.setdefault(TYPED_FIXTURES, set())
     for name in fixture_names(item):
         for definition in reversed(resolver.getfixturedefs(name, item) or ()):
-            fixtures.add(fixture_identity(definition.func))
+            yield fixture_identity(definition.func)
             if name not in definition.argnames:
                 break
+
+
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+    marker = metafunc.definition.get_closest_marker("steps")
+    if marker is not None:
+        parameterize(metafunc, marker, fixture_functions(metafunc.definition))
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -99,7 +112,9 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
         if isinstance(item, pytest.Function) and item.get_closest_marker(
             "fastsprout_typed"
         ):
-            register_fixtures(item)
+            item.config.stash.setdefault(TYPED_FIXTURES, set()).update(
+                fixture_functions(item)
+            )
         if isinstance(item, pytest.Function) and is_hypothesis_test(item.obj):
             try:
                 inner = item.obj.hypothesis.inner_test
@@ -119,7 +134,8 @@ def pytest_fixture_setup[T](
     function = unwrap(fixturedef.func)
     if isinstance(function, MethodType):
         function = function.__func__
-    contract = FIXTURE_CONTRACTS.get(function)
+    definition = FIXTURE_CONTRACTS.get(function)
+    contract = definition.signature if definition is not None else None
     source = getsourcefile(function)
     if (
         contract is None

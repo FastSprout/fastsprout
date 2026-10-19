@@ -9,7 +9,7 @@ import pytest_asyncio
 
 from fastsprout.core import dataclass
 
-from .contracts import FIXTURE_CONTRACTS, checked_signature
+from .contracts import FIXTURE_CONTRACTS, StepContract, checked_signature
 
 __all__ = ["FixtureStep", "given", "then", "when", "when_then"]
 
@@ -42,7 +42,9 @@ class FixtureStep:
         | Callable[P, Awaitable[T]]
         | Callable[P, AsyncIterator[T]]
     ):
-        FIXTURE_CONTRACTS[function] = checked_signature(function)
+        FIXTURE_CONTRACTS[function] = StepContract(
+            checked_signature(function), self.description
+        )
         function.__doc__ = f"{self.phase}: {self.description}"
         if iscoroutinefunction(function):
             return pytest_asyncio.fixture(function)
