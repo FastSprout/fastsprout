@@ -332,3 +332,22 @@ def mixed_schema_configuration[
     settings: Mapping[str, SchemaSetting[R | C | U | P]],
 ) -> None:
     assert_type(configure_schemas(service, entity, settings), frozenset[DataSOperation])
+
+
+class SelectedActions(Service):
+    entity = Hero
+    read_schema = HeroRead
+    create_schema = HeroCreate
+    chunk_size = 10
+
+    create = commands.create
+    bulk_create = commands.bulk_create
+    find_first = queries.find_first
+
+
+async def selected_action_types[Statement](query: BaseQuery[Hero, Statement]) -> None:
+    selected = SelectedActions()
+    assert_type(await selected.create(HeroCreate(name="Batman")), HeroRead)
+    assert_type(await selected.find_first(query), HeroRead | None)
+    assert_type(selected.bulk_create([HeroCreate(name="Batman")]), BaseCommonStream[HeroRead])
+    await selected.create(HeroPatch(score=1))  # error: reportArgumentType; mypy: arg-type

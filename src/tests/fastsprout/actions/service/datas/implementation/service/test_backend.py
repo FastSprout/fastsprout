@@ -2,7 +2,8 @@ from uuid import uuid4
 
 import pytest
 
-from fastsprout.actions import DataS
+from fastsprout.actions import DataS, Service
+from fastsprout.actions.service.datas.implementation import commands, queries
 from fastsprout.data import DataR
 from fastsprout.data.streams.protocols import AsyncEntityStream
 from fastsprout.data.utils.iterable import resolve_any_iterable
@@ -37,7 +38,36 @@ def memory_backend(monkeypatch: pytest.MonkeyPatch) -> MemoryAbility:
     return backend
 
 
+class SelectedMemoryActions(Service):
+    entity = MemoryRecord
+    read_schema = MemoryRecord
+    create_schema = MemoryCreate
+    chunk_size = 2
+
+    create = commands.create
+    bulk_create = commands.bulk_create
+    get = queries.get
+    delete = commands.delete
+
+
 class TestBackend:
+    @when_then("selected CRUD actions compose into an ordinary Service")
+    async def test_selected_actions_share_backend_context(
+        self, memory_backend: MemoryAbility
+    ) -> None:
+        service = SelectedMemoryActions()
+        async with DataR() as datar:
+            created = await service.create(MemoryCreate("Batman"), datar=datar)
+            assert await service.get(created.id, datar=datar) == created
+            added = await service.bulk_create(
+                (MemoryCreate(name) for name in ("Robin", "Batgirl")),
+                datar=datar,
+            ).to_list()
+            assert [row.name for row in added] == ["Robin", "Batgirl"]
+            assert await service.delete(created.id, datar=datar) == 1
+            assert await service.get(created.id, datar=datar) is None
+            assert all(context is datar for context in memory_backend.contexts)
+
     @when_then("CRUD and paginated reads use the same non-SQL backend context")
     async def test_non_sql_crud_uses_entity_and_one_context(
         self,
