@@ -5,6 +5,8 @@ import pytest
 
 from tests.type_checking import TypeChecker
 
+pytest_plugins = ["fastsprout.testing.core.plugin", "pytester"]
+
 
 @pytest.fixture(scope="session")
 def checker_python_version() -> str:

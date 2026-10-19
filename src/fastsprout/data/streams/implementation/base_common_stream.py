@@ -10,7 +10,7 @@ from functools import wraps
 from typing import Any
 
 from fastsprout.core import lazy_await
-from fastsprout.core.types import AnyIterable
+from fastsprout.core.types import AnyIterable, LazyAwait
 from fastsprout.core.types.protocols.ables import Addable, RichComparisonable
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.entity import Entitieable
@@ -45,13 +45,15 @@ class BaseCommonStream[T: Valuable | Entitieable]:
     def __aiter__(self) -> AsyncIterator[T]:
         return aiter(self.values)
 
-    @lazy_await
-    async def to_list(self) -> list[T]:
-        buffer: list[T] = []
-        async with aclosing(resolve_any_iterable(self)) as source:
-            async for item in source:
-                buffer.append(item)
-        return buffer
+    def to_list(self) -> LazyAwait[list[T]]:
+        async def collect() -> list[T]:
+            buffer: list[T] = []
+            async with aclosing(resolve_any_iterable(self)) as source:
+                async for item in source:
+                    buffer.append(item)
+            return buffer
+
+        return LazyAwait(collect)
 
     @lazy_await
     async def to_set(self) -> set[T]:

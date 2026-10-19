@@ -114,6 +114,33 @@ async def checks[Statement](
     await default.list(other_query)  # error: reportArgumentType; mypy: arg-type
 
 
+async def batch_checks(
+    heroes: AnyIterable[Hero],
+    others: AnyIterable[Other],
+    creates: AnyIterable[HeroCreate],
+    updates: AnyIterable[tuple[IdentificatorType, HeroPatch]],
+    deletes: AnyIterable[IdentificatorType],
+) -> None:
+    default = DataS(Hero)
+    created: AsyncCommonStream[Hero] = default.bulk_create(heroes)
+    updated: AsyncCommonStream[Hero] = default.bulk_update(heroes)
+    assert_type(await created.to_list(), list[Hero])
+    assert_type(await updated.to_list(), list[Hero])
+    assert_type(await default.bulk_create(heroes).to_list(), list[Hero])
+    assert_type(await default.bulk_update(heroes).to_list(), list[Hero])
+    assert_type(await default.bulk_delete(deletes), int)
+    custom = DataS(Hero, read=HeroRead, create=HeroCreate, update=HeroPatch, patch=HeroPatch)
+    assert_type(await custom.bulk_create(creates).to_list(), list[HeroRead])
+    assert_type(await custom.bulk_update(updates).to_list(), list[HeroRead])
+    assert_type(await custom.bulk_patch(updates).to_list(), list[HeroRead])
+    await custom.bulk_create(heroes).to_list()
+    await custom.bulk_create(others).to_list()  # error: reportArgumentType; mypy: arg-type
+    await custom.bulk_patch(creates).to_list()  # error: reportArgumentType; mypy: arg-type
+    datar = DataR(dependencies=[Depends(check_hero)])
+    assert_type(datar.dependencies, Sequence[DependsClass])
+    DataR(dependencies=[check_hero])  # error: reportArgumentType; mypy: list-item
+
+
 @dataclass(kw_only=True)
 class MemoryEntity(Entitieable[UUID]):
     __signpost__: ClassVar[Signpostable[None]]

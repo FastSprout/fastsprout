@@ -9,6 +9,7 @@ __all__ = [
     "Addable",
     "AllComparisonsable",
     "AsyncIterableResolver",
+    "AwaitGenerator",
     "Awaitable",
     "Boolable",
     "Callable",
@@ -47,8 +48,12 @@ class AsyncIterableResolver[T](Protocol):
     async def resolve(self) -> AsyncIterable[T]: ...
 
 
+# Python leaves scheduler yield/send values unconstrained; T is the resolved result.
+type AwaitGenerator[T] = Generatorable[Any, Any, T]
+
+
 class Awaitable[T](Protocol):
-    def __await__(self) -> Generatorable[Any, Any, T]: ...
+    def __await__(self) -> AwaitGenerator[T]: ...
 
 
 class Nextable[T](Protocol):

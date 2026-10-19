@@ -3,10 +3,7 @@ from typing import overload
 from typing_extensions import TypeVar
 
 from fastsprout.core import Depends, IdentificatorType, Schema
-from fastsprout.core.dto.conversion import (
-    prepare_create,
-    project_read,
-)
+from fastsprout.core.dto.conversion import project_read
 from fastsprout.core.types import AnyIterable
 from fastsprout.core.types.protocols.identificable import Identificatable
 from fastsprout.data.entity import Entitieable
@@ -24,7 +21,13 @@ from ..protocols.owners import (
     UpdateOwner,
 )
 from .batches import batch_count, batch_stream
-from .payloads import find_entity, prepare_upsert, prepare_write
+from .payloads import (
+    find_entity,
+    materialize,
+    prepare_new_entity,
+    prepare_upsert,
+    prepare_write,
+)
 from .query_writes import delete_by_query, update_by_query
 
 __all__ = [
@@ -52,7 +55,9 @@ P = TypeVar("P", bound=Schema | Entitieable, default=E)
 async def create(
     self: CreateOwner[E, R, C], entity: E | C, datar: DataR = Depends()
 ) -> R:
-    payload = prepare_create(self.entity, self.create_schema, entity)
+    payload = await prepare_new_entity(
+        self.entity, self.create_schema, entity, datar
+    )
     created = await datar.ability(self.entity).create(payload)
     return project_read(created, self.read_schema)
 
@@ -83,9 +88,7 @@ async def update(
     datar: DataR = Depends(),
 ) -> R:
     if isinstance(entity, self.entity) and data is None:
-        prepared = await prepare_write(
-            self.entity, entity.id, entity, self.entity, datar
-        )
+        prepared = await materialize(self.entity, entity, datar, creating=False)
     elif data is not None and isinstance(entity, Identificatable):
         prepared = await prepare_write(
             self.entity, entity, data, self.update_schema, datar
@@ -135,8 +138,11 @@ async def bulk_create(
     *,
     datar: DataR = Depends(),
 ) -> list[R]:
-    prepared = [
-        prepare_create(self.entity, self.create_schema, entity)
+    relations: dict[int, Entitieable[IdentificatorType]] = {}
+    prepared: list[E] = [
+        await prepare_new_entity(
+            self.entity, self.create_schema, entity, datar, relations=relations
+        )
         async for entity in achain(entities)
     ]
     created = await datar.ability(self.entity).bulk_create(prepared)
@@ -179,9 +185,7 @@ async def bulk_update(
                 self.entity, key, data, self.update_schema, datar
             )
         else:
-            entity = await prepare_write(
-                self.entity, item.id, item, self.entity, datar
-            )
+            entity = await materialize(self.entity, item, datar, creating=False)
         prepared.append(entity)
     updated = await datar.ability(self.entity).bulk_update(prepared)
     by_id = {entity.id: entity for entity in updated}

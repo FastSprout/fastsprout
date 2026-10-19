@@ -84,6 +84,14 @@ Run from the repository root with the events extra:
 uv run --extra events python {example}
 ```
 """,
+    "testing": """Pytest fixtures and tests declare typed BDD phases. Share cases
+through fixtures and base classes; property tests use Hypothesis.
+Run from the repository root:
+
+```bash
+uv run --extra testing pytest -p fastsprout.testing.core.plugin -o addopts= {example}
+```
+""",
 }
 
 

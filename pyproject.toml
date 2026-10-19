@@ -33,11 +33,13 @@ dependencies = ["pydantic>=2.13.5", "typing-extensions>=4.14"]
 [project.optional-dependencies]
 data-sql = ["sqlmodel==0.0.42", 'sqlalchemy']
 events = ["bubus>=1.5.6", "croniter>=6.2.4"]
+testing = ["hypothesis>=6.0", "pytest>=9.0.3", "pytest-asyncio>=1.4.0", "typeguard>=4.4,<5"]
 standard = ["fastsprout[data-sql,events]"]
 
 
 [dependency-groups]
 dev = [
+    "fastsprout[testing]",
     "basedpyright>=1.39.3",
     "import-linter[ui]>=2.3",
     "ipython>=9.4.0",

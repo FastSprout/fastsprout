@@ -19,6 +19,16 @@ layers =
     events
     core
 
+[importlinter:contract:FastSprout-testing-core-architecture]
+name = FastSprout Testing Core Architecture
+type = forbidden
+source_modules =
+    fastsprout.testing.core
+forbidden_modules =
+    fastsprout.actions
+    fastsprout.data
+    fastsprout.events
+
 
 ; === FastSprout-actions-level layers ===
 [importlinter:contract:FastSprout-actions-layers-architecture]

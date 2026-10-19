@@ -1,8 +1,8 @@
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
+
+from scripts.docs_nav import run_python_example
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -17,13 +17,4 @@ ROOT = Path(__file__).resolve().parents[2]
     ],
 )
 def test_example_runs(example: Path) -> None:
-    result = subprocess.run(
-        [sys.executable, str(example)],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
-    assert result.stdout.strip(), "Example did not print a result"
+    assert run_python_example(example, ROOT).strip()

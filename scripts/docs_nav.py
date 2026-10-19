@@ -131,7 +131,7 @@ def _example_nav(
 def on_config(config):
     examples: Navigation = [{"Overview": "learn/examples/index.md"}]
     docs_dir = Path(config["docs_dir"])
-    for layer in ("core", "actions", "data", "events"):
+    for layer in ("core", "actions", "data", "events", "testing"):
         pages = example_pages(docs_dir, layer)
         if pages:
             examples.append({layer.title(): pages})
@@ -162,8 +162,24 @@ def run_python_example(source: Path, root: Path) -> str:
     if previous_path := environment.get("PYTHONPATH"):
         source_path += os.pathsep + previous_path
     environment["PYTHONPATH"] = source_path
+    command = [sys.executable, str(source)]
+    if source.is_relative_to(root / "examples/testing"):
+        command = [
+            sys.executable,
+            "-m",
+            "pytest",
+            str(source),
+            "-p",
+            "fastsprout.testing.core.plugin",
+            "-qq",
+            "--no-header",
+            "-o",
+            "addopts=",
+            "-o",
+            "verbosity_test_cases=1",
+        ]
     run = subprocess.run(
-        [sys.executable, str(source)],
+        command,
         cwd=root,
         env=environment,
         capture_output=True,

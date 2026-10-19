@@ -115,10 +115,10 @@ docs-check:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
   script:
     - git fetch origin --tags
-    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/generate_readme_docs.py
+    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events --extra testing python scripts/generate_readme_docs.py
     - git diff --exit-code -- docs examples
     - test -z "$(git ls-files --others --exclude-standard docs/learn)"
-    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/build_docs.py --dev-ref HEAD --output public
+    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events --extra testing python scripts/build_docs.py --dev-ref HEAD --output public
   artifacts:
     paths:
       - public
@@ -151,7 +151,7 @@ pages:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
   script:
     - git fetch origin +refs/heads/development:refs/remotes/origin/development --tags
-    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/build_docs.py --dev-ref origin/development --output public
+    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events --extra testing python scripts/build_docs.py --dev-ref origin/development --output public
   artifacts:
     paths:
       - public

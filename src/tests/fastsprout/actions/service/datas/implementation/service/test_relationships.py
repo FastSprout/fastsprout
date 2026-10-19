@@ -7,6 +7,37 @@ from ...common import League, Team, TeamRecord, loaded_query
 
 
 class TestRelationships:
+    @pytest.mark.parametrize("chunk_size", [1, 2, 3])
+    async def test_bulk_create_preserves_shared_relations(
+        self, team_records: DataS[TeamRecord], chunk_size: int
+    ) -> None:
+        # given
+        team_records.chunk_size = chunk_size
+        league = League(name="World")
+        team = Team(name="Justice League", league=league)
+        entities = [
+            TeamRecord(name="Batman", team=team),
+            TeamRecord(name="Robin", team=team),
+            TeamRecord(
+                name="Katana", team=Team(name="Outsiders", league=league)
+            ),
+        ]
+        # when
+        created = await team_records.bulk_create(entities).to_list()
+        found = [
+            await team_records.get(loaded_query(TeamRecord, row.id))
+            for row in created
+        ]
+        # then
+        assert [row.name for row in created] == [row.name for row in entities]
+        assert await DataS(Team).count() == 2
+        assert await DataS(League).count() == 1
+        for record in found:
+            assert record is not None
+            assert record.team is not None
+            assert record.team.league is not None
+            assert record.team.league.id == league.id
+
     async def test_create_preserves_native_related_entities(
         self, team_records: DataS[TeamRecord]
     ) -> None:
