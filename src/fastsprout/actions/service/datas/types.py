@@ -1,4 +1,4 @@
-"""Operation names, schema settings, and paginated responses."""
+"""Operation names, schema settings, and pagination."""
 
 from typing import Annotated, ClassVar, Literal
 
