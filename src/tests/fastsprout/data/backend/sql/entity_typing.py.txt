@@ -48,7 +48,7 @@ def identity(entity: SQLEntity[UUID]) -> UUID:
 def forbidden(create: TeamCreate, child: ChildCreate) -> None:
     _ = create.id  # error: reportAttributeAccessIssue; mypy: call-overload
     create.id = uuid4()  # error: reportAttributeAccessIssue; mypy: arg-type
-    _ = TeamCreate.id  # error: reportAttributeAccessIssue; mypy: arg-type
+    identity_field = TeamCreate.id  # error: reportAttributeAccessIssue; mypy: type-var
     _ = child.id  # error: reportAttributeAccessIssue; mypy: call-overload
 
 
