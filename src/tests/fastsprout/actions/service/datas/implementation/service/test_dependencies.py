@@ -1,6 +1,7 @@
 import pytest
 
 from fastsprout.actions import DataS, Service, action
+from fastsprout.actions.service.datas import DataSOperation
 from fastsprout.core import Depends, IdentificatorType, dataclass
 from fastsprout.data import DataR
 from fastsprout.testing.core import when_then
@@ -14,6 +15,51 @@ class Actor:
 
 
 class TestDependencyValidation:
+    @when_then("contextual dependencies run once per payload")
+    async def test_contextual_dependencies_rerun_for_each_payload(
+        self,
+        records: DataS[Record],
+    ) -> None:
+        names: list[str] = []
+
+        def check(entity: Record) -> None:
+            names.append(entity.name)
+
+        service = DataS(Record, dependencies=[Depends(check)])
+
+        @action
+        async def parent() -> None:
+            await service.create(Record(name="Batman"))
+            await service.create(Record(name="Robin"))
+
+        await parent()
+        assert names == ["Batman", "Robin"]
+        assert await records.count() == 2
+
+    @when_then("nested dependencies receive the operation and explicit DataR")
+    async def test_nested_dependency_receives_operation_and_explicit_datar(
+        self,
+        records: DataS[Record],
+    ) -> None:
+        calls: list[tuple[DataSOperation, DataR]] = []
+        dependency = Depends()
+
+        async def nested(
+            operation: DataSOperation, datar: DataR = dependency
+        ) -> int:
+            calls.append((operation, datar))
+            return await records.count(datar=datar)
+
+        marker = Depends(nested)
+
+        def check(count: int = marker) -> None:
+            assert count == 0
+
+        service = DataS(Record, dependencies=[Depends(check)])
+        async with DataR() as datar:
+            await service.create(Record(name="Batman"), datar=datar)
+        assert calls == [("create", datar)]
+
     @when_then("dependencies check and normalize the payload in order")
     async def test_dependencies_run_checks_and_normalization_in_order(
         self,
