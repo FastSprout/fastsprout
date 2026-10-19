@@ -182,6 +182,7 @@ class DataR(Routerable):
     ) -> DataAbilitable[E, Any, BaseQuery[E, Any], Finalizable]:
         signpost = self.__init_bindings__.add(entity)
         ability = ability_of(entity)(signpost, bus=self.__bus)
+        ability.entity = entity
         if self.dependencies:
             guard_ability(
                 ability, signpost, self, self.dependencies, self.__bus

@@ -1,5 +1,7 @@
 """Read one match, all matches, or a lazy stream through the same Query.
 An explicit read DTO controls the fields returned by every read operation.
+DataR binds the entity to its ability: `query_for()` and `query_for(Hero)`
+create equivalent queries.
 """
 
 import asyncio
@@ -42,7 +44,7 @@ async def main() -> None:
                 ),
                 datar=datar,
             ).to_list()
-            query = datar.ability(Hero).query_for(Hero).order_by(Hero.power)
+            query = datar.ability(Hero).query_for().order_by(Hero.power)
             first = await heroes.find_first(query, datar=datar)
             print("First:", first.name if first else None)
             only = await heroes.find_exactly_one(

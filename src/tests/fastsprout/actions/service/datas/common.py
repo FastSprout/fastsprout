@@ -18,6 +18,8 @@ from fastsprout.core import (
     ReadDTO,
     ReadField,
     Schema,
+    Undefined,
+    UndefinedType,
     WriteDTO,
     WriteField,
     dataclass,
@@ -144,9 +146,12 @@ class MemoryAbility:
         self.items: dict[UUID, MemoryRecord] = {}
         self.contexts: list[DataR] = []
 
-    def query_for(self, entity: type[MemoryRecord]) -> MemoryQuery:
-        assert entity is self.entity
-        return MemoryQuery(entity)
+    def query_for(
+        self, entity: type[MemoryRecord] | UndefinedType = Undefined
+    ) -> MemoryQuery:
+        source = self.entity if isinstance(entity, UndefinedType) else entity
+        assert source is self.entity
+        return MemoryQuery(source)
 
     def stream(self, query: MemoryQuery) -> AsyncEntityStream[MemoryRecord]:
         assert query.entity is self.entity

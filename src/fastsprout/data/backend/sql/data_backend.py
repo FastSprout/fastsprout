@@ -3,21 +3,17 @@ from abc import ABC
 from collections.abc import AsyncGenerator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from functools import partial
-from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
 from fastsprout.core import Undefined, UndefinedType
 from fastsprout.data.backend.implementation.data_backend import BaseDataBackend
-from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.finalizer import SQLFinalizable
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.entity import Signpostable
 from fastsprout.events import EventBus
 from fastsprout.events.event import Eventable
-
-from .query import SQLQuery
 
 __all__ = ["SQLDataBackend"]
 
@@ -80,9 +76,6 @@ class SQLDataBackend(
                     )
             finally:
                 self.__waited_events.clear()
-
-    def query_for[E: SQLEntity[Any]](self, entity: type[E]) -> SQLQuery[E]:  # pyright: ignore[reportIncompatibleMethodOverride]
-        return SQLQuery[E](entity=entity)
 
     async def _publish_to_bus[E: Eventable](self, /, *events: E) -> None:
         self.__waited_events.extend(events)

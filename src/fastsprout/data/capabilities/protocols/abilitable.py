@@ -1,5 +1,6 @@
 from typing import Any, Protocol, runtime_checkable
 
+from fastsprout.core import Undefined, UndefinedType
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
 
@@ -25,4 +26,7 @@ class Abilitable[E: Entitieable[Any], Q: BaseQuery](
     Upsertable[E],
     UpdatableByQuery[E, Q],
     Protocol,
-): ...
+):
+    def query_for(self, entity: type[E] | UndefinedType = Undefined) -> Q:
+        """Create a query for the explicit entity or this ability's owner."""
+        ...

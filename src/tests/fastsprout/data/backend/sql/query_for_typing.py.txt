@@ -1,0 +1,34 @@
+from typing import assert_type
+
+from fastsprout.core import Field
+from fastsprout.data import DataR
+from fastsprout.data.backend.sql import SQLEntity, SQLQuery, SQLSignpost
+from fastsprout.data.backend.sql.capabilities import SQLAbilitable
+from fastsprout.data.capabilities.protocols import Abilitable
+
+
+class Hero(SQLEntity[int]):
+    name: Field[str]
+
+
+class Team(SQLEntity[int]):
+    title: Field[str]
+
+
+def queries(ability: SQLAbilitable[Hero], signpost: SQLSignpost) -> None:
+    protocol: Abilitable[Hero, SQLQuery[Hero]] = ability
+    assert_type(SQLAbilitable(signpost, entity=Hero), SQLAbilitable[Hero])
+    assert_type(ability.query_for(), SQLQuery[Hero])
+    assert_type(ability.query_for(Hero), SQLQuery[Hero])
+    assert_type(protocol.query_for(), SQLQuery[Hero])
+    assert_type(protocol.query_for(Hero), SQLQuery[Hero])
+    assert_type(ability.query_for().where(Hero.name.eq("Batman")), SQLQuery[Hero])
+    ability.query_for(Team)  # error: reportArgumentType; mypy: arg-type
+    protocol.query_for(Team)  # error: reportArgumentType; mypy: arg-type
+
+
+def routed(datar: DataR) -> None:
+    ability = datar.ability(Hero)
+    assert_type(ability.query_for().entity, type[Hero])
+    assert_type(ability.query_for(Hero).entity, type[Hero])
+    ability.query_for(Team)  # error: reportArgumentType; mypy: arg-type

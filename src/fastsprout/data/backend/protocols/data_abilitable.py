@@ -1,5 +1,6 @@
 from typing import Protocol, runtime_checkable
 
+from fastsprout.core import UndefinedType
 from fastsprout.data.backend.protocols.backendable import Backendable
 from fastsprout.data.backend.protocols.finalizable import Finalizable
 from fastsprout.data.capabilities import BaseQuery
@@ -13,4 +14,4 @@ __all__ = ["DataAbilitable"]
 class DataAbilitable[E: Entitieable, T, Q: BaseQuery, F: Finalizable](
     Abilitable[E, Q], Backendable[T, F], Protocol
 ):
-    pass
+    entity: type[E] | UndefinedType
