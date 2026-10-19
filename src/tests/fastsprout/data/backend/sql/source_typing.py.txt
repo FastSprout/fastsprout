@@ -4,8 +4,10 @@ from sqlmodel import Field as SQLField
 
 from fastsprout.core import Field, ReadDTO, ReadField
 from fastsprout.core.fields.field_predicate import FieldPredicate
-from fastsprout.data.backend.sql import SQLEntity, SQLQuery, SQLSignpost
+from fastsprout.data import DataR
+from fastsprout.data.backend.sql import SQLEntity, SQLJoinedQuery, SQLQuery, SQLSignpost
 from fastsprout.data.backend.sql.capabilities import SQLAbilitable
+from fastsprout.data.streams.protocols import AsyncJoinedStream
 
 
 class CRM(SQLSignpost): ...
@@ -25,6 +27,10 @@ class Other(SQLEntity[int, ERP]):
 class Team(SQLEntity[int, CRM]):
     id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str]
+
+
+class Country(SQLEntity[int, CRM]):
+    id: ReadField[int] = SQLField(primary_key=True)
 
 
 class DynamicSource(SQLEntity[int, Any]):
@@ -63,3 +69,27 @@ def routed(ability: SQLAbilitable[Hero]) -> None:
     assert_type(query.entity, type[Hero])
     assert_type(query.where(query.Or(Hero.name.eq("Batman"))), SQLQuery[Hero])
     query.where(query.Or(Hero.name.eq("Batman"), Other.name.eq("Robin")))  # error: reportArgumentType; mypy: arg-type
+
+
+async def joined_sources(datar: DataR) -> None:
+    comparison = Hero.id == Team.id
+    assert_type(crm_entity(comparison.left.entity_cls), type[Hero])
+    assert_type(crm_entity(comparison.right.entity_cls), type[Team])
+    query = SQLQuery(Hero).join(Team, comparison)
+    assert_type(query, SQLJoinedQuery[Hero, Team])
+    assert_type(crm_entity(query.entity), type[Hero])
+    nested = query.copy().join(Country, Team.id == Country.id)
+    assert_type(nested, SQLJoinedQuery[Hero, Team, Country])
+    assert_type(
+        nested.where(nested.Or(Hero.name.eq("Batman"))),
+        SQLJoinedQuery[Hero, Team, Country],
+    )
+    assert_type(datar.stream(nested), AsyncJoinedStream[Hero, Team, Country])
+    async for hero, team, country in datar.stream(nested):
+        assert_type(hero, Hero)
+        assert_type(team, Team)
+        assert_type(country, Country)
+        crm_entity(type(hero))
+        crm_entity(type(team))
+        crm_entity(type(country))
+    nested.where(nested.Or(Hero.name.eq("Batman"), Other.name.eq("Robin")))  # error: reportArgumentType; mypy: arg-type
