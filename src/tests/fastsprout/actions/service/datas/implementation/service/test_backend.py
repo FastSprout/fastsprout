@@ -5,10 +5,13 @@ import pytest
 from fastsprout.actions import DataS
 from fastsprout.data import DataR
 from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.data.utils.iterable import resolve_any_iterable
 from fastsprout.testing.core import given, when_then
 
 from ...common import (
     MemoryAbility,
+    MemoryCreate,
+    MemoryPatch,
     MemoryQuery,
     MemoryRecord,
 )
@@ -76,4 +79,45 @@ class TestBackend:
             assert await service.delete(created.id, datar=datar) == 1
             assert await service.delete(created.id, datar=datar) == 0
             assert await service.count(datar=datar) == 0
+            assert all(context is datar for context in memory_backend.contexts)
+
+    @when_then("non-SQL bulk actions accept sync and async schema inputs")
+    @pytest.mark.parametrize("asynchronous", [False, True])
+    async def test_bulk_schema_inputs(
+        self, memory_backend: MemoryAbility, asynchronous: bool
+    ) -> None:
+        service = DataS(
+            MemoryRecord, create=MemoryCreate, patch=MemoryPatch, chunk_size=2
+        )
+        async with DataR() as datar:
+            payloads = (
+                MemoryCreate(name) for name in ("Batman", "Robin", "Batgirl")
+            )
+            created = await service.bulk_create(
+                resolve_any_iterable(payloads) if asynchronous else payloads,
+                datar=datar,
+            ).to_list()
+            assert [row.name for row in created] == [
+                "Batman",
+                "Robin",
+                "Batgirl",
+            ]
+            patches = ((row.id, MemoryPatch(score=20)) for row in created)
+            patched = await service.bulk_patch(
+                resolve_any_iterable(patches) if asynchronous else patches,
+                datar=datar,
+            ).to_list()
+            assert [row.id for row in patched] == [row.id for row in created]
+            assert [row.score for row in patched] == [20, 20, 20]
+            identifiers = (row.id for row in patched)
+            assert (
+                await service.bulk_delete(
+                    resolve_any_iterable(identifiers)
+                    if asynchronous
+                    else identifiers,
+                    datar=datar,
+                )
+                == 3
+            )
+            assert memory_backend.items == {}
             assert all(context is datar for context in memory_backend.contexts)

@@ -30,6 +30,7 @@ from fastsprout.data import DataR, Relationship, SimpleAsyncEntityStream, sql
 from fastsprout.data.capabilities.query import (
     And,
     BaseQuery,
+    Expression,
 )
 from fastsprout.data.capabilities.query.predicate import evaluate
 from fastsprout.data.entity import Entitieable, Signpostable
@@ -155,13 +156,14 @@ class MemoryAbility:
 
     def stream(self, query: MemoryQuery) -> AsyncEntityStream[MemoryRecord]:
         assert query.entity is self.entity
+        condition: Expression[MemoryRecord] = And(*query.conditions)
         stream = SimpleAsyncEntityStream(
             [
                 entity
                 for entity in self.items.values()
                 if query.statement is None or entity.name == query.statement
             ]
-        ).filter(partial(evaluate, And(*query.conditions)))
+        ).filter(partial(evaluate, condition))
         for name, reverse in reversed(query.effective_orderings):
             stream = stream.sort(attrgetter(name), reverse=reverse)
         stream = stream.drop(query.offset_value)
@@ -178,12 +180,28 @@ class MemoryAbility:
         self.items[entity.id] = entity
         return entity
 
+    async def bulk_create(
+        self, entities: AnyIterable[MemoryRecord]
+    ) -> list[MemoryRecord]:
+        return [await self.create(entity) async for entity in achain(entities)]
+
     async def update(self, entity: MemoryRecord) -> MemoryRecord:
         self.items[entity.id] = entity
         return entity
 
+    async def bulk_update(
+        self, entities: AnyIterable[MemoryRecord]
+    ) -> list[MemoryRecord]:
+        return [await self.update(entity) async for entity in achain(entities)]
+
     async def delete(self, entity: MemoryRecord) -> int:
         return int(self.items.pop(entity.id, None) is not None)
+
+    async def bulk_delete(self, entities: AnyIterable[MemoryRecord]) -> int:
+        deleted = 0
+        async for entity in achain(entities):
+            deleted += await self.delete(entity)
+        return deleted
 
 
 class League(sql.SQLEntity[UUID]):
