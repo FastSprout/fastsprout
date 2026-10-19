@@ -14,6 +14,7 @@ from fastsprout.data.backend.sql import (
     SQLQuery,
     SQLSignpost,
 )
+from fastsprout.data.backend.sql.entity import SQLSource
 from fastsprout.data.capabilities.query import Expression
 from fastsprout.data.exceptions import NoSessionError
 from fastsprout.testing.core import given, when_then
@@ -21,12 +22,12 @@ from fastsprout.testing.core import given, when_then
 from .conftest import Hero
 
 
-class QueryCountry(SQLEntity[int]):
+class QueryCountry(SQLEntity[int, SQLSignpost]):
     id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str]
 
 
-class QueryTeam(SQLEntity[int]):
+class QueryTeam(SQLEntity[int, SQLSignpost]):
     id: ReadField[int] = SQLField(primary_key=True)
     country_id: Field[int]
 
@@ -208,10 +209,16 @@ class TestSQLJoinedQuery:
     @when_then(
         "joins reject different signpost instances and late reassignment"
     )
+    @pytest.mark.parametrize("scoped", [False, True])
     def test_shared_source(
-        self, joined_source: SQLSignpost, monkeypatch: pytest.MonkeyPatch
+        self,
+        joined_source: SQLSignpost,
+        monkeypatch: pytest.MonkeyPatch,
+        scoped: bool,
     ) -> None:
-        query = SQLQuery(Hero).join(QueryTeam, Hero.age == QueryTeam.id)
+        query = SQLQuery(Hero, source=joined_source if scoped else None).join(
+            QueryTeam, Hero.age == QueryTeam.id
+        )
         monkeypatch.setattr(
             QueryTeam, "__signpost__", SQLSignpost(joined_source.factory)
         )
@@ -242,7 +249,9 @@ class TestSQLJoinedQuery:
     ) -> None:
         checked: list[type[Hero]] = []
 
-        async def check(query: SQLJoinedQuery[Hero, QueryTeam]) -> None:
+        async def check(
+            query: SQLJoinedQuery[SQLSource, Hero, QueryTeam],
+        ) -> None:
             checked.append(query.entity)
             if not allowed:
                 raise PermissionError("Denied")

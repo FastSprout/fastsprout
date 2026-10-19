@@ -4,7 +4,7 @@ from typing import Any
 from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 
 from fastsprout.data.backend.sql.data_backend import SQLDataBackend
-from fastsprout.data.backend.sql.entity import SQLEntity
+from fastsprout.data.backend.sql.entity import SQLEntity, SQLSource
 from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.backend.sql.streams import SQLEntityStream
 from fastsprout.data.capabilities.protocols import Findable
@@ -14,12 +14,16 @@ __all__ = ["SQLFindable"]
 
 
 class SQLFindable[E: SQLEntity[Any]](Findable[E, SQLQuery[E]], SQLDataBackend):
-    async def find_first(self, query: SQLQuery[E], /) -> E | None:
+    async def find_first[S: SQLSource](
+        self, query: SQLQuery[E, S], /
+    ) -> E | None:
         return await SimpleAsyncEntityStream(
             SQLEntityStream(query, self._signpost)
         ).first()
 
-    async def find_exactly_one(self, query: SQLQuery[E], /) -> E:
+    async def find_exactly_one[S: SQLSource](
+        self, query: SQLQuery[E, S], /
+    ) -> E:
         rows = (
             await SimpleAsyncEntityStream(
                 SQLEntityStream(query, self._signpost)
@@ -33,5 +37,7 @@ class SQLFindable[E: SQLEntity[Any]](Findable[E, SQLQuery[E]], SQLDataBackend):
             raise MultipleResultsFound("Query must match exactly one record")
         return rows[0]
 
-    async def find_all(self, query: SQLQuery[E], /) -> Sequence[E]:
+    async def find_all[S: SQLSource](
+        self, query: SQLQuery[E, S], /
+    ) -> Sequence[E]:
         return await SQLEntityStream(query, self._signpost).to_list()

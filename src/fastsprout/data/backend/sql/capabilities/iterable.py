@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator, Sequence
 from typing import Any
 
 from fastsprout.data.backend.sql.data_backend import SQLDataBackend
-from fastsprout.data.backend.sql.entity import SQLEntity
+from fastsprout.data.backend.sql.entity import SQLEntity, SQLSource
 from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.backend.sql.streams import SQLEntityStream
 from fastsprout.data.capabilities.protocols import Iterable
@@ -12,12 +12,12 @@ __all__ = ["SQLIterable"]
 
 
 class SQLIterable[E: SQLEntity[Any]](Iterable[E, SQLQuery[E]], SQLDataBackend):
-    def iter(self, query: SQLQuery[E], /) -> AsyncIterator[E]:
+    def iter[S: SQLSource](self, query: SQLQuery[E, S], /) -> AsyncIterator[E]:
         return aiter(SQLEntityStream(query, self._signpost))
 
-    def iter_per(
+    def iter_per[S: SQLSource](
         self,
-        query: SQLQuery[E],
+        query: SQLQuery[E, S],
         /,
         *,
         chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,

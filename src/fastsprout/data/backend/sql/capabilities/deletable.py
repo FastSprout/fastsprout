@@ -4,7 +4,7 @@ from sqlalchemy import CursorResult, delete
 
 from fastsprout.core.types import AnyIterable
 from fastsprout.data.backend.sql.data_backend import SQLDataBackend
-from fastsprout.data.backend.sql.entity import SQLEntity
+from fastsprout.data.backend.sql.entity import SQLEntity, SQLSource
 from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.backend.sql.streams import SQLEntityStream
 from fastsprout.data.capabilities.protocols import Deletable
@@ -40,7 +40,9 @@ class SQLDeletable[E: SQLEntity[Any]](
                     )
         return deleted
 
-    async def delete_by_query(self, query: SQLQuery[E], /) -> int:
+    async def delete_by_query[S: SQLSource](
+        self, query: SQLQuery[E, S], /
+    ) -> int:
         if not query.native_conditions:
             return await self.bulk_delete(
                 SQLEntityStream(query, self._signpost)

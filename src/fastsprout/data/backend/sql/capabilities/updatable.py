@@ -9,7 +9,7 @@ from sqlalchemy.orm.base import Mapped
 from fastsprout.core.fields.field_assigment import FieldAssignment
 from fastsprout.core.types import AnyIterable
 from fastsprout.data.backend.sql.data_backend import SQLDataBackend
-from fastsprout.data.backend.sql.entity import SQLEntity
+from fastsprout.data.backend.sql.entity import SQLEntity, SQLSource
 from fastsprout.data.backend.sql.helpers import get_primary_key
 from fastsprout.data.backend.sql.query import SQLQuery
 from fastsprout.data.backend.sql.streams import SQLEntityStream
@@ -121,9 +121,9 @@ class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLDataBackend):
 class SQLUpdatableByQuery[E: SQLEntity[Any]](
     UpdatableByQuery[E, SQLQuery[E]], SQLDataBackend
 ):
-    async def update_by_query(
+    async def update_by_query[S: SQLSource](
         self,
-        query: SQLQuery[E],
+        query: SQLQuery[E, S],
         /,
         *assignments: FieldAssignment[Any],
     ) -> int:

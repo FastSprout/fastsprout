@@ -39,9 +39,12 @@ __all__ = [
     "SQL_ENTITY_REGISTRY",
     "SQLEntity",
     "SQLSignpost",
+    "SQLSource",
     "TypedSQLMeta",
     "validate_source",
 ]
+
+type SQLSource = Signpostable[AbstractAsyncContextManager[AsyncSession]]
 
 IDT = TypeVar("IDT", bound=IdentificatorType)
 SourceT = TypeVar(
@@ -219,19 +222,23 @@ class SQLEntity(
         validate_source(cls)
 
 
-def validate_source(entity: type[SQLEntity[IDT, SourceT]]) -> None:
+def validate_source(
+    entity: type[SQLEntity[IDT, SourceT]], source: SQLSource | None = None
+) -> None:
     """Check the current signpost against the entity's declared source type."""
+    if source is not None and entity.__signpost__ is not source:
+        raise TypeError("SQL queries require their declared signpost")
     for base in entity.__mro__:
         metadata = vars(base).get("__pydantic_generic_metadata__", {})
         arguments = metadata.get("args", ())
         if len(arguments) == 2 and metadata.get("origin") is SQLEntity:
-            source = arguments[1]
+            source_type = arguments[1]
             if (
-                source is not Any
-                and isinstance(source, type)
+                source_type is not Any
+                and isinstance(source_type, type)
                 and hasattr(entity, "__signpost__")
-                and not isinstance(entity.__signpost__, source)
+                and not isinstance(entity.__signpost__, source_type)
             ):
                 raise TypeError(
-                    f"{entity.__name__}.__signpost__ must be an instance of {source.__name__}"
+                    f"{entity.__name__}.__signpost__ must be an instance of {source_type.__name__}"
                 )

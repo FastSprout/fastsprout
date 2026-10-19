@@ -36,6 +36,7 @@ from fastsprout.data.types import (
     PredicateCallable,
 )
 
+from ..entity import SQLSource
 from ..query import SQLQuery, compile_predicate
 from .value_stream import SQLValueStream
 
@@ -65,9 +66,9 @@ class SQLEntityStream[E: SQLEntity[Any]](
     a server-side cursor — rows are never fully buffered.
     """
 
-    def __init__(
+    def __init__[S: SQLSource](
         self,
-        stmt: Select[tuple[E]] | SQLQuery[E],
+        stmt: Select[tuple[E]] | SQLQuery[E, S],
         signpost: (
             SQLSignpost
             | Signpostable[AbstractAsyncContextManager[AsyncSession]]

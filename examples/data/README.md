@@ -27,3 +27,4 @@ uv run --extra data-sql --extra events python examples/data/01_datar/01_smart_ro
 | [02_stream/04_query_conditions.py](02_stream/04_query_conditions.py) | Build field conditions once and reuse them in Query and stream.filter. |
 | [02_stream/05_query_joins.py](02_stream/05_query_joins.py) | Read three entities with one SQL query and typed tuple results. |
 | [02_stream/06_sqlalchemy_query.py](02_stream/06_sqlalchemy_query.py) | Combine a SQLAlchemy aggregate query with SQLQuery conditions and paging. |
+| [02_stream/07_mixed_join_stages.py](02_stream/07_mixed_join_stages.py) | Continue a SQL query join with a stream join across two databases. |

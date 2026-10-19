@@ -51,9 +51,17 @@ class TestSQLSource:
             assert (found.id, found.name) == (1, "Batman")
             assert query.entity is ScopedHero
             assert ScopedHero.__signpost__ is crm
+            scoped_rows = await datar.stream(
+                SQLQuery(ScopedHero, source=crm)
+            ).to_list()
+            assert [row.id for row in scoped_rows] == [1]
 
+        pinned = SQLQuery(ScopedHero, source=crm)
+        assert pinned.build().column_descriptions[0]["entity"] is ScopedHero
         monkeypatch.setattr(ScopedHero, "__signpost__", CRM(crm.factory))
         assert query.build().column_descriptions[0]["entity"] is ScopedHero
+        with pytest.raises(TypeError, match="their declared signpost"):
+            pinned.build()
         monkeypatch.setattr(ScopedHero, "__signpost__", ERP(crm.factory))
         with pytest.raises(
             TypeError, match="__signpost__ must be an instance of CRM"

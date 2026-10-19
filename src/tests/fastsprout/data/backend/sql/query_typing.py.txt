@@ -8,6 +8,7 @@ from fastsprout.core.fields.field_predicate import FieldPredicate
 from fastsprout.core.fields.field_ref import FieldComparison
 from fastsprout.data import DataR
 from fastsprout.data.backend.sql import SQLEntity, SQLJoinedQuery, SQLQuery
+from fastsprout.data.backend.sql.entity import SQLSource
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.router.protocols import Routerable
 from fastsprout.data.streams.protocols import AsyncEntityStream, AsyncJoinedStream
@@ -45,14 +46,14 @@ async def field_conditions(stream: AsyncEntityStream[Hero], values: AsyncIterato
 async def joined_results(datar: DataR, router: Routerable) -> None:
     assert_type(Hero.id == Other.id, FieldComparison[Hero, Other, int, Mapped[int], Mapped[int]])
     query = SQLQuery(Hero).join(Other, Hero.id == Other.id)
-    assert_type(query, SQLJoinedQuery[Hero, Other])
+    assert_type(query, SQLJoinedQuery[SQLSource, Hero, Other])
     assert_type(datar.stream(query), AsyncJoinedStream[Hero, Other])
     assert_type(router.stream(query), AsyncJoinedStream[Hero, Other])
     async for hero, other in datar.stream(query):
         assert_type(hero, Hero)
         assert_type(other, Other)
     query3 = query.join(Country, Other.id == Country.id)
-    assert_type(query3, SQLJoinedQuery[Hero, Other, Country])
+    assert_type(query3, SQLJoinedQuery[SQLSource, Hero, Other, Country])
     assert_type(datar.stream(query3), AsyncJoinedStream[Hero, Other, Country])
     assert_type(await datar.stream(query).to_list(), list[tuple[Hero, Other]])
     entity_query(query)  # error: reportArgumentType; mypy: arg-type
