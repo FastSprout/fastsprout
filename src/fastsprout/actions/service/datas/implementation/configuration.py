@@ -25,30 +25,7 @@ __all__ = [
 ENTITY_ATTRIBUTE = "entity_type"
 
 DATAS_OPERATIONS: frozenset[DataSOperation] = frozenset(
-    {
-        "join",
-        "map",
-        "create",
-        "update",
-        "patch",
-        "delete",
-        "upsert",
-        "bulk_upsert",
-        "update_by_query",
-        "delete_by_query",
-        "get",
-        "find_first",
-        "find_exactly_one",
-        "find_all",
-        "stream",
-        "exists",
-        "count",
-        "list",
-        "bulk_create",
-        "bulk_update",
-        "bulk_patch",
-        "bulk_delete",
-    }
+    get_args(DataSOperation.__value__)
 )
 
 
