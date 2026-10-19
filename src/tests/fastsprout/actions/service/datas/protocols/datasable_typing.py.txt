@@ -2,6 +2,7 @@ from typing import assert_type
 
 from fastsprout.actions import DataSable, Page
 from fastsprout.core import BaseSchema, IdentificatorType, Schema, dataclass, typed_fields
+from fastsprout.core.types import LazyAwait
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.streams.implementation.base_common_stream import BaseCommonStream
@@ -56,6 +57,7 @@ async def schema_inputs[E: Entitieable](
     assert_type(await service.create(CreateInput(name="Batman")), E)
     assert_type(await service.update(identifier, UpdateInput(name="Batman")), E)
     assert_type(await service.patch(identifier, PatchInput()), E)
+    assert_type(service.bulk_create([CreateInput(name="Batman")]), AsyncCommonStream[E])
     await service.create(UpdateInput(name="Batman"))  # error: reportArgumentType; mypy: arg-type
     await service.create(ForeignInput())  # error: reportArgumentType; mypy: arg-type
 
@@ -67,6 +69,15 @@ async def query_results[E: Entitieable, Statement](
     assert_type(await service.exists(query), bool)
     assert_type(await service.list(query), Page[E])
     assert_type(await service.count(query), int)
+    stream = service.stream(query)
+    assert_type(stream, AsyncCommonStream[E])
+    assert_type(stream.to_list(), LazyAwait[list[E]])
+    assert_type(stream.first(), LazyAwait[E | None])
+    assert_type(stream.sum_by(lambda entity: 1), LazyAwait[int | None])
+    assert_type(stream.min(lambda entity: str(entity)), LazyAwait[E | None])
+    assert_type(stream.max(lambda entity: str(entity)), LazyAwait[E | None])
+    async for chunk in stream.chunked(10):
+        assert_type(chunk, list[E])
 
 
 def common_stream_contract[T: Valuable | Entitieable](stream: BaseCommonStream[T]) -> AsyncCommonStream[T]:
