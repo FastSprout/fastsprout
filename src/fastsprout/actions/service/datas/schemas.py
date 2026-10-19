@@ -79,9 +79,9 @@ def configure_schemas[E, S](
     )
 
 
-def read_source(
-    read: type[Valuable | Entitieable], source: type[Entitieable]
-) -> type[DTO | Entitieable]:
+def read_source[R: Valuable | Entitieable, E: Entitieable](
+    read: type[R], source: type[E]
+) -> type[DTO | E]:
     if read is source:
         return source
     if (

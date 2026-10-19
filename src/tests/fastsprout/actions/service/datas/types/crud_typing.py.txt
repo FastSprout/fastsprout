@@ -300,3 +300,17 @@ async def explicit_dto_types(payload: HeroWrite) -> None:
     assert_type(created.id, UUID)
     _ = payload.id  # error: reportAttributeAccessIssue; mypy: call-overload
     _ = created.secret  # error: reportAttributeAccessIssue; mypy: call-overload
+
+async def exact_match_conditions[Statement](
+    service: DataS[Hero, HeroRead],
+    contract: DataSable[Hero, HeroRead],
+    query: BaseQuery[Hero, Statement],
+) -> None:
+    assert_type(await service.find_exactly_one(Hero.name.eq("Batman")), HeroRead)
+    assert_type(await service.find_exactly_one(Hero.name.eq("Batman"), Hero.score.gte(10)), HeroRead)
+    assert_type(await contract.find_exactly_one(Hero.name.eq("Batman")), HeroRead)
+    assert_type(await contract.find_exactly_one(Hero.name.eq("Batman"), Hero.score.gte(10)), HeroRead)
+    await service.find_exactly_one(Other.name.eq("Batman"))  # error: reportArgumentType; mypy: arg-type
+    await contract.find_exactly_one(Other.name.eq("Batman"))  # error: reportArgumentType; mypy: arg-type
+    await service.find_exactly_one(Hero.name.eq("Batman"), Other.name.eq("Batman"))  # error: reportArgumentType; mypy: arg-type
+    await contract.find_exactly_one(Hero.name.eq("Batman"), Other.name.eq("Batman"))  # error: reportArgumentType; mypy: arg-type

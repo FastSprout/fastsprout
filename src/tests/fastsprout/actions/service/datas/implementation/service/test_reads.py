@@ -11,6 +11,7 @@ from fastsprout.core.depends.scope import dependency_resources
 from fastsprout.core.fields.field_predicate import FieldPredicate
 from fastsprout.data import DataR, sql
 from fastsprout.data.utils.iterable import resolve_any_iterable
+from fastsprout.testing.core import when_then
 
 from ...common import Record, RecordRead, RecordWrite, Team
 
@@ -75,32 +76,38 @@ class TestReads:
             await records.stream(first, *rest).to_list()
         assert dependency_resources.get() is None
 
-    async def test_stream_rejects_query_with_separate_predicates(
+    @when_then("read actions accept a Query or separate predicates")
+    async def test_reads_reject_query_with_separate_predicates(
         self, records: DataS[Record]
     ) -> None:
-        # given
         query = sql.SQLQuery(Record)
-        # when / then
         with pytest.raises(TypeError, match="query or field predicates"):
             await records.stream(query, Record.score.gte(20)).to_list()
+        with pytest.raises(TypeError, match="query or field predicates"):
+            await records.find_exactly_one(query, Record.score.gte(20))
         assert dependency_resources.get() is None
 
+    @when_then("Query and direct predicates preserve the read DTO")
+    @pytest.mark.parametrize("direct", [False, True])
     async def test_read_dtos_preserve_query_order_and_pagination(
-        self, records: DataS[Record]
+        self, records: DataS[Record], direct: bool
     ) -> None:
-        # given
         service = DataS(Record, read=RecordRead)
         await records.bulk_create(
             Record(name=name, score=score)
             for name, score in (("Batman", 10), ("Robin", 20), ("Batgirl", 30))
         ).to_list()
         query = sql.SQLQuery(Record).order_by(Record.score).offset(1).limit(1)
-        # when
         first = await service.find_first(query)
-        only = await service.find_exactly_one(query)
+        only = await (
+            service.find_exactly_one(
+                Record.name.eq("Robin"), Record.score.eq(20)
+            )
+            if direct
+            else service.find_exactly_one(query)
+        )
         all_rows = await service.find_all(query)
         streamed = await service.stream(query).to_list()
-        # then
         assert first is not None
         for row in (first, only, *all_rows, *streamed):
             assert isinstance(row, RecordRead)
@@ -109,23 +116,24 @@ class TestReads:
                 row.__getattribute__("system_key")
         assert len(all_rows) == len(streamed) == 1
 
+    @when_then("exact matches reject zero or multiple results")
+    @pytest.mark.parametrize("direct", [False, True])
     async def test_empty_and_multiple_results(
-        self, records: DataS[Record]
+        self, records: DataS[Record], direct: bool
     ) -> None:
-        # given
         query = sql.SQLQuery(Record)
-        # when / then
+        selection = Record.score.gte(0) if direct else query
         assert await records.find_first(query) is None
         assert await records.find_all(query) == []
         assert await records.stream(query).to_list() == []
         assert await records.stream(Record.score.gte(20)).to_list() == []
         with pytest.raises(NoResultFound):
-            await records.find_exactly_one(query)
+            await records.find_exactly_one(selection)
         await records.bulk_create(
             Record(name=name) for name in ("a", "b")
         ).to_list()
         with pytest.raises(MultipleResultsFound):
-            await records.find_exactly_one(query)
+            await records.find_exactly_one(selection)
 
     @pytest.mark.parametrize("direct", [False, True])
     @pytest.mark.parametrize("stop_early", [False, True])

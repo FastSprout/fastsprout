@@ -1,7 +1,7 @@
 """Query actions and read projection shared by DataSs."""
 
 import builtins
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import aclosing
 from typing import overload
 
@@ -147,12 +147,12 @@ async def find_exactly_one[
     Statement,
 ](
     self: QueryOwner[E, R],
-    query: BaseQuery[E, Statement],
-    *,
+    query: BaseQuery[E, Statement] | FieldPredicate[E],
+    *predicates: FieldPredicate[E],
     datar: DataR = Depends(),
 ) -> R:
     found = await datar.ability(self.entity).find_exactly_one(
-        validated(self, datar, query)
+        validated(self, datar, query, *predicates)
     )
     return project_read(found, self.read_schema)
 
@@ -262,12 +262,15 @@ def public_leaf[E: Entitieable](
     if isinstance(condition, FieldPredicate):
         return public_field(source, read, condition)
     if callable(condition):
+        predicate: Callable[[E], Awaitable[bool]] = resolve_any_callable(
+            condition
+        )
 
         async def visible(entity: E) -> bool:
             public = project_read(entity, read)
             if not isinstance(public, source):
                 raise TypeError("Read DTO must derive from the query entity")
-            return await resolve_any_callable(condition)(public)
+            return await predicate(public)
 
         return visible
     raise TypeError("Query conditions require field comparisons or predicates")

@@ -169,8 +169,8 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
 
     async def find_exactly_one[Statement](
         self: QueryOwner[E, R],
-        query: BaseQuery[E, Statement],
-        *,
+        query: BaseQuery[E, Statement] | FieldPredicate[E],
+        *predicates: FieldPredicate[E],
         datar: DataR = ...,
     ) -> R: ...
 
