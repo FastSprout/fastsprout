@@ -45,6 +45,11 @@ class BaseQuery(ABC, Generic[E, StatementT, RowT]):
     def unpaged(self) -> Self:
         return self.copy().offset(0).limit(None)
 
+    def unfiltered(self) -> Self:
+        query = self.copy()
+        query.conditions = ()
+        return query
+
     def where(self, *conditions: Expression[E]) -> Self:
         self.conditions += conditions
         return self

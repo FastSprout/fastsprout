@@ -1,24 +1,28 @@
 from collections.abc import Hashable
 from contextlib import AbstractAsyncContextManager
-from typing import Any, Generic
+from typing import Any, Generic, Never, Self
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.selectable import Select
 from typing_extensions import TypeVar
 
-from fastsprout.core import Undefined, UndefinedType, dataclass
+from fastsprout.core import UndefinedType, dataclass
 from fastsprout.core.fields.field_ref import FieldComparison
 from fastsprout.data.capabilities.query import (
     And,
     BaseQuery,
+    Expression,
+    FieldPredicate,
+    Filter,
 )
 from fastsprout.data.entity import Signpostable
 from fastsprout.data.streams.implementation import JoinedStream
+from fastsprout.data.types import PredicateCallable
 
 from .data_backend import SQLDataBackend
 from .entity import SQLEntity, SQLSource, validate_source
-from .predicates import compile_predicate
+from .predicates import compile_predicate, row_filter
 
 __all__ = ["SQLJoinedQuery", "SQLQuery", "compile_predicate"]
 
@@ -34,9 +38,10 @@ class SQLQuery(BaseQuery[E, Select[tuple[E]]], Generic[E, SourceT]):
 
     @property
     def native_conditions(self) -> bool:
+        condition: Expression[E] = And(*self.conditions)
         return (
             compile_predicate(
-                And(*self.conditions),
+                condition,
                 self.entity,
                 lambda name: self.entity.__table__.c[name],
             )
@@ -56,25 +61,56 @@ class SQLQuery(BaseQuery[E, Select[tuple[E]]], Generic[E, SourceT]):
         self,
         entity: type[SQLEntity[Any, SourceT]],
         condition: FieldComparison[L, F, Key, LO, RO],
-    ) -> "SQLJoinedQuery[SourceT, E, F]":
-        return join_query(self, entity, condition, source=self.source)
+    ) -> "SQLJoinedQuery[SourceT, FieldPredicate[F], E, F]":
+        row_conditions: tuple[Filter[Never], ...] = ()
+        return join_query(
+            self,
+            entity,
+            condition,
+            source=self.source,
+            row_conditions=row_conditions,
+        )
 
 
 @dataclass
-class SQLJoinedQuery[S: SQLSource, E: SQLEntity[Any], *Ts](
+class SQLJoinedQuery[S: SQLSource, P: FieldPredicate, E: SQLEntity[Any], *Ts](
     BaseQuery[E, Select[tuple[E, *Ts]], tuple[E, *Ts]]
 ):
+    """Filter fields from joined entities; Python callbacks receive the root."""
+
     sources: tuple[type[SQLEntity[Any]], ...] = ()
     source: S | None = None
+    row_conditions: tuple[Filter[P | PredicateCallable[E]], ...] = ()
+
+    def where(self, *conditions: Filter[P | PredicateCallable[E]]) -> Self:
+        self.row_conditions += conditions
+        return self
+
+    def unfiltered(self) -> Self:
+        query = super().unfiltered()
+        query.row_conditions = ()
+        return query
+
+    @property
+    def native_conditions(self) -> bool:
+        root = SQLQuery(
+            self.entity, conditions=self.conditions
+        ).native_conditions
+        condition: Filter[P | PredicateCallable[E]] = And(*self.row_conditions)
+        joined = compile_predicate(
+            condition,
+            self.sources,
+            lambda name: self.entity.__table__.c[name],
+        )
+        return root and joined is not None
 
     def stream(
         self, signpost: Signpostable[AbstractAsyncContextManager[AsyncSession]]
     ) -> JoinedStream[E, *Ts]:
         return SQLDataBackend(signpost).stream_rows(
             self,
-            native_conditions=SQLQuery(
-                self.entity, conditions=self.conditions
-            ).native_conditions,
+            native_conditions=self.native_conditions,
+            condition=row_filter(And(*self.row_conditions), self.sources),
         )
 
     def build(self) -> Select[tuple[E, *Ts]]:
@@ -85,14 +121,30 @@ class SQLJoinedQuery[S: SQLSource, E: SQLEntity[Any], *Ts](
                 raise TypeError("SQL joins require one shared signpost")
         if self.statement is None:
             raise TypeError("A joined query requires a SQL statement")
-        return apply_query(self, self.statement)
+        condition: Filter[P | PredicateCallable[E]] = And(*self.row_conditions)
+        joined = compile_predicate(
+            condition,
+            self.sources,
+            lambda name: self.entity.__table__.c[name],
+        )
+        if joined is None:
+            raise TypeError(
+                "Python predicates require query execution through stream()"
+            )
+        return apply_query(self, self.statement.where(joined))
 
     def join[F: SQLEntity[Any], L: SQLEntity[Any], Key: Hashable, LO, RO](
         self,
         entity: type[SQLEntity[Any, S]],
         condition: FieldComparison[L, F, Key, LO, RO],
-    ) -> "SQLJoinedQuery[S, E, *Ts, F]":
-        return join_query(self, entity, condition, source=self.source)
+    ) -> "SQLJoinedQuery[S, P | FieldPredicate[F], E, *Ts, F]":
+        return join_query(
+            self,
+            entity,
+            condition,
+            source=self.source,
+            row_conditions=self.row_conditions,
+        )
 
 
 def join_query[
@@ -104,6 +156,7 @@ def join_query[
     RO,
     R,
     S: SQLSource,
+    P: FieldPredicate,
     *Ts,
 ](
     query: BaseQuery[E, Select[tuple[E, *Ts]], R],
@@ -111,7 +164,8 @@ def join_query[
     condition: FieldComparison[L, F, Key, LO, RO],
     *,
     source: S | None,
-) -> SQLJoinedQuery[S, E, *Ts, F]:
+    row_conditions: tuple[Filter[P | PredicateCallable[E]], ...],
+) -> SQLJoinedQuery[S, P | FieldPredicate[F], E, *Ts, F]:
     sources = (
         query.sources if isinstance(query, SQLJoinedQuery) else (query.entity,)
     )
@@ -129,11 +183,8 @@ def join_query[
     clause = (
         left.entity_cls.__table__.c[left.name] == entity.__table__.c[right.name]
     )
-    prepared = query.copy()
-    prepared.conditions = ()
+    prepared = query.unfiltered().unpaged()
     prepared.orderings = ()
-    prepared.limit_value = Undefined
-    prepared.offset_value = 0
     return SQLJoinedQuery(
         query.entity,
         statement=prepared.build()
@@ -145,6 +196,7 @@ def join_query[
         orderings=query.orderings,
         sources=(*sources, entity),
         source=source,
+        row_conditions=row_conditions,
     )
 
 
@@ -152,8 +204,9 @@ def apply_query[E: SQLEntity[Any], R, *Ts](
     query: BaseQuery[E, Select[tuple[*Ts]], R],
     statement: Select[tuple[*Ts]],
 ) -> Select[tuple[*Ts]]:
+    condition: Expression[E] = And(*query.conditions)
     predicate = compile_predicate(
-        And(*query.conditions),
+        condition,
         query.entity,
         lambda name: statement.selected_columns[name],
     )

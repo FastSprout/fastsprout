@@ -33,18 +33,20 @@ def prepare_query[E: Entitieable, StatementT, R](
 ) -> tuple[StatementT, BaseQuery[E, StatementT, R] | None]:
     fallback = None if native else query.copy()
     if fallback is not None:
-        query = query.unpaged()
-        query.conditions = ()
+        query = query.unpaged().unfiltered()
     return query.build(), fallback
 
 
 def row_predicate[E: Entitieable, R, *Ts](
     query: BaseQuery[E, Select[tuple[E, *Ts]], R],
+    joined: Callable[[tuple[E, *Ts]], Awaitable[bool]] | None = None,
 ) -> Callable[[tuple[E, *Ts]], Awaitable[bool]]:
     condition: Expression[E] = And(*query.conditions)
 
     async def matching(row: tuple[E, *Ts]) -> bool:
-        return await evaluate(condition, row[0])
+        return await evaluate(condition, row[0]) and (
+            joined is None or await joined(row)
+        )
 
     return matching
 
@@ -115,6 +117,7 @@ class SQLDataBackend(
         query: BaseQuery[E, Select[tuple[E, *Ts]], R],
         *,
         native_conditions: bool,
+        condition: Callable[[tuple[E, *Ts]], Awaitable[bool]] | None = None,
     ) -> JoinedStream[E, *Ts]:
         statement, fallback = prepare_query(query, native_conditions)
         if fallback is None:
@@ -124,7 +127,7 @@ class SQLDataBackend(
             async with aclosing(self.rows(statement)) as source:
                 stream = (
                     SimpleAsyncValueStream(source)
-                    .filter(row_predicate(fallback))
+                    .filter(row_predicate(fallback, condition))
                     .drop(fallback.offset_value)
                 )
                 if isinstance(fallback.limit_value, int):

@@ -35,6 +35,11 @@ class Country(SQLEntity[int, CRM]):
     id: ReadField[int] = SQLField(primary_key=True)
 
 
+class Unjoined(SQLEntity[int, CRM]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+
 class DynamicSource(SQLEntity[int, Any]):
     id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str]
@@ -78,13 +83,13 @@ async def joined_sources(datar: DataR) -> None:
     assert_type(crm_entity(comparison.left.entity_cls), type[Hero])
     assert_type(crm_entity(comparison.right.entity_cls), type[Team])
     query = SQLQuery(Hero).join(Team, comparison)
-    assert_type(query, SQLJoinedQuery[SQLSource, Hero, Team])
+    assert_type(query, SQLJoinedQuery[SQLSource, FieldPredicate[Team], Hero, Team])
     assert_type(crm_entity(query.entity), type[Hero])
     nested = query.copy().join(Country, Team.id == Country.id)
-    assert_type(nested, SQLJoinedQuery[SQLSource, Hero, Team, Country])
+    assert_type(nested, SQLJoinedQuery[SQLSource, FieldPredicate[Team] | FieldPredicate[Country], Hero, Team, Country])
     assert_type(
         nested.where(nested.Or(Hero.name.eq("Batman"))),
-        SQLJoinedQuery[SQLSource, Hero, Team, Country],
+        SQLJoinedQuery[SQLSource, FieldPredicate[Team] | FieldPredicate[Country], Hero, Team, Country],
     )
     assert_type(datar.stream(nested), AsyncJoinedStream[Hero, Team, Country])
     async for hero, team, country in datar.stream(nested):
@@ -104,9 +109,11 @@ def scoped_joins(source: CRM) -> None:
     query = SQLQuery(Hero, source=source)
     assert_type(query, SQLQuery[Hero, CRM])
     joined = query.join(Team, Hero.id == Team.id)
-    assert_type(joined, SQLJoinedQuery[CRM, Hero, Team])
+    assert_type(joined, SQLJoinedQuery[CRM, FieldPredicate[Team], Hero, Team])
     nested = joined.copy().join(Country, Team.id == Country.id)
-    assert_type(nested, SQLJoinedQuery[CRM, Hero, Team, Country])
+    assert_type(nested, SQLJoinedQuery[CRM, FieldPredicate[Team] | FieldPredicate[Country], Hero, Team, Country])
+    nested.where(nested.Or(Hero.name.eq("Batman"), Team.name.eq("Avengers"), Country.id.eq(1)))
+    nested.where(Unjoined.name.eq("Unknown"))  # error: reportArgumentType; mypy: arg-type
     query.join(Other, Hero.id == Other.id)  # error: reportArgumentType; mypy: arg-type
     joined.join(Other, Team.id == Other.id)  # error: reportArgumentType; mypy: arg-type
     nested.join(Other, Country.id == Other.id)  # error: reportArgumentType; mypy: arg-type

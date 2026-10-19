@@ -46,14 +46,16 @@ async def field_conditions(stream: AsyncEntityStream[Hero], values: AsyncIterato
 async def joined_results(datar: DataR, router: Routerable) -> None:
     assert_type(Hero.id == Other.id, FieldComparison[Hero, Other, int, Mapped[int], Mapped[int]])
     query = SQLQuery(Hero).join(Other, Hero.id == Other.id)
-    assert_type(query, SQLJoinedQuery[SQLSource, Hero, Other])
+    assert_type(query, SQLJoinedQuery[SQLSource, FieldPredicate[Other], Hero, Other])
     assert_type(datar.stream(query), AsyncJoinedStream[Hero, Other])
     assert_type(router.stream(query), AsyncJoinedStream[Hero, Other])
     async for hero, other in datar.stream(query):
         assert_type(hero, Hero)
         assert_type(other, Other)
     query3 = query.join(Country, Other.id == Country.id)
-    assert_type(query3, SQLJoinedQuery[SQLSource, Hero, Other, Country])
+    assert_type(query3, SQLJoinedQuery[SQLSource, FieldPredicate[Other] | FieldPredicate[Country], Hero, Other, Country])
+    query3.where(query3.Or(Hero.name.eq("Batman"), Other.name.eq("Robin"), Country.id.eq(1)))
+    query3.where(lambda hero: hero.age > 5)
     assert_type(datar.stream(query3), AsyncJoinedStream[Hero, Other, Country])
     assert_type(await datar.stream(query).to_list(), list[tuple[Hero, Other]])
     entity_query(query)  # error: reportArgumentType; mypy: arg-type

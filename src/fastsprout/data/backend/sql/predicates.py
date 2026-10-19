@@ -1,4 +1,4 @@
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from enum import Enum
 
 from sqlalchemy import and_, false, func, not_, or_, true
@@ -7,7 +7,6 @@ from sqlalchemy.sql import ColumnElement
 from fastsprout.core.types import FilterValue
 from fastsprout.data.capabilities.query import (
     And,
-    Expression,
     FieldPredicate,
     Filter,
     In,
@@ -19,8 +18,16 @@ from fastsprout.data.capabilities.query.operators import (
     Comparison,
     ComparisonKind,
 )
+from fastsprout.data.capabilities.query.predicate import (
+    evaluate_filter,
+    matches,
+)
+from fastsprout.data.types import PredicateCallable
+from fastsprout.data.utils.callable import resolve_any_callable
 
-__all__ = ["compile_predicate"]
+from .entity import SQLEntity
+
+__all__ = ["compile_predicate", "row_filter"]
 
 
 def comparison(
@@ -113,9 +120,9 @@ def compile_scalar(
     return column == condition
 
 
-def compile_predicate[E](
-    expression: Expression[E],
-    source: type[E],
+def compile_predicate[T, E](
+    expression: Filter[T],
+    source: type[E] | tuple[type[E], ...],
     column: Callable[[str], ColumnElement[FilterValue]],
 ) -> ColumnElement[bool] | None:
     if isinstance(expression, Not):
@@ -143,9 +150,38 @@ def compile_predicate[E](
 
 def compile_field[E](
     expression: FieldPredicate[E],
-    source: type[E],
+    source: type[E] | tuple[type[E], ...],
     column: Callable[[str], ColumnElement[FilterValue]],
 ) -> ColumnElement[bool] | None:
+    if isinstance(source, tuple):
+        if expression.source not in source or not issubclass(
+            expression.source, SQLEntity
+        ):
+            raise TypeError("Filter field must belong to the joined entities")
+        return compile_value(
+            expression.source.__table__.c[expression.name], expression.condition
+        )
     if expression.source is not source:
         raise TypeError("Filter field must belong to the stream entity")
     return compile_value(column(expression.name), expression.condition)
+
+
+def row_filter[P: FieldPredicate, E: SQLEntity, *Ts](
+    expression: Filter[P | PredicateCallable[E]],
+    sources: tuple[type[SQLEntity], ...],
+) -> Callable[[tuple[E, *Ts]], Awaitable[bool]]:
+    async def matching(row: tuple[E, *Ts]) -> bool:
+        async def check(condition: P | PredicateCallable[E]) -> bool:
+            if isinstance(condition, FieldPredicate):
+                index = sources.index(condition.source)
+                return await matches(
+                    getattr(row[index], condition.name), condition.condition
+                )
+            predicate: Callable[[E], Awaitable[bool]] = resolve_any_callable(
+                condition
+            )
+            return await predicate(row[0])
+
+        return await evaluate_filter(expression, check)
+
+    return matching
