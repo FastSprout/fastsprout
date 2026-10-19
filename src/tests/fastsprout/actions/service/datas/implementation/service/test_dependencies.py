@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import pytest
 
 from fastsprout.actions import DataS, Service, action
@@ -15,6 +17,40 @@ class Actor:
 
 
 class TestDependencyValidation:
+    @when_then("a disabled operation never runs its dependencies")
+    async def test_disabled_operation_does_not_run_dependencies(
+        self,
+        records: DataS[Record],
+    ) -> None:
+        def never() -> None:
+            raise AssertionError("A disabled operation ran a dependency")
+
+        service = DataS(
+            Record,
+            operations=frozenset({"exists"}),
+            dependencies=[Depends(never)],
+        )
+        with pytest.raises(AttributeError, match="disabled"):
+            await service.delete(uuid4())
+
+    @when_then("each read operation runs its dependencies")
+    async def test_dependencies_run_for_read_operations(
+        self,
+        records: DataS[Record],
+    ) -> None:
+        created = await records.create(Record(name="Batman"))
+        operations: list[DataSOperation] = []
+
+        def check(operation: DataSOperation) -> None:
+            operations.append(operation)
+
+        service = DataS(Record, dependencies=[Depends(check)])
+        assert await service.get(created.id) is not None
+        assert await service.exists(created.id)
+        assert await service.count() == 1
+        assert (await service.list()).total == 1
+        assert operations == ["get", "exists", "count", "list"]
+
     @when_then("contextual dependencies run once per payload")
     async def test_contextual_dependencies_rerun_for_each_payload(
         self,
