@@ -19,6 +19,7 @@ __all__ = [
     "DunderGTable",
     "DunderLEable",
     "DunderLTable",
+    "Eqable",
     "Floatable",
     "Generatorable",
     "Hashable",
@@ -105,6 +106,8 @@ class DunderGEable[T](Protocol):
 
 
 class Eqable[T](Protocol):  # type: ignore
+    __slots__ = ()
+
     def __eq__(self, other: T | object, /) -> Boolable: ...  # type: ignore
 
 

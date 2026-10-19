@@ -1,12 +1,23 @@
 from collections.abc import Sequence
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Protocol, Self, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Protocol,
+    Self,
+    overload,
+    runtime_checkable,
+)
 
 from fastsprout.core.depends import DependsClass
 from fastsprout.data.backend.protocols import DataAbilitable, Finalizable
 from fastsprout.data.capabilities import BaseQuery
+from fastsprout.data.capabilities.query import JoinedQuery
 from fastsprout.data.entity import Entitieable
-from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.data.streams.protocols import (
+    AsyncEntityStream,
+    AsyncJoinedStream,
+)
 from fastsprout.events import EventBus
 
 if TYPE_CHECKING:
@@ -37,6 +48,12 @@ class Routerable(Finalizable, Protocol):
         self, entity: type[E]
     ) -> DataAbilitable[E, Any, BaseQuery[E, Any], Finalizable]: ...
 
+    @overload
+    def stream[E: Entitieable[Any], ContextT, *Ts](
+        self, q: JoinedQuery[E, ContextT, *Ts]
+    ) -> AsyncJoinedStream[*Ts]: ...
+
+    @overload
     def stream[E: Entitieable[Any], StatementT](
         self, q: BaseQuery[E, StatementT]
     ) -> AsyncEntityStream[E]: ...

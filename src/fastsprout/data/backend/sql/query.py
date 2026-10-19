@@ -1,12 +1,15 @@
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Hashable, Sequence
+from contextlib import AbstractAsyncContextManager
 from enum import Enum
 from typing import Any
 
 from sqlalchemy import and_, false, func, not_, or_, select, true
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import ColumnElement
 from sqlalchemy.sql.selectable import Select
 
-from fastsprout.core import UndefinedType, dataclass
+from fastsprout.core import Undefined, UndefinedType, dataclass
+from fastsprout.core.fields.field_ref import FieldComparison
 from fastsprout.core.types import FilterValue
 from fastsprout.data.capabilities.query import (
     And,
@@ -23,10 +26,13 @@ from fastsprout.data.capabilities.query.operators import (
     Comparison,
     ComparisonKind,
 )
+from fastsprout.data.entity import Signpostable
+from fastsprout.data.streams.implementation import JoinedStream
 
+from .data_backend import SQLDataBackend
 from .entity import SQLEntity, validate_source
 
-__all__ = ["SQLQuery", "compile_predicate"]
+__all__ = ["SQLJoinedQuery", "SQLQuery", "compile_predicate"]
 
 
 @dataclass
@@ -49,26 +55,121 @@ class SQLQuery[E: SQLEntity[Any]](BaseQuery[E, Select[tuple[E]]]):
             if self.statement is not None
             else select(self.entity)
         )
-        predicate = compile_predicate(
-            And(*self.conditions),
-            self.entity,
-            lambda name: statement.selected_columns[name],
+        return apply_query(self, statement)
+
+    def join[F: SQLEntity[Any], L: SQLEntity[Any], Key: Hashable, LO, RO](
+        self,
+        entity: type[F],
+        condition: FieldComparison[L, F, Key, LO, RO],
+    ) -> "SQLJoinedQuery[E, F]":
+        return join_query(self, entity, condition)
+
+
+@dataclass
+class SQLJoinedQuery[E: SQLEntity[Any], *Ts](
+    BaseQuery[E, Select[tuple[E, *Ts]], tuple[E, *Ts]]
+):
+    sources: tuple[type[SQLEntity[Any]], ...] = ()
+
+    def stream(
+        self, signpost: Signpostable[AbstractAsyncContextManager[AsyncSession]]
+    ) -> JoinedStream[E, *Ts]:
+        return SQLDataBackend(signpost).stream_rows(
+            self,
+            native_conditions=SQLQuery(
+                self.entity, conditions=self.conditions
+            ).native_conditions,
         )
-        if predicate is None:
-            raise TypeError(
-                "Python predicates require query execution through stream()"
-            )
-        statement = statement.where(predicate)
-        if self.orderings:
-            statement = statement.order_by(None)
-        for name, reverse in self.effective_orderings:
-            column = statement.selected_columns[name]
-            statement = statement.order_by(
-                column.desc() if reverse else column.asc()
-            )
-        if not isinstance(self.limit_value, UndefinedType):
-            statement = statement.limit(self.limit_value)
-        return statement.offset(self.offset_value or None)
+
+    def build(self) -> Select[tuple[E, *Ts]]:
+        for source in self.sources:
+            validate_source(source)
+            if source.__signpost__ is not self.entity.__signpost__:
+                raise TypeError("SQL joins require one shared signpost")
+        if self.statement is None:
+            raise TypeError("A joined query requires a SQL statement")
+        return apply_query(self, self.statement)
+
+    def join[F: SQLEntity[Any], L: SQLEntity[Any], Key: Hashable, LO, RO](
+        self,
+        entity: type[F],
+        condition: FieldComparison[L, F, Key, LO, RO],
+    ) -> "SQLJoinedQuery[E, *Ts, F]":
+        return join_query(self, entity, condition)
+
+
+def join_query[
+    E: SQLEntity[Any],
+    F: SQLEntity[Any],
+    L: SQLEntity[Any],
+    Key: Hashable,
+    LO,
+    RO,
+    R,
+    *Ts,
+](
+    query: BaseQuery[E, Select[tuple[E, *Ts]], R],
+    entity: type[F],
+    condition: FieldComparison[L, F, Key, LO, RO],
+) -> SQLJoinedQuery[E, *Ts, F]:
+    sources = (
+        query.sources if isinstance(query, SQLJoinedQuery) else (query.entity,)
+    )
+    if not isinstance(condition, FieldComparison):
+        raise TypeError("A SQL join requires a field equality expression")
+    left, right = condition.left, condition.right
+    if left.entity_cls not in sources or right.entity_cls is not entity:
+        raise TypeError("Join fields must belong to the joined entities")
+    if entity in sources:
+        raise TypeError("Use SQLAlchemy aliases to join the same entity twice")
+    validate_source(entity)
+    if entity.__signpost__ is not query.entity.__signpost__:
+        raise TypeError("SQL joins require one shared signpost")
+    clause = (
+        left.entity_cls.__table__.c[left.name] == entity.__table__.c[right.name]
+    )
+    prepared = query.copy()
+    prepared.conditions = ()
+    prepared.orderings = ()
+    prepared.limit_value = Undefined
+    prepared.offset_value = 0
+    return SQLJoinedQuery(
+        query.entity,
+        statement=prepared.build()
+        .add_columns(entity)
+        .join_from(left.entity_cls, entity, clause),
+        offset_value=query.offset_value,
+        limit_value=query.limit_value,
+        conditions=query.conditions,
+        orderings=query.orderings,
+        sources=(*sources, entity),
+    )
+
+
+def apply_query[E: SQLEntity[Any], R, *Ts](
+    query: BaseQuery[E, Select[tuple[*Ts]], R],
+    statement: Select[tuple[*Ts]],
+) -> Select[tuple[*Ts]]:
+    predicate = compile_predicate(
+        And(*query.conditions),
+        query.entity,
+        lambda name: statement.selected_columns[name],
+    )
+    if predicate is None:
+        raise TypeError(
+            "Python predicates require query execution through stream()"
+        )
+    statement = statement.where(predicate)
+    if query.orderings:
+        statement = statement.order_by(None)
+    for name, reverse in query.effective_orderings:
+        column = statement.selected_columns[name]
+        statement = statement.order_by(
+            column.desc() if reverse else column.asc()
+        )
+    if not isinstance(query.limit_value, UndefinedType):
+        statement = statement.limit(query.limit_value)
+    return statement.offset(query.offset_value or None)
 
 
 def comparison(

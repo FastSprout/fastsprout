@@ -1,23 +1,31 @@
 from abc import ABC, abstractmethod
+from contextlib import AbstractAsyncContextManager
 from copy import copy
-from typing import Annotated, Any, Self
+from typing import Annotated, Any, Generic, Protocol, Self, runtime_checkable
 
 from annotated_types import Ge
+from typing_extensions import TypeVar
 
 from fastsprout.core import Undefined, UndefinedType, dataclass
 from fastsprout.core.fields.field_ref import FieldRef
 from fastsprout.core.types import OrderedValue
-from fastsprout.data.entity import Entitieable
+from fastsprout.data.entity import Entitieable, Signpostable
+from fastsprout.data.streams.protocols import AsyncJoinedStream
 
 from .operators import And, Eq, Gt, Lt, Nand, Or, Xor
 from .predicate import Expression, FieldPredicate
 
-__all__ = ["BaseQuery"]
+__all__ = ["BaseQuery", "JoinedQuery"]
+
+E = TypeVar("E", bound=Entitieable[Any])
+StatementT = TypeVar("StatementT")
+# TypeVar defaults preserve two-parameter queries on Python 3.12.
+RowT = TypeVar("RowT", default=None)
 
 
 @dataclass
-class BaseQuery[E: Entitieable[Any], StatementT](ABC):
-    """Backend query with shared predicates and pagination."""
+class BaseQuery(ABC, Generic[E, StatementT, RowT]):
+    """Shared query builder; RowT distinguishes tuple rows from entity reads."""
 
     And = And
     Or = Or
@@ -86,3 +94,15 @@ class BaseQuery[E: Entitieable[Any], StatementT](ABC):
 
     @abstractmethod
     def build(self) -> StatementT: ...
+
+
+@runtime_checkable
+class JoinedQuery[E: Entitieable[Any], ProductT, *Ts](Protocol):
+    """Bind a multi-entity query to a routed backend context."""
+
+    @property
+    def entity(self) -> type[E]: ...
+
+    def stream(
+        self, signpost: Signpostable[AbstractAsyncContextManager[ProductT]]
+    ) -> AsyncJoinedStream[*Ts]: ...

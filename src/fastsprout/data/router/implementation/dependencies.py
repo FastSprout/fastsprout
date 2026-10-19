@@ -98,6 +98,25 @@ class AbilityDependencies:
 
         return iterate
 
+    def stream[ProductT, **P](
+        self,
+        signpost: Signpostable[AbstractAsyncContextManager[ProductT]],
+        read: Callable[P, Awaitable[None]],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> BoundSignpost[AbstractAsyncContextManager[ProductT]]:
+        @asynccontextmanager
+        async def factory() -> AsyncIterator[ProductT]:
+            await self.check(read, *args, **kwargs)
+            async with signpost.factory() as product:
+                yield product
+
+        if not isinstance(signpost, BoundSignpost):
+            raise TypeError("A router stream requires its bound signpost")
+        return BoundSignpost(
+            factory, signpost.context, priority=signpost.priority
+        )
+
 
 def guard_ability[
     E: Entitieable[IdentificatorType],
@@ -119,17 +138,7 @@ def guard_ability[
         async def read(query: BaseQuery[E, StatementT]) -> None:
             """Provide the read operation's arguments to dependencies."""
 
-        @asynccontextmanager
-        async def factory() -> AsyncIterator[ProductT]:
-            await guard.check(read, query)
-            async with signpost.factory() as product:
-                yield product
-
-        if not isinstance(signpost, BoundSignpost):
-            raise TypeError("A router stream requires its bound signpost")
-        checked = BoundSignpost(
-            factory, signpost.context, priority=signpost.priority
-        )
+        checked = guard.stream(signpost, read, query)
         return type(ability)(checked, bus=bus).stream(query)
 
     ability.create = guard.coroutine(ability.create)

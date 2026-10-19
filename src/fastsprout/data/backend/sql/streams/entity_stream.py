@@ -1,4 +1,4 @@
-from collections.abc import AsyncGenerator, AsyncIterator, Hashable
+from collections.abc import AsyncIterator, Hashable
 from contextlib import AbstractAsyncContextManager
 from functools import partial
 from typing import Any
@@ -13,11 +13,13 @@ from fastsprout.core import lazy_await
 from fastsprout.core.fields.field_ref import FieldRef
 from fastsprout.core.types.protocols.ables import RichComparisonable
 from fastsprout.data.backend.implementation import BaseDataBackend
-from fastsprout.data.backend.sql.data_backend import SQLDataBackend
+from fastsprout.data.backend.sql.data_backend import (
+    SQLDataBackend,
+    prepare_query,
+)
 from fastsprout.data.backend.sql.entity import SQLEntity, SQLSignpost
-from fastsprout.data.capabilities.query import And, FieldPredicate
+from fastsprout.data.capabilities.query import And, BaseQuery, FieldPredicate
 from fastsprout.data.capabilities.query.predicate import evaluate
-from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
 from fastsprout.data.entity import Entitieable, Signpostable
 from fastsprout.data.streams.implementation import (
     JoinedStream,
@@ -73,13 +75,9 @@ class SQLEntityStream[E: SQLEntity[Any]](
         /,
     ) -> None:
         BaseDataBackend.__init__(self, signpost)
-        self.query: SQLQuery[E] | None = None
+        self.query: BaseQuery[E, Select[tuple[E]]] | None = None
         if isinstance(stmt, SQLQuery):
-            if not stmt.native_conditions:
-                self.query = stmt.copy()
-                stmt = stmt.unpaged()
-                stmt.conditions = ()
-            stmt = stmt.build()
+            stmt, self.query = prepare_query(stmt, stmt.native_conditions)
         self._stmt = stmt
 
     def _clone(self, stmt: Select[tuple[E]]) -> "SQLEntityStream[E]":
@@ -125,22 +123,7 @@ class SQLEntityStream[E: SQLEntity[Any]](
             ),
         )
 
-        async def rows() -> AsyncGenerator[tuple[E, F], None]:
-            async with self.session() as session:
-                result = await session.stream(
-                    statement,
-                    execution_options={
-                        "yield_per": DEFAULT_ITERATION_CHUNK_SIZE
-                    },
-                )
-                try:
-                    async for row in result.tuples():
-                        self._check_stream_context()
-                        yield row
-                finally:
-                    await result.close()
-
-        return JoinedStream.from_factory(rows)
+        return JoinedStream.from_factory(partial(self.rows, statement))
 
     def take(self, n: int) -> SimpleAsyncEntityStream[E]:
         if self.query is not None:

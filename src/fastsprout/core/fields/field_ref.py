@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+from typing import overload
+
 from fastsprout.core.types.comparable import FilterValue
 from fastsprout.core.types.iterable import AnyIterable
+from fastsprout.core.types.protocols.ables import Boolable, Eqable
 
 from .conditions import Between, Eq, Gt, Gte, In, Lt, Lte, Ne
 from .field_assigment import FieldAssignment
 from .field_predicate import FieldPredicate
 
-__all__ = ["FieldRef"]
+__all__ = ["FieldComparison", "FieldRef"]
 
 
-class FieldRef[E, T, OrmCtor]:
+class FieldRef[E, T, OrmCtor](Eqable["FieldRef[E, T, OrmCtor]"]):
     """Class-bound reference to a field and with generic ORM/backend extension.
 
     Carries entity class and field name. Value type T is static-only.
@@ -75,10 +78,39 @@ class FieldRef[E, T, OrmCtor]:
     def __repr__(self) -> str:
         return f"<{self.entity_cls.__name__}.{self.name}>"
 
-    def __eq__(self, other: object) -> bool:
+    # Equality builds a query expression instead of the bool declared by object.
+    @overload  # type: ignore[override]
+    def __eq__[F, RightOrm](
+        self, other: FieldRef[F, T, RightOrm]
+    ) -> FieldComparison[E, F, T, OrmCtor, RightOrm]: ...
+
+    @overload
+    def __eq__(self, other: object) -> Boolable: ...
+
+    def __eq__(self, other: object) -> Boolable:
         if not isinstance(other, FieldRef):
             return NotImplemented
-        return self.entity_cls is other.entity_cls and self.name == other.name
+        return FieldComparison(self, other)
 
     def __hash__(self) -> int:
         return hash((self.entity_cls, self.name))
+
+
+class FieldComparison[L, R, T, LeftOrm, RightOrm]:
+    """Field equality retaining both references for query compilation."""
+
+    __slots__ = ("left", "right")
+
+    def __init__(
+        self,
+        left: FieldRef[L, T, LeftOrm],
+        right: FieldRef[R, T, RightOrm],
+    ) -> None:
+        self.left = left
+        self.right = right
+
+    def __bool__(self) -> bool:
+        return (
+            self.left.entity_cls is self.right.entity_cls
+            and self.left.name == self.right.name
+        )

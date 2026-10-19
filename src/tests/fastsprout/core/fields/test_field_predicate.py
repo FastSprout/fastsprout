@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 import pytest
 
 from fastsprout.core import BaseSchema, Field
+from fastsprout.core.fields.field_ref import FieldComparison, FieldRef
 from fastsprout.testing.core import given, then, when, when_then
 
 
@@ -12,6 +13,20 @@ class Record(BaseSchema):
 
 
 class TestFieldPredicate:
+    @when_then("field equality retains its operands and reference identity")
+    def test_field_equality(self) -> None:
+        field = Record.value
+        comparison = field == Record.value
+        other: FieldRef[Record, int, None] = FieldRef("other", Record, None)
+        assert isinstance(comparison, FieldComparison)
+        assert comparison.left is field
+        assert comparison.right.name == "value"
+        assert bool(comparison)
+        assert not (field == other)
+        assert hash(field) == hash(Record.value)
+        assert field in {Record.value}
+        assert (field == 1) is False
+
     @when_then("membership consumes its source lazily and shares its values")
     async def test_membership_is_lazy_and_shared(self) -> None:
         consumed: list[int] = []

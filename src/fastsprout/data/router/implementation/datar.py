@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import TracebackType
-from typing import Any, Self
+from typing import Any, Self, overload
 
 from fastsprout.core.depends import DependsClass
 from fastsprout.data.backend.implementation.bound_signpost import BoundSignpost
@@ -11,15 +11,19 @@ from fastsprout.data.backend.protocols import (
     Finalizable,
 )
 from fastsprout.data.capabilities import BaseQuery
+from fastsprout.data.capabilities.query import JoinedQuery
 from fastsprout.data.entity import Entitieable, Signpostable
 from fastsprout.data.router.exceptions import DataRError, NoBackendError
 from fastsprout.data.router.protocols import Routerable
 from fastsprout.data.streams.context import StreamContext
 from fastsprout.data.streams.implementation import JoinedStream
-from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.data.streams.protocols import (
+    AsyncEntityStream,
+    AsyncJoinedStream,
+)
 from fastsprout.events import EventBus
 
-from .dependencies import guard_ability
+from .dependencies import AbilityDependencies, guard_ability
 from .routed_join import RoutedJoin
 
 try:
@@ -189,9 +193,30 @@ class DataR(Routerable):
             )
         return ability
 
+    @overload
+    def stream[E: Entitieable[Any], ContextT, *Ts](
+        self, q: JoinedQuery[E, ContextT, *Ts]
+    ) -> AsyncJoinedStream[*Ts]: ...
+
+    @overload
     def stream[E: Entitieable[Any], StatementT](
         self, q: BaseQuery[E, StatementT]
-    ) -> AsyncEntityStream[E]:
+    ) -> AsyncEntityStream[E]: ...
+
+    def stream[E: Entitieable[Any], StatementT, ContextT, *Ts](
+        self, q: BaseQuery[E, StatementT] | JoinedQuery[E, ContextT, *Ts]
+    ) -> AsyncEntityStream[E] | AsyncJoinedStream[*Ts]:
+        if isinstance(q, JoinedQuery):
+            signpost = self.__init_bindings__.add(q.entity)
+            if self.dependencies:
+
+                async def read(query: JoinedQuery[E, ContextT, *Ts]) -> None:
+                    """Provide the joined read's arguments to dependencies."""
+
+                signpost = AbilityDependencies(self, self.dependencies).stream(
+                    signpost, read, q
+                )
+            return q.stream(signpost)
         if isinstance(q, BaseQuery):
             self.__init_bindings__.add(q.entity)
             ability = self.ability(q.entity)
