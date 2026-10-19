@@ -3,6 +3,7 @@ import pytest
 from fastsprout.actions import DataS, Service, action
 from fastsprout.core import Depends, IdentificatorType, dataclass
 from fastsprout.data import DataR
+from fastsprout.testing.core import when_then
 
 from ...common import Record
 
@@ -13,6 +14,40 @@ class Actor:
 
 
 class TestDependencyValidation:
+    @when_then(
+        "a rejected dependency stops execution and rolls back its writes"
+    )
+    @pytest.mark.parametrize("related", [False, True])
+    async def test_dependency_failure_rolls_back_the_invocation(
+        self, records: DataS[Record], related: bool
+    ) -> None:
+        calls: list[str] = []
+
+        async def prepare(datar: DataR) -> None:
+            calls.append("prepare")
+            if related:
+                await records.create(Record(name="Related"), datar=datar)
+
+        async def reject() -> None:
+            calls.append("reject")
+            raise PermissionError("Forbidden")
+
+        def after_rejection() -> None:
+            calls.append("after")
+
+        service = DataS(
+            Record,
+            dependencies=[
+                Depends(prepare),
+                Depends(reject),
+                Depends(after_rejection),
+            ],
+        )
+        with pytest.raises(PermissionError, match="Forbidden"):
+            await service.create(Record(name="Batman"))
+        assert calls == ["prepare", "reject"]
+        assert await records.count() == 0
+
     async def test_delete_dependencies_receive_the_key_and_can_reject(
         self,
         records: DataS[Record],
