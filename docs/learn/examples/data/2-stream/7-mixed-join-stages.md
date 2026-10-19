@@ -13,6 +13,7 @@ in memory, then streams the left-hand rows.
 source=sales_source also binds the SQL query's source type for the IDE.
 It rejects Country in this SQL join because Country belongs to Geography;
 joining its stream after the SQL stage remains allowed.
+The typed bind calls also reject assigning a Geography entity to Sales.
 
 ## Source
 
@@ -28,6 +29,7 @@ in memory, then streams the left-hand rows.
 source=sales_source also binds the SQL query's source type for the IDE.
 It rejects Country in this SQL join because Country belongs to Geography;
 joining its stream after the SQL stage remains allowed.
+The typed bind calls also reject assigning a Geography entity to Sales.
 """
 
 import asyncio
@@ -76,9 +78,10 @@ async def main() -> None:
         sales = async_sessionmaker(sales_engine, expire_on_commit=False)
         geography = async_sessionmaker(geography_engine, expire_on_commit=False)
         sales_source = Sales(sales)
-        Customer.__signpost__ = sales_source
-        Order.__signpost__ = Customer.__signpost__
-        Country.__signpost__ = Geography(geography)
+        geography_source = Geography(geography)
+        sales_source.bind(Customer)
+        sales_source.bind(Order)
+        geography_source.bind(Country)
 
         async with sales() as session:
             session.add_all(
@@ -106,7 +109,7 @@ async def main() -> None:
 
         async with DataR() as datar:
             sales_rows = datar.stream(orders)
-            countries = datar.stream(SQLQuery(Country))
+            countries = datar.stream(SQLQuery(Country, source=geography_source))
             combined = sales_rows.join(
                 countries,
                 on=(lambda row: row[0].country_id, lambda country: country.id),
