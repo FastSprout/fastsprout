@@ -70,8 +70,8 @@ def inject_relationship_keys(
     name: str,
     annotations: dict[str, Any],
     namespace: dict[str, Any],
-    descriptors: dict[str, type[Field]],
-) -> None:
+) -> list[str]:
+    keys: list[str] = []
     for fname, annotation in tuple(annotations.items()):
         relation = namespace.get(fname)
         if not isinstance(relation, RelationshipInfo) or not getattr(
@@ -96,12 +96,13 @@ def inject_relationship_keys(
             )
         id_type = model_fields["id"].annotation
         annotations[fk_name] = id_type | None
-        descriptors[fk_name] = InternalField
+        keys.append(fk_name)
         namespace[fk_name] = SQLPydField(
             default=None,
             foreign_key=f"{table.name}.id",
             nullable=optional,
         )
+    return keys
 
 
 @dataclass_transform(
@@ -136,16 +137,19 @@ class TypedSQLMeta(SQLModelMetaclass):
         field_names = list(field_descriptors)
         unwrap_field_annotations(annotations, namespace)
         convert_field_specifiers(namespace, field_names)
-        inject_relationship_keys(
-            name, annotations, namespace, field_descriptors
+        relationship_keys = inject_relationship_keys(
+            name, annotations, namespace
         )
-        field_names = list(field_descriptors)
+        field_names.extend(relationship_keys)
 
         for fname in field_names:
             if isinstance(annotations.get(fname), TypeVar):
                 annotations[fname] = Any
         namespace["__fastsprout_fields__"] = field_names
-        namespace["__fastsprout_descriptors__"] = field_descriptors
+        namespace["__fastsprout_descriptors__"] = {
+            **field_descriptors,
+            **dict.fromkeys(relationship_keys, InternalField),
+        }
         token = model_building_context_var.set(True)
         try:
             return super().__new__(mcs, name, bases, namespace, **kwargs)
