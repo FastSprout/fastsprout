@@ -5,29 +5,118 @@ from uuid import UUID
 
 from bubus import EventBus as NativeBubusBus
 
-from fastsprout.events import Event, EventBus, EventResult, sub
+from fastsprout.events import EventBus, EventResult, EventState, sub
 from fastsprout.events.backend.async_queue import AsyncQueueBroker
 from fastsprout.events.backend.implementation import InMemoryBroker
 from fastsprout.testing.core import then, when
 
-from .base_test_broker import BaseTestBroker
-
-
-class Message(Event):
-    value: int
+from .base_test_broker import BaseTestBroker, Completion, Message
 
 
 class TestInMemoryBroker(BaseTestBroker):
     @asynccontextmanager
     async def make_broker(self) -> AsyncIterator[InMemoryBroker]:
-        broker = InMemoryBroker()
+        broker = InMemoryBroker(NativeBubusBus())
         try:
             yield broker
         finally:
             await broker.stop()
 
+    @when("two native Bubus handlers finish processing a message")
+    async def native_delivery(self, bus: EventBus) -> EventState[Message]:
+        @sub(Message, bus=bus)
+        async def first(event: Message) -> Message:
+            return Message(value=event.value + 1)
 
-class TestAsyncQueueBroker(TestInMemoryBroker):
+        @sub(Message, bus=bus)
+        async def second(event: Message) -> Message:
+            return Message(value=event.value + 2)
+
+        state = await bus.publish(Message(value=1))
+        await state.wait()
+        return state
+
+    @then("native Bubus collects both results and retains the event state")
+    async def test_collects_results_from_multiple_handlers(
+        self,
+        broker: InMemoryBroker,
+        bus: EventBus,
+        native_delivery: EventState[Message],
+    ) -> None:
+        successful, pending = native_delivery.result
+        assert {result.value for result in successful} == {2, 3}
+        assert pending == []
+        assert await bus.get(native_delivery.event) is native_delivery
+        assert broker.bus is not None
+        assert broker.bus.handlers["FastSproutEnvelope"]
+
+    @when("a native Bubus message is retracted before handlers start")
+    async def retracted(
+        self, bus: EventBus
+    ) -> tuple[bool, list[Message], EventState[Message] | None]:
+        seen: list[Message] = []
+
+        @sub(Message, bus=bus)
+        async def handler(event: Message) -> None:
+            seen.append(event)
+
+        event = Message(value=1)
+        state = await bus.publish(event)
+        removed = await bus.retract(state)
+        await asyncio.sleep(0)
+        return removed, seen, await bus.get(event)
+
+    @then("retraction removes the event and prevents native handlers running")
+    def test_retracts_event_before_handlers_start(
+        self,
+        retracted: tuple[bool, list[Message], EventState[Message] | None],
+    ) -> None:
+        removed, seen, state = retracted
+        assert removed
+        assert seen == []
+        assert state is None
+
+    @when(
+        "a native Bubus event is awaited before and after releasing a handler"
+    )
+    async def native_completions(
+        self, bus: EventBus
+    ) -> tuple[Completion, EventResult[Message]]:
+        release = asyncio.Event()
+
+        @sub(Message, bus=bus)
+        async def slow(event: Message) -> Message:
+            await release.wait()
+            return Message(value=event.value + 1)
+
+        @sub(Message, bus=bus)
+        async def fast(event: Message) -> Message:
+            return Message(value=event.value + 2)
+
+        state = await bus.publish(Message(value=1))
+        successful, pending = await state.wait(return_when="FIRST_COMPLETED")
+        first = Completion(
+            state,
+            release,
+            tuple(result.value for result in successful),
+            len(pending),
+        )
+        release.set()
+        return first, await state.wait()
+
+    @then("FIRST_COMPLETED preserves pending work and both eventual results")
+    def test_first_completed_keeps_other_result_pending(
+        self, native_completions: tuple[Completion, EventResult[Message]]
+    ) -> None:
+        first, completed = native_completions
+        assert first.values == (3,)
+        assert first.pending_count == 1
+        successful, pending = completed
+        assert {result.value for result in successful} == {2, 3}
+        assert pending == []
+
+
+class TestAsyncQueueBroker(BaseTestBroker):
     @asynccontextmanager
     async def make_broker(self) -> AsyncIterator[AsyncQueueBroker]:
         broker = AsyncQueueBroker(asyncio.Queue[UUID](maxsize=1))
@@ -87,73 +176,3 @@ class TestAsyncQueueBroker(TestInMemoryBroker):
         done, pending = stopped_result
         assert done == []
         assert pending == []
-
-
-async def test_in_memory_broker_collects_results_from_multiple_handlers():
-    native = NativeBubusBus()
-    bus = EventBus(InMemoryBroker(native))
-
-    @sub(Message, bus=bus)
-    async def first(event: Message) -> Message:
-        return Message(value=event.value + 1)
-
-    @sub(Message, bus=bus)
-    async def second(event: Message) -> Message:
-        return Message(value=event.value + 2)
-
-    event = Message(value=1)
-    state = await bus.publish(event)
-    successful, pending = await state.wait()
-
-    assert {result.value for result in successful} == {2, 3}
-    assert pending == []
-    assert await bus.get(event) is state
-    assert native.handlers["FastSproutEnvelope"]
-
-
-async def test_in_memory_broker_retracts_event_before_handlers_start():
-    native = NativeBubusBus()
-    bus = EventBus(InMemoryBroker(native))
-    seen: list[Message] = []
-
-    @sub(Message, bus=bus)
-    async def handler(event: Message) -> None:
-        seen.append(event)
-
-    event = Message(value=1)
-    state = await bus.publish(event)
-
-    assert await bus.retract(state)
-    await asyncio.sleep(0)
-
-    assert seen == []
-    assert await bus.get(event) is None
-
-
-async def test_in_memory_broker_first_completed_keeps_other_result_pending():
-    native = NativeBubusBus()
-    bus = EventBus(InMemoryBroker(native))
-    release = asyncio.Event()
-
-    @sub(Message, bus=bus)
-    async def slow(event: Message) -> Message:
-        await release.wait()
-        return Message(value=event.value + 1)
-
-    @sub(Message, bus=bus)
-    async def fast(event: Message) -> Message:
-        return Message(value=event.value + 2)
-
-    try:
-        state = await bus.publish(Message(value=1))
-        successful, pending = await state.wait(return_when="FIRST_COMPLETED")
-
-        assert [result.value for result in successful] == [3]
-        assert len(pending) == 1
-
-        release.set()
-        successful, pending = await state.wait()
-        assert {result.value for result in successful} == {2, 3}
-        assert pending == []
-    finally:
-        release.set()

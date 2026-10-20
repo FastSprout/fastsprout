@@ -6,6 +6,7 @@ from sqlmodel import Field as SQLField
 from fastsprout.core import Field, ReadField
 from fastsprout.data.backend.sql import SQLEntity, SQLQuery, SQLSignpost
 from fastsprout.data.backend.sql.streams import SQLEntityStream
+from fastsprout.data.streams.protocols import AsyncValueStream
 from fastsprout.testing.core import given, then, when
 
 from .conftest import Hero
@@ -56,53 +57,72 @@ class TestMappedFieldGetters:
 
 
 class TestSQLEntityStream:
-    async def test_take(self, entity_stream: SQLEntityStream[Hero]):
-        # when
-        found = await entity_stream.take(3).to_list()
-        # then
-        assert len(found) == 3
+    @when("the entity stream takes three rows")
+    async def taken(self, entity_stream: SQLEntityStream[Hero]) -> list[Hero]:
+        return await entity_stream.take(3).to_list()
 
-    async def test_sort_by_field(self, entity_stream: SQLEntityStream[Hero]):
-        # when
+    @then("take limits the result to three rows")
+    def test_take(self, taken: list[Hero]) -> None:
+        assert len(taken) == 3
+
+    @when("the entity stream sorts names in reverse order")
+    async def sorted_names(
+        self, entity_stream: SQLEntityStream[Hero]
+    ) -> list[str]:
         found = await entity_stream.sort(Hero.name, reverse=True).to_list()
-        # then
-        assert [hero.name for hero in found] == [
-            f"h{i}" for i in reversed(range(10))
-        ]
+        return [hero.name for hero in found]
 
-    async def test_count(self, entity_stream: SQLEntityStream[Hero]):
-        # when
-        count = await entity_stream.count()
-        # then
+    @then("field sorting preserves descending name order")
+    def test_sort_by_field(self, sorted_names: list[str]) -> None:
+        assert sorted_names == [f"h{i}" for i in reversed(range(10))]
+
+    @when("the entity stream counts rows")
+    async def count(self, entity_stream: SQLEntityStream[Hero]) -> int:
+        return await entity_stream.count()
+
+    @then("the stream contains ten entities")
+    def test_count(self, count: int) -> None:
         assert count == 10
 
-    async def test_first(self, entity_stream: SQLEntityStream[Hero]):
-        # when
-        first = await entity_stream.sort(Hero.age).first()
-        # then
+    @when("the youngest entity is requested")
+    async def first(self, entity_stream: SQLEntityStream[Hero]) -> Hero | None:
+        return await entity_stream.sort(Hero.age).first()
+
+    @then("first returns the youngest entity")
+    def test_first(self, first: Hero | None) -> None:
         assert first is not None
         assert first.age == 0
 
-    async def test_drop(self, entity_stream: SQLEntityStream[Hero]):
-        # when
-        found = await entity_stream.sort(Hero.age).drop(8).to_list()
-        # then
-        assert [hero.age for hero in found] == [8, 9]
+    @when("the first eight sorted entities are dropped")
+    async def dropped(self, entity_stream: SQLEntityStream[Hero]) -> list[Hero]:
+        return await entity_stream.sort(Hero.age).drop(8).to_list()
 
-    async def test_python_predicate(self, entity_stream: SQLEntityStream[Hero]):
-        # when
-        found = await (
+    @then("drop leaves the last two entities")
+    def test_drop(self, dropped: list[Hero]) -> None:
+        assert [hero.age for hero in dropped] == [8, 9]
+
+    @when("a Python predicate selects even ages")
+    async def filtered(
+        self, entity_stream: SQLEntityStream[Hero]
+    ) -> list[Hero]:
+        return await (
             entity_stream.sort(Hero.age)
             .filter(lambda hero: hero.age % 2 == 0)
             .to_list()
         )
-        # then
-        assert [hero.age for hero in found] == [0, 2, 4, 6, 8]
 
-    async def test_chunked(self, entity_stream: SQLEntityStream[Hero]):
-        # when
-        chunks = [chunk async for chunk in entity_stream.chunked(4)]
-        # then
+    @then("the fallback predicate retains matching entities in order")
+    def test_python_predicate(self, filtered: list[Hero]) -> None:
+        assert [hero.age for hero in filtered] == [0, 2, 4, 6, 8]
+
+    @when("the entity stream is consumed in chunks of four")
+    async def chunks(
+        self, entity_stream: SQLEntityStream[Hero]
+    ) -> list[list[Hero]]:
+        return [chunk async for chunk in entity_stream.chunked(4)]
+
+    @then("chunking yields every entity exactly once")
+    def test_chunked(self, chunks: list[list[Hero]]) -> None:
         assert [len(chunk) for chunk in chunks] == [4, 4, 2]
         assert sorted(hero.id for chunk in chunks for hero in chunk) == list(
             range(10)
@@ -110,26 +130,32 @@ class TestSQLEntityStream:
 
 
 class TestSQLValueStream:
-    async def test_sum(self, entity_stream: SQLEntityStream[Hero]):
-        # given
-        values = entity_stream.to_values(Hero.age)
-        # when
-        total = await values.sum()
-        # then
+    @given("the ages projected from the entity stream")
+    def values(
+        self, entity_stream: SQLEntityStream[Hero]
+    ) -> AsyncValueStream[int]:
+        return entity_stream.to_values(Hero.age)
+
+    @when("the value stream is summed")
+    async def total(self, values: AsyncValueStream[int]) -> int | None:
+        return await values.sum()
+
+    @then("sum includes all projected ages")
+    def test_sum(self, total: int | None) -> None:
         assert total == sum(range(10))
 
-    async def test_count(self, entity_stream: SQLEntityStream[Hero]):
-        # given
-        values = entity_stream.to_values(Hero.age)
-        # when
-        count = await values.count()
-        # then
+    @when("the projected values are counted")
+    async def count(self, values: AsyncValueStream[int]) -> int:
+        return await values.count()
+
+    @then("projection preserves the number of rows")
+    def test_count(self, count: int) -> None:
         assert count == 10
 
-    async def test_sort_and_take(self, entity_stream: SQLEntityStream[Hero]):
-        # given
-        values = entity_stream.to_values(Hero.age)
-        # when
-        found = await values.sort().take(3).to_list()
-        # then
+    @when("the three smallest values are requested")
+    async def found(self, values: AsyncValueStream[int]) -> list[int]:
+        return await values.sort().take(3).to_list()
+
+    @then("sort and take return the first three ages")
+    def test_sort_and_take(self, found: list[int]) -> None:
         assert found == [0, 1, 2]

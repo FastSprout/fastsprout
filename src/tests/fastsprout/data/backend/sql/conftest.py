@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Field as SQLField
 from sqlmodel import Session, create_engine
@@ -19,6 +19,7 @@ from fastsprout.data.backend.sql.entity import SQLSignpost
 from fastsprout.data.backend.sql.streams import SQLEntityStream
 from fastsprout.data.capabilities.query import Gte, where
 from fastsprout.testing.core import given
+from fastsprout.testing.data import TestSQLite
 
 
 class SearchField[T](Field[T]): ...
@@ -61,7 +62,7 @@ class Hero(SQLEntity[int]):
     age: Field[int] = Field(default=0)
 
 
-@pytest.fixture
+@given("a synchronous session factory for mapped field and DTO models")
 def sql_session_factory() -> Iterator[sessionmaker[Session]]:
     engine = create_engine("sqlite://")
     try:
@@ -74,16 +75,11 @@ def sql_session_factory() -> Iterator[sessionmaker[Session]]:
 
 @given("a SQL session containing ten heroes")
 async def sql_session() -> AsyncIterator[AsyncSession]:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    try:
-        async with engine.begin() as connection:
-            await connection.run_sync(Hero.__table__.create)
-        async with AsyncSession(engine, expire_on_commit=False) as session:
+    async with TestSQLite(Hero) as database:
+        async with database.session() as session:
             session.add_all(Hero(id=i, name=f"h{i}", age=i) for i in range(10))
             await session.flush()
             yield session
-    finally:
-        await engine.dispose()
 
 
 @given("a signpost sharing the prepared SQL session")
@@ -97,12 +93,12 @@ def sql_signpost(
     return SQLSignpost(shared_session)
 
 
-@pytest.fixture
+@given("SQL abilities using the shared session signpost")
 def sql_ability(sql_signpost: SQLSignpost) -> SQLAbilitable[Hero]:
     return SQLAbilitable(sql_signpost)
 
 
-@pytest.fixture
+@given("a query selecting heroes")
 def query() -> SQLQuery[Hero]:
     return SQLQuery(entity=Hero)
 
@@ -123,7 +119,7 @@ def selected_query(request: pytest.FixtureRequest) -> SQLQuery[Hero]:
     return query.order_by(Hero.id).offset(1).limit(2)
 
 
-@pytest.fixture
+@given("an SQL entity stream using the selected query")
 def entity_stream(
     sql_ability: SQLAbilitable[Hero], query: SQLQuery[Hero]
 ) -> SQLEntityStream[Hero]:

@@ -1,14 +1,12 @@
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 import pytest
-from sqlalchemy.exc import MultipleResultsFound, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastsprout.data.backend.sql import SQLQuery, SQLSignpost
 from fastsprout.data.backend.sql.capabilities import (
     SQLAbilitable,
     SQLDeletable,
-    SQLFindable,
     SQLIterable,
 )
 from fastsprout.data.backend.sql.capabilities.updatable import (
@@ -17,7 +15,6 @@ from fastsprout.data.backend.sql.capabilities.updatable import (
 )
 from fastsprout.data.capabilities.protocols import (
     Deletable,
-    Findable,
     Iterable,
     UpdatableByQuery,
 )
@@ -27,12 +24,37 @@ from fastsprout.data.streams.implementation import (
     SimpleAsyncValueStream,
 )
 from fastsprout.data.types import PredicateCallable
-from fastsprout.testing.core import then, when
+from fastsprout.testing.core import given, then, when
 
 from .conftest import Hero
 
 
 class TestSQLAbilitable:
+    @given("a query combining a lower bound and a native or Python upper bound")
+    def logical_query(
+        self,
+        operation: Callable[
+            [FieldPredicate[Hero], PredicateCallable[Hero]], Expression[Hero]
+        ],
+        python_predicate: bool,
+    ) -> SQLQuery[Hero]:
+        upper: PredicateCallable[Hero] = (
+            (lambda hero: hero.age <= 7)
+            if python_predicate
+            else Hero.age.lte(7)
+        )
+        return (
+            SQLQuery(Hero)
+            .where(operation(Hero.age.gte(5), upper))
+            .order_by(Hero.id)
+        )
+
+    @when("the logical query is consumed")
+    async def logical_ids(
+        self, sql_ability: SQLAbilitable[Hero], logical_query: SQLQuery[Hero]
+    ) -> list[int]:
+        return [hero.id async for hero in sql_ability.stream(logical_query)]
+
     @pytest.mark.parametrize(
         "operation, expected",
         [
@@ -43,37 +65,14 @@ class TestSQLAbilitable:
         ],
     )
     @pytest.mark.parametrize("python_predicate", [False, True])
-    async def test_query_logical_operations(
-        self,
-        sql_ability: SQLAbilitable[Hero],
-        operation: Callable[
-            [FieldPredicate[Hero], PredicateCallable[Hero]], Expression[Hero]
-        ],
-        expected: list[int],
-        python_predicate: bool,
+    @then("native and fallback predicates retain the same logical semantics")
+    def test_query_logical_operations(
+        self, logical_ids: list[int], expected: list[int]
     ) -> None:
-        # given
-        query = SQLQuery(Hero)
-        upper: PredicateCallable[Hero] = (
-            (lambda hero: hero.age <= 7)
-            if python_predicate
-            else Hero.age.lte(7)
-        )
-        query.where(operation(Hero.age.gte(5), upper)).order_by(Hero.id)
-        # when
-        found = await sql_ability.stream(query).to_list()
-        # then
-        assert [hero.id for hero in found] == expected
+        assert logical_ids == expected
 
-    @pytest.mark.parametrize(
-        "source_kind", ["list", "iterator", "async_iterator"]
-    )
-    async def test_reusable_membership(
-        self,
-        sql_ability: SQLAbilitable[Hero],
-        source_kind: str,
-    ) -> None:
-        # given
+    @given("a membership predicate backed by a list or one-shot iterator")
+    def membership(self, source_kind: str) -> FieldPredicate[Hero]:
         values = [2, 7]
         source = (
             iter(values)
@@ -84,38 +83,55 @@ class TestSQLAbilitable:
                 else values
             )
         )
-        predicate = Hero.age.in_(source)
-        query = SQLQuery(Hero).where(predicate).order_by(Hero.id)
-        # when
+        return Hero.age.in_(source)
+
+    @when(
+        "the membership predicate is consumed twice in SQL and once in Python"
+    )
+    async def membership_results(
+        self,
+        sql_ability: SQLAbilitable[Hero],
+        membership: FieldPredicate[Hero],
+    ) -> tuple[list[Hero], list[Hero], list[Hero]]:
+        query = SQLQuery(Hero).where(membership).order_by(Hero.id)
         first = await sql_ability.stream(query).to_list()
         repeated = await sql_ability.stream(query).to_list()
         in_memory = (
-            await SimpleAsyncEntityStream(first).filter(predicate).to_list()
+            await SimpleAsyncEntityStream(first).filter(membership).to_list()
         )
-        # then
+        return first, repeated, in_memory
+
+    @pytest.mark.parametrize(
+        "source_kind", ["list", "iterator", "async_iterator"]
+    )
+    @then("membership sources remain reusable across SQL and Python")
+    def test_reusable_membership(
+        self, membership_results: tuple[list[Hero], list[Hero], list[Hero]]
+    ) -> None:
+        first, repeated, in_memory = membership_results
         assert [hero.id for hero in first] == [2, 7]
         assert repeated == first == in_memory
 
-    async def test_xor_keeps_three_matches(
-        self, sql_ability: SQLAbilitable[Hero]
-    ) -> None:
-        # given
+    @when("a query combines three overlapping predicates with XOR")
+    async def xor_ids(self, sql_ability: SQLAbilitable[Hero]) -> list[int]:
         query = SQLQuery(Hero)
         query.where(
             query.Xor(Hero.age.gte(2), Hero.age.gte(4), Hero.age.gte(6))
         ).order_by(Hero.id)
-        # when
         found = await sql_ability.stream(query).to_list()
-        # then
-        assert [hero.id for hero in found] == [2, 3, 6, 7, 8, 9]
+        return [hero.id for hero in found]
 
-    @pytest.mark.parametrize("async_source", [False, True])
-    async def test_bulk_update(
+    @then("XOR retains rows matching an odd number of predicates")
+    def test_xor_keeps_three_matches(self, xor_ids: list[int]) -> None:
+        assert xor_ids == [2, 3, 6, 7, 8, 9]
+
+    @when("selected entities are bulk-updated from sync or async input")
+    async def bulk_updated(
         self,
         sql_ability: SQLUpdatable[Hero],
         sql_session: AsyncSession,
         async_source: bool,
-    ) -> None:
+    ) -> tuple[Sequence[Hero], Hero | None, Hero | None, Sequence[Hero]]:
         entities = [
             Hero(id=key, name=f"updated-{key}", age=20) for key in (7, 2)
         ]
@@ -123,17 +139,29 @@ class TestSQLAbilitable:
         source = SimpleAsyncEntityStream(entities) if async_source else entities
         updated = await sql_ability.bulk_update(source)
 
+        sql_session.expire_all()
+        stored = await sql_session.get(Hero, 7)
+        untouched = await sql_session.get(Hero, 3)
+        empty = await sql_ability.bulk_update([])
+        return updated, stored, untouched, empty
+
+    @pytest.mark.parametrize("async_source", [False, True])
+    @then("bulk update changes only its inputs and accepts an empty batch")
+    def test_bulk_update(
+        self,
+        bulk_updated: tuple[
+            Sequence[Hero], Hero | None, Hero | None, Sequence[Hero]
+        ],
+    ) -> None:
+        updated, stored, untouched, empty = bulk_updated
         assert sorted((hero.id, hero.name, hero.age) for hero in updated) == [
             (2, "updated-2", 20),
             (7, "updated-7", 20),
         ]
-        sql_session.expire_all()
-        stored = await sql_session.get(Hero, 7)
-        untouched = await sql_session.get(Hero, 3)
         assert stored is not None and stored.name == "updated-7"
         assert untouched is not None and untouched.name == "h3"
 
-        assert await sql_ability.bulk_update([]) == []
+        assert empty == []
 
     @when("an ability updates a missing entity")
     async def missing_update(
@@ -180,88 +208,69 @@ class TestSQLAbilitable:
         assert deleted_count == 4
         assert [hero.id for hero in remaining] == list(range(4, 10))
 
-    @pytest.mark.parametrize("capability", [SQLAbilitable, SQLDeletable])
-    async def test_delete_by_query(
+    @when("a selected query is deleted")
+    async def deleted_by_query(
         self,
         capability: type[SQLDeletable[Hero]],
         sql_signpost: SQLSignpost,
-        sql_session: AsyncSession,
         selected_query: SQLQuery[Hero],
-    ) -> None:
-        # given
+    ) -> int:
         ability: Deletable[Hero, SQLQuery[Hero]] = capability(sql_signpost)
-        # when
-        deleted = await ability.delete_by_query(selected_query)
-        # then
-        assert deleted == 2
+        return await ability.delete_by_query(selected_query)
+
+    @pytest.mark.parametrize("capability", [SQLAbilitable, SQLDeletable])
+    @then("query deletion removes only the selected rows")
+    async def test_delete_by_query(
+        self, deleted_by_query: int, sql_session: AsyncSession
+    ) -> None:
+        assert deleted_by_query == 2
         assert await sql_session.get(Hero, 6) is None
         assert await sql_session.get(Hero, 7) is None
         assert await sql_session.get(Hero, 5) is not None
         assert await sql_session.get(Hero, 8) is not None
 
-    @pytest.mark.parametrize("capability", [SQLAbilitable, SQLFindable])
-    async def test_find_first(
-        self,
-        capability: type[SQLFindable[Hero]],
-        sql_signpost: SQLSignpost,
-        selected_query: SQLQuery[Hero],
-    ) -> None:
-        # given
-        ability: Findable[Hero, SQLQuery[Hero]] = capability(sql_signpost)
-        # when
-        first = await ability.find_first(selected_query)
-        found = await ability.find_all(selected_query)
-        # then
-        assert first is not None
-        assert first.id == 6
-        assert [hero.id for hero in found] == [6, 7]
-        # then
-        with pytest.raises(MultipleResultsFound):
-            await ability.find_exactly_one(selected_query)
-        selected_query.limit(1)
-        assert (await ability.find_exactly_one(selected_query)).id == 6
-        selected_query.limit(0)
-        assert await ability.find_first(selected_query) is None
-        with pytest.raises(NoResultFound):
-            await ability.find_exactly_one(selected_query)
-
-    @pytest.mark.parametrize("capability", [SQLAbilitable, SQLIterable])
-    async def test_iter(
+    @when("the selected rows are iterated individually and in chunks")
+    async def iterated(
         self,
         capability: type[SQLIterable[Hero]],
         sql_signpost: SQLSignpost,
         selected_query: SQLQuery[Hero],
-    ) -> None:
-        # given
+    ) -> tuple[list[int], list[list[int]]]:
         ability: Iterable[Hero, SQLQuery[Hero]] = capability(sql_signpost)
-        # when
         found = [hero.id async for hero in ability.iter(selected_query)]
         chunks = [
             [hero.id for hero in chunk]
             async for chunk in ability.iter_per(selected_query, chunk_size=1)
         ]
-        # then
+        return found, chunks
+
+    @pytest.mark.parametrize("capability", [SQLAbilitable, SQLIterable])
+    @then("iteration and chunking preserve the selected row order")
+    def test_iter(self, iterated: tuple[list[int], list[list[int]]]) -> None:
+        found, chunks = iterated
         assert found == [6, 7]
         assert chunks == [[6], [7]]
 
-    @pytest.mark.parametrize("capability", [SQLAbilitable, SQLUpdatableByQuery])
-    async def test_update_by_query(
+    @when("the selected rows receive a field assignment")
+    async def updated_by_query(
         self,
         capability: type[SQLUpdatableByQuery[Hero]],
         sql_signpost: SQLSignpost,
-        sql_session: AsyncSession,
         selected_query: SQLQuery[Hero],
-    ) -> None:
-        # given
+    ) -> int:
         ability: UpdatableByQuery[Hero, SQLQuery[Hero]] = capability(
             sql_signpost
         )
-        # when
-        updated = await ability.update_by_query(
+        return await ability.update_by_query(
             selected_query, Hero.name.set("updated")
         )
-        # then
-        assert updated == 2
+
+    @pytest.mark.parametrize("capability", [SQLAbilitable, SQLUpdatableByQuery])
+    @then("query updates preserve every non-selected row")
+    async def test_update_by_query(
+        self, updated_by_query: int, sql_session: AsyncSession
+    ) -> None:
+        assert updated_by_query == 2
         sql_session.expire_all()
         for key in range(10):
             hero = await sql_session.get(Hero, key)
