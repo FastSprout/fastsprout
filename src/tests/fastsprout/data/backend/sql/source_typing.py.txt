@@ -8,7 +8,6 @@ from fastsprout.core.fields.field_predicate import FieldPredicate
 from fastsprout.data import DataR
 from fastsprout.data.backend.sql import SQLEntity, SQLJoinedQuery, SQLQuery, SQLSignpost
 from fastsprout.data.backend.sql.capabilities import SQLAbilitable
-from fastsprout.data.backend.sql.entity import SQLSource
 from fastsprout.data.streams.protocols import AsyncEntityStream, AsyncJoinedStream
 
 
@@ -65,7 +64,7 @@ assert_type(crm_entity(DynamicSource), type[DynamicSource])
 assert_type(crm_entity(HeroRead), type[HeroRead])
 assert_type(crm_query(SQLQuery(Hero)), SQLQuery[Hero])
 assert_type(crm_query(SQLQuery(Team)), SQLQuery[Team])
-assert_type(SQLQuery(DynamicSource), SQLQuery[DynamicSource])
+assert_type(SQLQuery(DynamicSource), SQLQuery[DynamicSource, Any])
 assert_type(Hero.name.eq("Batman"), FieldPredicate[Hero])
 crm_entity(Other)  # error: reportArgumentType; mypy: type-var
 crm_query(SQLQuery(Other))  # error: reportArgumentType; mypy: type-var
@@ -82,14 +81,17 @@ async def joined_sources(datar: DataR) -> None:
     comparison = Hero.id == Team.id
     assert_type(crm_entity(comparison.left.entity_cls), type[Hero])
     assert_type(crm_entity(comparison.right.entity_cls), type[Team])
-    query = SQLQuery(Hero).join(Team, comparison)
-    assert_type(query, SQLJoinedQuery[SQLSource, FieldPredicate[Team], Hero, Team])
+    root = SQLQuery(Hero)
+    assert_type(root, SQLQuery[Hero, CRM])
+    assert_type(root.copy().where(Hero.name.eq("Batman")), SQLQuery[Hero, CRM])
+    query = root.join(Team, comparison)
+    assert_type(query, SQLJoinedQuery[CRM, FieldPredicate[Team], Hero, Team])
     assert_type(crm_entity(query.entity), type[Hero])
     nested = query.copy().join(Country, Team.id == Country.id)
-    assert_type(nested, SQLJoinedQuery[SQLSource, FieldPredicate[Team] | FieldPredicate[Country], Hero, Team, Country])
+    assert_type(nested, SQLJoinedQuery[CRM, FieldPredicate[Team] | FieldPredicate[Country], Hero, Team, Country])
     assert_type(
         nested.where(nested.Or(Hero.name.eq("Batman"))),
-        SQLJoinedQuery[SQLSource, FieldPredicate[Team] | FieldPredicate[Country], Hero, Team, Country],
+        SQLJoinedQuery[CRM, FieldPredicate[Team] | FieldPredicate[Country], Hero, Team, Country],
     )
     assert_type(datar.stream(nested), AsyncJoinedStream[Hero, Team, Country])
     async for hero, team, country in datar.stream(nested):
@@ -100,6 +102,14 @@ async def joined_sources(datar: DataR) -> None:
         crm_entity(type(team))
         crm_entity(type(country))
     nested.where(nested.Or(Hero.name.eq("Batman"), Other.name.eq("Robin")))  # error: reportArgumentType; mypy: arg-type
+    root.join(Other, Hero.id == Other.id)  # error: reportArgumentType; mypy: arg-type
+    query.copy().join(Other, Team.id == Other.id)  # error: reportArgumentType; mypy: arg-type
+    nested.join(Other, Country.id == Other.id)  # error: reportArgumentType; mypy: arg-type
+
+
+def dto_source() -> None:
+    assert_type(SQLQuery(HeroRead), SQLQuery[HeroRead, CRM])
+    SQLQuery(int)  # error: reportArgumentType; mypy: arg-type
 
 
 def scoped_joins(source: CRM) -> None:

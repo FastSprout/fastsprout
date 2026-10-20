@@ -4,6 +4,7 @@ from typing import (
     Any,
     ClassVar,
     Generic,
+    Protocol,
     Self,
     dataclass_transform,
     get_args,
@@ -39,6 +40,7 @@ from fastsprout.data.entity import Entitieable, Signpostable
 __all__ = [
     "SQL_ENTITY_REGISTRY",
     "SQLEntity",
+    "SQLEntityClass",
     "SQLSignpost",
     "SQLSource",
     "TypedSQLMeta",
@@ -225,9 +227,24 @@ class SQLEntity(
 
     id: ReadField[IDT]
 
+    @classmethod
+    def __sql_entity__(cls) -> type[Self]:
+        return cls
+
+    @classmethod
+    def __sql_source__(cls) -> type[SourceT]:
+        """Expose the source type for inference without constructing a source."""
+        raise TypeError("SQL source type anchors are not runtime factories")
+
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
         validate_source(cls)
+
+
+class SQLEntityClass[E, S: SQLSource](Protocol):
+    def __sql_entity__(self) -> type[E]: ...
+
+    def __sql_source__(self) -> type[S]: ...
 
 
 def validate_source(

@@ -1,13 +1,14 @@
 from collections.abc import Hashable
 from contextlib import AbstractAsyncContextManager
-from typing import Any, Generic, Never, Self
+from typing import Annotated, Any, Generic, Never, Self
 
+from annotated_types import Ge
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.selectable import Select
 from typing_extensions import TypeVar
 
-from fastsprout.core import UndefinedType, dataclass
+from fastsprout.core import Undefined, UndefinedType, dataclass
 from fastsprout.core.fields.field_ref import FieldComparison
 from fastsprout.data.capabilities.query import (
     And,
@@ -21,7 +22,7 @@ from fastsprout.data.streams.implementation import JoinedStream
 from fastsprout.data.types import PredicateCallable
 
 from .data_backend import SQLDataBackend
-from .entity import SQLEntity, SQLSource, validate_source
+from .entity import SQLEntity, SQLEntityClass, SQLSource, validate_source
 from .predicates import compile_predicate, native_conditions, row_filter
 
 __all__ = ["SQLJoinedQuery", "SQLQuery", "compile_predicate"]
@@ -32,9 +33,29 @@ SourceT = TypeVar("SourceT", bound=SQLSource, default=SQLSource)
 
 @dataclass
 class SQLQuery(BaseQuery[E, Select[tuple[E]]], Generic[E, SourceT]):
-    """Use source= to check join target types and pin the signpost instance."""
+    """Infer the entity's source; source= additionally pins its instance."""
 
     source: SourceT | None = None
+
+    def __init__(
+        self,
+        entity: SQLEntityClass[E, SourceT],
+        statement: Select[tuple[E]] | None = None,
+        limit_value: int | UndefinedType | None = Undefined,
+        offset_value: Annotated[int, Ge(0)] = 0,
+        conditions: tuple[Expression[E], ...] = (),
+        orderings: tuple[tuple[str, bool], ...] = (),
+        source: SourceT | None = None,
+    ) -> None:
+        super().__init__(
+            entity.__sql_entity__(),
+            statement,
+            limit_value,
+            offset_value,
+            conditions,
+            orderings,
+        )
+        self.source = source
 
     @property
     def native_conditions(self) -> bool:

@@ -10,7 +10,7 @@ through Python key functions. Both stages use one DataR context and start
 reading only when iterated. The stream join indexes its right-hand source
 in memory, then streams the left-hand rows.
 
-source=sales_source also binds the SQL query's source type for the IDE.
+SQLQuery infers the source type; source=sales_source pins its runtime instance.
 It rejects Country in this SQL join because Country belongs to Geography;
 joining its stream after the SQL stage remains allowed.
 The typed bind calls also reject assigning a Geography entity to Sales.
@@ -26,7 +26,7 @@ through Python key functions. Both stages use one DataR context and start
 reading only when iterated. The stream join indexes its right-hand source
 in memory, then streams the left-hand rows.
 
-source=sales_source also binds the SQL query's source type for the IDE.
+SQLQuery infers the source type; source=sales_source pins its runtime instance.
 It rejects Country in this SQL join because Country belongs to Geography;
 joining its stream after the SQL stage remains allowed.
 The typed bind calls also reject assigning a Geography entity to Sales.

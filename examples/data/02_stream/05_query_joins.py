@@ -6,7 +6,8 @@ DataR.stream opens the cursor when iteration starts. Use DataR.join for
 entities from different sources.
 
 The source type is declared once per entity. bind validates that declaration
-before assigning the signpost; source=backend lets the IDE check join targets.
+before assigning the signpost. SQLQuery infers its source type from the entity,
+so the IDE checks join targets without an explicit source argument.
 Logical groups can combine fields from any entity already in the join.
 
 Python predicates and iterator membership conditions run lazily on the
@@ -75,7 +76,7 @@ async def main() -> None:
             await session.commit()
 
         query = (
-            SQLQuery(Order, source=backend)
+            SQLQuery(Order)
             .join(Customer, Order.customer_id == Customer.id)
             .join(Country, Customer.country_id == Country.id)
             .order_by(Order.id)
