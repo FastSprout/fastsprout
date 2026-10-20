@@ -1,9 +1,9 @@
-# Database test contexts
+# Database and broker test contexts
 
-Install the database contexts:
+Install the contexts you need:
 
 ```bash
-pip install 'fastsprout[testing-data]'
+pip install 'fastsprout[testing-data,testing-events]'
 ```
 
 `testing.core` provides typed pytest phases. `testing.data.TestSQLite(*entities)`
@@ -101,3 +101,13 @@ native settings. Its public default image is `nats:2-alpine`.
 The default Core NATS server provides live delivery without durable replay.
 
 See the [NATS example](../learn/examples/testing/3-events/4-nats.md).
+
+## Kafka
+
+`TestKafka()` starts a disposable Kafka container and yields a `KafkaBroker`.
+Pass a configured `KafkaContainer`, native broker factory, or adapter factory
+for native settings. Its public default image is
+`confluentinc/cp-kafka:7.6.0`. Partitions, consumer groups, offsets, and commits
+remain available through the native Kafka API.
+
+See the [Kafka example](../learn/examples/testing/3-events/5-kafka.md).

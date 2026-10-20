@@ -38,3 +38,7 @@
 ::: fastsprout.testing.events.nats.nats
     options:
       heading: TestNATS
+
+::: fastsprout.testing.events.kafka.kafka
+    options:
+      heading: TestKafka

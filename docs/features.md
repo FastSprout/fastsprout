@@ -18,15 +18,15 @@ allow typed data processing, including an in-memory joined stream. Install the
 
 ## Events
 
-`EventBus` delivers events through Bubus, asyncio.Queue, RabbitMQ, or NATS. The
+`EventBus` delivers events through Bubus, asyncio.Queue, RabbitMQ, NATS, or Kafka. The
 `pub` and `sub` decorators connect actions and handlers to a bus. Install
 `events` for local brokers, `events-rabbit` for RabbitMQ, or `events-nats`
-for NATS. See the [events guide](guide/events.md),
+for NATS, or `events-kafka` for Kafka. See the [events guide](guide/events.md),
 [events examples](learn/examples/index.md), and
 [events API](api/events.md).
 
 ## Testing
 
-Typed pytest phases share setup and assertions. SQLite contexts prepare
-isolated in-memory databases and restore entity bindings on exit. See the
+Typed pytest phases share setup and assertions. Database and broker contexts
+prepare isolated test resources and clean them up on exit. See the
 [testing guide](guide/testing.md) and [testing API](api/testing.md).

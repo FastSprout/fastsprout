@@ -6,8 +6,8 @@ Install the events extra:
 pip install 'fastsprout[events]'
 ```
 
-`EventBus` delivers events in memory. In this example, `pub` publishes the
-event returned by an action, and `sub` registers a handler for that event type.
+By default, `EventBus` delivers events in memory. In this example, `pub`
+publishes the event returned by an action, and `sub` registers its handler.
 Both decorators use the same bus instance.
 
 <!-- example-source: docs_src/events/pub_sub.py -->
@@ -99,3 +99,14 @@ The default uses Core NATS: messages are not persisted or replayed, and
 publication does not receive a server persistence acknowledgement.
 It shares EventState's local subscriber results and event IDs with the other
 adapters. See the [NATS example](../learn/examples/testing/3-events/4-nats.md).
+
+## Kafka
+
+Install `fastsprout[events-kafka]` and pass a native
+`faststream.kafka.KafkaBroker` to the `KafkaBroker` adapter. Event types select
+topics; event UUIDs are used as message keys. `group_id=` configures the
+consumer group, and `subscription=` supports native consumer options.
+
+The adapter shares EventState's local results with the other brokers.
+Partition assignment, offsets, replay, and commits retain native Kafka
+semantics. See the [Kafka example](../learn/examples/testing/3-events/5-kafka.md).

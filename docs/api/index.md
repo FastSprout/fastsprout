@@ -7,4 +7,4 @@ Start with the package you use:
 - [Data](data.md) — DataR and streams.
 - [SQL](sql.md) — SQL entities, queries, and streams.
 - [Events](events.md) — events, buses, and handlers.
-- [Testing](testing.md) — typed pytest phases and SQLite test contexts.
+- [Testing](testing.md) — typed pytest phases and database/broker contexts.

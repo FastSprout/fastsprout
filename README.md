@@ -37,7 +37,7 @@ pip install "fastsprout[standard]"
 
 - **Core:** typed schemas, fields, actions, and DTO visibility.
 - **Data:** routing entities to persistence backends, streams, and joins.
-- **Events:** EventBus with Bubus, asyncio.Queue, RabbitMQ, and NATS adapters.
+- **Events:** EventBus with Bubus, asyncio.Queue, RabbitMQ, NATS, and Kafka adapters.
 - **Testing:** typed pytest phases and database/broker test contexts.
 
 The [features guide](https://github.com/FastSprout/fastsprout/blob/development/docs/features.md) describes each

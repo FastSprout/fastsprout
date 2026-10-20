@@ -35,3 +35,4 @@ uv run --extra testing-data --extra testing-events pytest -p fastsprout.testing.
 | [03_events/02_in_memory.py](03_events/02_in_memory.py) | Test multiple subscribers with the local Bubus-backed broker. |
 | [03_events/03_async_queue.py](03_events/03_async_queue.py) | Test local event delivery through an asyncio queue. |
 | [03_events/04_nats.py](03_events/04_nats.py) | Deliver an EventBus event through a disposable NATS broker. |
+| [03_events/05_kafka.py](03_events/05_kafka.py) | Run EventBus subscribers against a disposable Kafka broker. |

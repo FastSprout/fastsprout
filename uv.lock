@@ -769,6 +769,11 @@ events = [
     { name = "bubus" },
     { name = "croniter" },
 ]
+events-kafka = [
+    { name = "bubus" },
+    { name = "croniter" },
+    { name = "faststream", extra = ["kafka"] },
+]
 events-nats = [
     { name = "bubus" },
     { name = "croniter" },
@@ -806,7 +811,7 @@ testing-data = [
 testing-events = [
     { name = "bubus" },
     { name = "croniter" },
-    { name = "faststream", extra = ["nats", "rabbit"] },
+    { name = "faststream", extra = ["kafka", "nats", "rabbit"] },
     { name = "hypothesis" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -850,9 +855,11 @@ requires-dist = [
     { name = "croniter", marker = "extra == 'events'", specifier = ">=6.2.4" },
     { name = "fastsprout", extras = ["data-sql", "events"], marker = "extra == 'standard'" },
     { name = "fastsprout", extras = ["data-sql", "testing"], marker = "extra == 'testing-data'" },
+    { name = "fastsprout", extras = ["events"], marker = "extra == 'events-kafka'" },
     { name = "fastsprout", extras = ["events"], marker = "extra == 'events-nats'" },
     { name = "fastsprout", extras = ["events"], marker = "extra == 'events-rabbit'" },
-    { name = "fastsprout", extras = ["events-nats", "events-rabbit", "testing"], marker = "extra == 'testing-events'" },
+    { name = "fastsprout", extras = ["events-kafka", "events-nats", "events-rabbit", "testing"], marker = "extra == 'testing-events'" },
+    { name = "faststream", extras = ["kafka"], marker = "extra == 'events-kafka'", specifier = ">=0.7.5,<0.8" },
     { name = "faststream", extras = ["nats"], marker = "extra == 'events-nats'", specifier = ">=0.7.5,<0.8" },
     { name = "faststream", extras = ["rabbit"], marker = "extra == 'events-rabbit'", specifier = ">=0.7.5,<0.8" },
     { name = "hypothesis", marker = "extra == 'testing'", specifier = ">=6.0" },
@@ -861,12 +868,12 @@ requires-dist = [
     { name = "pytest-asyncio", marker = "extra == 'testing'", specifier = ">=1.4.0" },
     { name = "sqlalchemy", marker = "extra == 'data-sql'" },
     { name = "sqlmodel", marker = "extra == 'data-sql'", specifier = "==0.0.42" },
+    { name = "testcontainers", extras = ["kafka", "nats", "rabbitmq"], marker = "extra == 'testing-events'", specifier = ">=4.15,<5" },
     { name = "testcontainers", extras = ["mysql", "oracle", "postgres"], marker = "extra == 'testing-data'", specifier = ">=4.15,<5" },
-    { name = "testcontainers", extras = ["nats", "rabbitmq"], marker = "extra == 'testing-events'", specifier = ">=4.15,<5" },
     { name = "typeguard", marker = "extra == 'testing'", specifier = ">=4.4,<5" },
     { name = "typing-extensions", specifier = ">=4.14" },
 ]
-provides-extras = ["data-sql", "events", "testing", "standard", "testing-data", "events-rabbit", "testing-events", "events-nats"]
+provides-extras = ["data-sql", "events", "testing", "standard", "testing-data", "events-rabbit", "testing-events", "events-nats", "events-kafka"]
 
 [package.metadata.requires-dev]
 dev = [
