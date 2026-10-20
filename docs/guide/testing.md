@@ -92,3 +92,12 @@ The `@when` step publishes the event and waits for its subscribers.
 
 - [In-memory subscriber results](../learn/examples/testing/3-events/2-in-memory.md)
 - [Async queue delivery](../learn/examples/testing/3-events/3-async-queue.md)
+
+## NATS
+
+`TestNATS()` starts a disposable NATS container and yields a `NATSBroker`.
+Pass a configured `NatsContainer`, native broker factory, or adapter factory for
+native settings. Its public default image is `nats:2-alpine`.
+The default Core NATS server provides live delivery without durable replay.
+
+See the [NATS example](../learn/examples/testing/3-events/4-nats.md).

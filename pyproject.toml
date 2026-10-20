@@ -48,8 +48,13 @@ events-rabbit = [
     "faststream[rabbit]>=0.7.5,<0.8",
 ]
 testing-events = [
-    "fastsprout[events-rabbit,testing]",
-    "testcontainers[rabbitmq]>=4.15,<5",
+    "fastsprout[events-nats,events-rabbit,testing]",
+    "testcontainers[nats,rabbitmq]>=4.15,<5",
+]
+
+events-nats = [
+    "fastsprout[events]",
+    "faststream[nats]>=0.7.5,<0.8",
 ]
 
 [dependency-groups]

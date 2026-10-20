@@ -86,8 +86,8 @@ uv run --extra events python {example}
 """,
     "testing": """Pytest fixtures and tests declare typed BDD phases. Share cases
 through fixtures and base classes; property tests use Hypothesis. Database
-contexts prepare isolated tables and restore entity bindings. Run PostgreSQL,
-MySQL, MariaDB, Oracle, and RabbitMQ examples with Docker using pytest -m integration.
+contexts prepare isolated tables and restore entity bindings. Run container
+examples with Docker using pytest -m integration.
 Run from the repository root:
 
 ```bash

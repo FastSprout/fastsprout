@@ -1,8 +1,9 @@
 from typing import assert_type
+from fastsprout.events.backend.nats import NATSBroker
 from fastsprout.events.backend.async_queue import AsyncQueueBroker
 from fastsprout.events.backend.protocols import Brokerable
 from fastsprout.events.backend.rabbitmq import RabbitMQBroker
-from fastsprout.testing.events import TestRabbitMQ
+from fastsprout.testing.events import TestNATS, TestRabbitMQ
 
 async def broker() -> None:
     async with TestRabbitMQ() as adapter:
@@ -10,3 +11,8 @@ async def broker() -> None:
         contract: Brokerable = adapter
 
 queue_contract: Brokerable = AsyncQueueBroker()
+
+async def nats() -> None:
+    async with TestNATS() as adapter:
+        assert_type(adapter, NATSBroker)
+        contract: Brokerable = adapter

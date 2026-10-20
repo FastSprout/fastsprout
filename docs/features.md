@@ -18,9 +18,10 @@ allow typed data processing, including an in-memory joined stream. Install the
 
 ## Events
 
-`EventBus` publishes events in memory and delivers them to subscribers. The
-`pub` and `sub` decorators connect actions and handlers to a bus. Install the
-`events` extra and see the [events guide](guide/events.md),
+`EventBus` delivers events through Bubus, asyncio.Queue, RabbitMQ, or NATS. The
+`pub` and `sub` decorators connect actions and handlers to a bus. Install
+`events` for local brokers, `events-rabbit` for RabbitMQ, or `events-nats`
+for NATS. See the [events guide](guide/events.md),
 [events examples](learn/examples/index.md), and
 [events API](api/events.md).
 

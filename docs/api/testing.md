@@ -34,3 +34,7 @@
 ::: fastsprout.testing.events.rabbitmq.rabbitmq
     options:
       heading: TestRabbitMQ
+
+::: fastsprout.testing.events.nats.nats
+    options:
+      heading: TestNATS

@@ -20,6 +20,7 @@ TITLE_WORDS = {
     "mysql": "MySQL",
     "mariadb": "MariaDB",
     "rabbitmq": "RabbitMQ",
+    "nats": "NATS",
 }
 
 type Navigation = list[dict[str, str | Navigation]]

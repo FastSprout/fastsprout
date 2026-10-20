@@ -88,3 +88,14 @@ unfinished work and stops the queue consumer.
 
 - [In-memory example](../learn/examples/events/4-brokers/1-in-memory.md)
 - [Async queue example](../learn/examples/events/4-brokers/2-async-queue.md)
+
+## NATS
+
+Install `fastsprout[events-nats]` and use `NATSBroker` with a native
+`faststream.nats.NatsBroker`. Routing and subscriptions can be configured with
+`route=` and `subscription=`, as with the other transport adapters.
+
+The default uses Core NATS: messages are not persisted or replayed, and
+publication does not receive a server persistence acknowledgement.
+It shares EventState's local subscriber results and event IDs with the other
+adapters. See the [NATS example](../learn/examples/testing/3-events/4-nats.md).
