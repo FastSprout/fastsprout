@@ -85,11 +85,12 @@ uv run --extra events python {example}
 ```
 """,
     "testing": """Pytest fixtures and tests declare typed BDD phases. Share cases
-through fixtures and base classes; property tests use Hypothesis.
+through fixtures and base classes; property tests use Hypothesis. SQLite
+contexts prepare isolated tables and restore entity bindings after each test.
 Run from the repository root:
 
 ```bash
-uv run --extra testing pytest -p fastsprout.testing.core.plugin -o addopts= {example}
+uv run --extra testing-data pytest -p fastsprout.testing.core.plugin -o addopts= {example}
 ```
 """,
 }

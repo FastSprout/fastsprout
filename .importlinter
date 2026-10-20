@@ -14,6 +14,7 @@ containers =
     fastsprout
     tests.fastsprout
 layers =
+    testing
     actions
     data
     events
@@ -28,6 +29,17 @@ forbidden_modules =
     fastsprout.actions
     fastsprout.data
     fastsprout.events
+
+
+[importlinter:contract:FastSprout-testing-layers-architecture]
+name = FastSprout Testing Layers Architecture
+type = layers
+containers =
+    fastsprout.testing
+layers =
+    data
+    container
+    core
 
 
 ; === FastSprout-actions-level layers ===

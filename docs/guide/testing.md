@@ -1,0 +1,26 @@
+# Database test contexts
+
+Install the SQLite context:
+
+```bash
+pip install 'fastsprout[testing-data]'
+```
+
+`testing.core` provides typed pytest phases. `testing.data.TestSQLite(*entities)`
+creates an isolated in-memory database and exposes a typed `TestSQLDatabase`
+with `engine`, `session`, and `signpost`.
+
+The context creates the selected tables, binds the entities, and removes the
+tables on exit. Previous entity bindings are restored, including inherited
+bindings. Isolation does not depend on rolling back application transactions:
+a test can commit through DataR and read the result in another transaction.
+Use dedicated test databases; existing selected tables are rejected.
+
+Pass `signpost=CRM` for an entity family declared with that source type.
+The resulting `database.signpost` retains the concrete CRM type.
+
+TestSQLite accepts a caller-owned `engine` and a `sessions` factory.
+Caller-owned engines remain open after exit; selected tables are still
+removed. Default session factories use `expire_on_commit=False`.
+
+See the [SQLite example](../learn/examples/testing/2-data/1-sqlite.md).

@@ -35,6 +35,11 @@ data-sql = ["sqlmodel==0.0.42", 'sqlalchemy']
 events = ["bubus>=1.5.6", "croniter>=6.2.4"]
 testing = ["hypothesis>=6.0", "pytest>=9.0.3", "pytest-asyncio>=1.4.0", "typeguard>=4.4,<5"]
 standard = ["fastsprout[data-sql,events]"]
+testing-data = [
+    "aiosqlite>=0.22.1",
+    "fastsprout[data-sql,testing]",
+    "testcontainers>=4.15,<5",
+]
 
 
 [dependency-groups]

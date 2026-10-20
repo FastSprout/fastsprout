@@ -97,12 +97,14 @@ nav:
   - Reference:
       - Overview: reference.md
       - Dependencies: guide/dependencies.md
+      - Testing: guide/testing.md
   - API Reference:
       - Overview: api/index.md
       - Core: api/core.md
       - Data: api/data.md
       - SQL: api/sql.md
       - Events: api/events.md
+      - Testing: api/testing.md
   - About: about.md
   - Security: security.md
   - Release Notes: release-notes.md

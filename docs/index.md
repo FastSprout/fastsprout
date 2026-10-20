@@ -41,6 +41,7 @@ pip install "fastsprout[standard]"
 - **Core:** typed schemas, fields, actions, and DTO visibility.
 - **Data:** routing entities to persistence backends, streams, and joins.
 - **Events:** in-memory publishing and subscription through `EventBus`.
+- **Testing:** typed pytest phases and isolated SQLite test contexts.
 
 The [features guide](https://github.com/FastSprout/fastsprout/blob/development/docs/features.md) describes each
 layer. The [API reference](https://github.com/FastSprout/fastsprout/tree/development/src/fastsprout) is generated from

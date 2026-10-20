@@ -1,0 +1,13 @@
+from typing import assert_type
+from fastsprout.data.backend.sql import SQLSignpost
+from fastsprout.testing.data import TestSQLite, TestSQLDatabase
+
+class CRM(SQLSignpost): ...
+
+assert_type(TestSQLite(), TestSQLDatabase[SQLSignpost])
+assert_type(TestSQLite(signpost=CRM), TestSQLDatabase[CRM])
+
+async def context() -> None:
+    async with TestSQLite(signpost=CRM) as database:
+        assert_type(database, TestSQLDatabase[CRM])
+        assert_type(database.signpost, CRM)

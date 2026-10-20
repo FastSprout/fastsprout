@@ -15,6 +15,7 @@ TITLE_WORDS = {
     "orm": "ORM",
     "pyd": "Pydantic",
     "sql": "SQL",
+    "sqlite": "SQLite",
 }
 
 type Navigation = list[dict[str, str | Navigation]]

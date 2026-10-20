@@ -23,3 +23,9 @@ allow typed data processing, including an in-memory joined stream. Install the
 `events` extra and see the [events guide](guide/events.md),
 [events examples](learn/examples/index.md), and
 [events API](api/events.md).
+
+## Testing
+
+Typed pytest phases share setup and assertions. SQLite contexts prepare
+isolated in-memory databases and restore entity bindings on exit. See the
+[testing guide](guide/testing.md) and [testing API](api/testing.md).
