@@ -40,7 +40,7 @@ testing-data = [
     "aiosqlite>=0.22.1",
     "asyncpg>=0.30",
     "fastsprout[data-sql,testing]",
-    "testcontainers[mysql,postgres]>=4.15,<5",
+    "testcontainers[mysql,oracle,postgres]>=4.15,<5",
 ]
 
 

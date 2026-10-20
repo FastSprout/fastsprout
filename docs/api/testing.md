@@ -24,3 +24,7 @@
 ::: fastsprout.testing.data.mariadb.mariadb
     options:
       heading: TestMariaDB
+
+::: fastsprout.testing.data.oracle.oracle
+    options:
+      heading: TestOracle

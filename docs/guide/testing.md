@@ -54,3 +54,17 @@ The default images are public `mysql:8.4` and `mariadb:11.4`; override `image=`
 to select another version or registry.
 
 See the [MySQL and MariaDB example](../learn/examples/testing/2-data/3-mysql.md).
+
+## Oracle
+
+`TestOracle(*entities)` runs Oracle Free with asynchronous `oracledb`
+connections. Pass a configured `OracleDbContainer` to select credentials and
+service, or engine/session factories for SQLAlchemy settings. The public
+default image is `gvenzl/oracle-free:23-slim-faststart`; override `image=`
+for another version or registry.
+
+Oracle string columns need an explicit length, for example
+`name: Field[str] = SQLField(max_length=100)`. The context preserves the model's
+column definitions.
+
+See the [Oracle example](../learn/examples/testing/2-data/4-oracle.md).

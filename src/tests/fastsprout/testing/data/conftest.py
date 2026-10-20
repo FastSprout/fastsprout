@@ -9,7 +9,7 @@ class CRM(SQLSignpost): ...
 
 class ContextRecord(SQLEntity[int]):
     id: ReadField[int] = SQLField(primary_key=True)
-    name: Field[str]
+    name: Field[str] = SQLField(max_length=100)
 
 
 class CRMRecord(SQLEntity[int, CRM]):

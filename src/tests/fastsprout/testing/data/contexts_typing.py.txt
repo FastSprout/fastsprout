@@ -1,6 +1,6 @@
 from typing import assert_type
 from fastsprout.data.backend.sql import SQLSignpost
-from fastsprout.testing.data import TestSQLite, TestPostgreSQL, TestSQLDatabase, TestMySQL, TestMariaDB
+from fastsprout.testing.data import TestSQLite, TestPostgreSQL, TestSQLDatabase, TestMySQL, TestMariaDB, TestOracle
 
 class CRM(SQLSignpost): ...
 
@@ -29,4 +29,11 @@ async def mariadb() -> None:
         assert_type(database, TestSQLDatabase[CRM])
         assert_type(database.signpost, CRM)
     async with TestMariaDB() as default_database:
+        assert_type(default_database, TestSQLDatabase[SQLSignpost])
+
+async def oracle() -> None:
+    async with TestOracle(signpost=CRM) as database:
+        assert_type(database, TestSQLDatabase[CRM])
+        assert_type(database.signpost, CRM)
+    async with TestOracle() as default_database:
         assert_type(default_database, TestSQLDatabase[SQLSignpost])
