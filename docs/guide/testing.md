@@ -1,6 +1,6 @@
 # Database test contexts
 
-Install the SQLite context:
+Install the database contexts:
 
 ```bash
 pip install 'fastsprout[testing-data]'
@@ -24,3 +24,23 @@ Caller-owned engines remain open after exit; selected tables are still
 removed. Default session factories use `expire_on_commit=False`.
 
 See the [SQLite example](../learn/examples/testing/2-data/1-sqlite.md).
+
+## PostgreSQL
+
+`TestPostgreSQL(*entities)` starts a disposable PostgreSQL container and reuses
+the SQL context's table, session, and binding lifecycle. Pass a configured
+`PostgresContainer`, an engine factory, or a session factory for native settings.
+The default image is the public `postgres:18-alpine` image.
+
+Container tests require Docker. Select them with the integration marker:
+
+```bash
+uv run --extra testing-data \
+  pytest src/tests/fastsprout/testing/data -m integration --no-cov
+```
+
+Use `pytest -m "not integration"` to run without containers. Unavailable Docker
+infrastructure fails integration tests. The CI container job requires a runner
+allowing privileged Docker-in-Docker services.
+
+See the [PostgreSQL example](../learn/examples/testing/2-data/2-postgresql.md).

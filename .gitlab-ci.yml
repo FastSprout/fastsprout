@@ -62,6 +62,8 @@ include:
       cert: ""
 
 pytest:
+  variables:
+    PYTEST_ADDOPTS: '-m "not integration"'
   retry: &retry_nonrelease_job
     max: 2
     when:
@@ -79,6 +81,31 @@ python-quality:
     matrix:
       - UV_PYTHON: ["3.12", "3.13", "3.14"]
   image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
+
+container-tests:
+  stage: test
+  retry: *retry_nonrelease_job
+  parallel: *python_matrix
+  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/docker:28.5.1-dind
+      alias: docker
+      command: ["--tls=false"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    TESTCONTAINERS_HOST_OVERRIDE: docker
+    RYUK_CONTAINER_IMAGE: harbor.3dcra.net/dockerhub-proxy/testcontainers/ryuk:0.8.1
+  script:
+    # The main pytest matrix collects project coverage; this job exercises real containers.
+    - >-
+      uv run --locked --all-extras --all-groups pytest
+      src/tests/fastsprout/testing/data
+      -m integration --no-cov --junitxml=container-tests.xml
+  artifacts:
+    when: always
+    reports:
+      junit: container-tests.xml
 
 changelog:
   stage: static-analysis

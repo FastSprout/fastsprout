@@ -16,6 +16,7 @@ TITLE_WORDS = {
     "pyd": "Pydantic",
     "sql": "SQL",
     "sqlite": "SQLite",
+    "postgresql": "PostgreSQL",
 }
 
 type Navigation = list[dict[str, str | Navigation]]
@@ -164,7 +165,8 @@ def run_python_example(source: Path, root: Path) -> str:
         source_path += os.pathsep + previous_path
     environment["PYTHONPATH"] = source_path
     command = [sys.executable, str(source)]
-    if source.is_relative_to(root / "examples/testing"):
+    testing = source.is_relative_to(root / "examples/testing")
+    if testing:
         command = [
             sys.executable,
             "-m",
@@ -172,6 +174,8 @@ def run_python_example(source: Path, root: Path) -> str:
             str(source),
             "-p",
             "fastsprout.testing.core.plugin",
+            "-m",
+            "not integration",
             "-qq",
             "--no-header",
             "-o",
@@ -188,12 +192,16 @@ def run_python_example(source: Path, root: Path) -> str:
         timeout=30,
         check=False,
     )
-    if run.returncode:
+    if run.returncode not in ((0, 5) if testing else (0,)):
         raise RuntimeError(
             f"{source.relative_to(root)} failed with exit code {run.returncode}:\n"
             f"{run.stderr}"
         )
-    output = run.stdout.rstrip("\n")
+    output = (
+        "No tests selected by -m 'not integration'."
+        if testing and run.returncode == 5
+        else run.stdout.rstrip("\n")
+    )
     if not output:
         raise ValueError(f"{source.relative_to(root)} did not print a result")
     return output

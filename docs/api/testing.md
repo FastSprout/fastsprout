@@ -12,3 +12,7 @@
 ::: fastsprout.testing.data.sqlite.sqlite
     options:
       heading: TestSQLite
+
+::: fastsprout.testing.data.postgresql.postgresql
+    options:
+      heading: TestPostgreSQL
