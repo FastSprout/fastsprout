@@ -1,0 +1,9 @@
+from typing import assert_type
+from fastsprout.events.backend.protocols import Brokerable
+from fastsprout.events.backend.rabbitmq import RabbitMQBroker
+from fastsprout.testing.events import TestRabbitMQ
+
+async def broker() -> None:
+    async with TestRabbitMQ() as adapter:
+        assert_type(adapter, RabbitMQBroker)
+        contract: Brokerable = adapter

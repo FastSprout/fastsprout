@@ -28,3 +28,9 @@
 ::: fastsprout.testing.data.oracle.oracle
     options:
       heading: TestOracle
+
+## Brokers
+
+::: fastsprout.testing.events.rabbitmq.rabbitmq
+    options:
+      heading: TestRabbitMQ

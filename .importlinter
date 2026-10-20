@@ -37,7 +37,7 @@ type = layers
 containers =
     fastsprout.testing
 layers =
-    data
+    data | events
     container
     core
 

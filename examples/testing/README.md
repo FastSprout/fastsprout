@@ -3,11 +3,11 @@
 Pytest fixtures and tests declare typed BDD phases. Share cases
 through fixtures and base classes; property tests use Hypothesis. Database
 contexts prepare isolated tables and restore entity bindings. Run PostgreSQL,
-MySQL, MariaDB, and Oracle examples with Docker using pytest -m integration.
+MySQL, MariaDB, Oracle, and RabbitMQ examples with Docker using pytest -m integration.
 Run from the repository root:
 
 ```bash
-uv run --extra testing-data pytest -p fastsprout.testing.core.plugin -o addopts= examples/testing/01_core/01_function_steps.py
+uv run --extra testing-data --extra testing-events pytest -p fastsprout.testing.core.plugin -o addopts= examples/testing/01_core/01_function_steps.py
 ```
 
 ## 1. Core
@@ -26,3 +26,9 @@ uv run --extra testing-data pytest -p fastsprout.testing.core.plugin -o addopts=
 | [02_data/02_postgresql.py](02_data/02_postgresql.py) | Run the same DataR operations against PostgreSQL in a disposable container. |
 | [02_data/03_mysql.py](02_data/03_mysql.py) | Run one reusable test against MySQL and MariaDB containers. |
 | [02_data/04_oracle.py](02_data/04_oracle.py) | Run DataR operations against Oracle Free with an asynchronous driver. |
+
+## 3. Events
+
+| File | Shows |
+| --- | --- |
+| [03_events/01_rabbitmq.py](03_events/01_rabbitmq.py) | Deliver an EventBus event through a disposable RabbitMQ broker. |

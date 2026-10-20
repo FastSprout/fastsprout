@@ -7,10 +7,10 @@ from typing_extensions import TypeVarTuple
 
 try:
     from bubus import BaseEvent
-    from bubus import EventBus as _BubusEventBus
+    from bubus import EventBus as NativeBubusEventBus
 except ImportError:
     BaseEvent = None
-    _BubusEventBus = None
+    NativeBubusEventBus = None
 
 if TYPE_CHECKING:
     from bubus import EventBus as BubusEventBus
@@ -37,26 +37,28 @@ class InMemoryBroker(Brokerable):
     """Route events through an in-memory bubus bus."""
 
     def __init__(self, bus: "BubusEventBus | None" = None) -> None:
-        self.__bus = bus
-        self.__registered = False
-        self.__handlers: list[
+        self.bus = bus
+        self.registered = False
+        self.handlers: list[
             tuple[type[Event], Callable[[Event], Awaitable[object]]]
         ] = []
-        self.__states: dict[UUID, EventState[Any]] = {}
-        self.__tasks: dict[UUID, list[asyncio.Task[Any]]] = {}
-        self.__processing: dict[UUID, asyncio.Task[None]] = {}
-        self.__starts: dict[UUID, asyncio.Future[None]] = {}
-        self.__started: set[UUID] = set()
+        self.states: dict[UUID, EventState[Any]] = {}
+        self.tasks: dict[UUID, list[asyncio.Task[Any]]] = {}
+        self.processing: dict[UUID, asyncio.Task[None]] = {}
+        self.starts: dict[UUID, asyncio.Future[None]] = {}
+        self.started: set[UUID] = set()
 
-    def __native_bus(self) -> "BubusEventBus":
-        if not self.__registered:
-            if _BubusEventBus is None:
-                raise ModuleNotFoundError("Install fastsprout[events] for bubus")
-            self.__bus = self.__bus or _BubusEventBus()
-            self.__bus.on("FastSproutEnvelope", self.__process)
-            self.__registered = True
-        assert self.__bus is not None
-        return self.__bus
+    def native_bus(self) -> "BubusEventBus":
+        if not self.registered:
+            if NativeBubusEventBus is None:
+                raise ModuleNotFoundError(
+                    "Install fastsprout[events] for bubus"
+                )
+            self.bus = self.bus or NativeBubusEventBus()
+            self.bus.on("FastSproutEnvelope", self.process)
+            self.registered = True
+        assert self.bus is not None
+        return self.bus
 
     def subscribe[E: Event](
         self,
@@ -65,23 +67,27 @@ class InMemoryBroker(Brokerable):
         | BaseAction[E, Any]
         | BaseSequenceAction[E, Any],
     ) -> None:
-        self.__handlers.append(
+        self.handlers.append(
             (event_type, cast(Callable[[Event], Awaitable[object]], handler))
         )
 
     async def dispatch[E: Eventable](self, event_state: EventState[E]) -> None:
+        self.prepare(event_state)
+        self.enqueue(event_state)
+
+    def prepare[E: Eventable](self, event_state: EventState[E]) -> None:
         event = event_state.event
         event_id = event.__event_id__
-        if event_id in self.__states:
+        if event_id in self.states:
             raise ValueError(f"Event already dispatched: {event_id}")
 
         start: asyncio.Future[None] = asyncio.get_running_loop().create_future()
         tasks: list[asyncio.Task[Any]] = []
-        self.__states[event_id] = event_state
-        self.__starts[event_id] = start
-        self.__tasks[event_id] = tasks
+        self.states[event_id] = event_state
+        self.starts[event_id] = start
+        self.tasks[event_id] = tasks
 
-        for event_type, handler in self.__handlers:
+        for event_type, handler in self.handlers:
             if not isinstance(event, event_type):
                 continue
 
@@ -89,46 +95,58 @@ class InMemoryBroker(Brokerable):
                 action: Callable[[Event], Awaitable[object]] = handler,
             ) -> object:
                 await asyncio.shield(start)
-                self.__started.add(event_id)
+                self.started.add(event_id)
                 return await action(cast(Event, event))
 
             task = asyncio.create_task(invoke())
             tasks.append(task)
             event_state.result.add_pending(task)
 
-        self.__enqueue(event_id, tasks)
-
-    def __enqueue(self, event_id: UUID, tasks: list[asyncio.Task[Any]]) -> None:
+    def enqueue[E: Eventable](self, state: EventState[E]) -> None:
+        event_id = state.event.__event_id__
+        tasks = self.tasks[event_id]
         try:
             if BaseEvent is None:
-                raise ModuleNotFoundError("Install fastsprout[events] for bubus")
+                raise ModuleNotFoundError(
+                    "Install fastsprout[events] for bubus"
+                )
             envelope = BaseEvent[None](
                 event_type="FastSproutEnvelope",
                 event_schema="FastSproutEnvelope@1",
                 event_id=str(event_id),
             )
             processing = asyncio.create_task(
-                self.__native_bus().process_event(envelope)
+                self.native_bus().process_event(envelope)
             )
-            self.__processing[event_id] = processing
+            self.processing[event_id] = processing
             processing.add_done_callback(
-                lambda _: self.__processing.pop(event_id, None)
+                lambda _: self.processing.pop(event_id, None)
             )
         except Exception:
-            self.__starts.pop(event_id)
-            self.__tasks.pop(event_id)
-            del self.__states[event_id]
+            self.starts.pop(event_id)
+            self.tasks.pop(event_id)
+            del self.states[event_id]
             for task in tasks:
                 task.cancel()
             raise
 
-    async def __process(self, envelope: Any) -> None:
-        event_id = UUID(envelope.event_id)
-        start = self.__starts.pop(event_id, None)
+    async def process(self, envelope: Any) -> None:
+        await self.deliver(UUID(envelope.event_id))
+
+    async def deliver(
+        self, event_id: UUID, *, raise_errors: bool = False
+    ) -> None:
+        start = self.starts.pop(event_id, None)
         if start is None:
             return
         start.set_result(None)
-        await asyncio.gather(*self.__tasks[event_id], return_exceptions=True)
+        results = await asyncio.gather(
+            *self.tasks[event_id], return_exceptions=True
+        )
+        if raise_errors:
+            for result in results:
+                if isinstance(result, BaseException):
+                    raise result
 
     @overload
     async def get[E: Eventable](
@@ -146,17 +164,17 @@ class InMemoryBroker(Brokerable):
             event_type = items[0]
 
             async def matches() -> AsyncIterator[EventState[Eventable]]:
-                for state in tuple(self.__states.values()):
+                for state in tuple(self.states.values()):
                     if isinstance(state.event, event_type):
                         yield state
 
             return matches()
         if len(items) == 1:
-            return self.__states.get(items[0].__event_id__)
+            return self.states.get(items[0].__event_id__)
 
         states = []
         for event in items:
-            state = self.__states.get(event.__event_id__)
+            state = self.states.get(event.__event_id__)
             if state is None:
                 raise LookupError(f"Event is not published: {event!r}")
             states.append(state)
@@ -164,15 +182,25 @@ class InMemoryBroker(Brokerable):
 
     async def retract[E: Eventable](self, state: EventState[E]) -> bool:
         event_id = state.event.__event_id__
-        if self.__states.get(event_id) is not state:
+        if self.states.get(event_id) is not state:
             return False
-        if event_id in self.__started:
+        if event_id in self.started:
             return False
-        self.__starts.pop(event_id, None)
-        processing = self.__processing.pop(event_id, None)
+        self.starts.pop(event_id, None)
+        processing = self.processing.pop(event_id, None)
         if processing is not None:
             processing.cancel()
-        for task in self.__tasks.pop(event_id, ()):
+        for task in self.tasks.pop(event_id, ()):
             task.cancel()
-        del self.__states[event_id]
+        del self.states[event_id]
         return True
+
+    async def stop(self) -> None:
+        tasks = [task for batch in self.tasks.values() for task in batch]
+        tasks.extend(self.processing.values())
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        self.starts.clear()
+        self.tasks.clear()
+        self.processing.clear()

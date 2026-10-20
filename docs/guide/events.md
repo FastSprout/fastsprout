@@ -63,3 +63,17 @@ Welcome sent to ada@example.com
 
 See the [events examples](../learn/examples/index.md) for publishers,
 subscriber groups, scheduling, and middleware.
+
+## RabbitMQ
+
+Install `fastsprout[events-rabbit]` and pass
+`RabbitMQBroker(faststream.rabbit.RabbitBroker(url))` to `EventBus`. The adapter
+uses the same publishing and subscription API as the in-memory broker. Pass
+`route=` or `subscription=` to configure routing and native consumers.
+
+Event IDs survive transport. `EventState` tracks this adapter's subscriber
+results and exposes failures through `result.errors`; it does not collect RPC
+results from other processes. Publication waits for the native client's
+acknowledgement. The default consumer acknowledges successful handlers and
+rejects failed handlers. Published messages cannot be retracted. Call
+`await adapter.stop()` to close an adapter used outside a testing context.

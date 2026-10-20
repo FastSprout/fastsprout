@@ -68,3 +68,18 @@ Oracle string columns need an explicit length, for example
 column definitions.
 
 See the [Oracle example](../learn/examples/testing/2-data/4-oracle.md).
+
+## RabbitMQ
+
+Install `fastsprout[testing-events]` for `TestRabbitMQ()`. It starts a disposable
+RabbitMQ container and yields a `RabbitMQBroker` implementing `Brokerable`.
+Pass it to `EventBus` and register subscribers before publishing. Dispatch
+connects the adapter and starts its consumers. A receiver which does not publish
+calls `await adapter.start()` after registering its handlers.
+
+Pass a configured `RabbitMqContainer`, a native broker factory, or an adapter
+factory for native configuration. The public default image is
+`rabbitmq:4.1.0-alpine`; `image=` selects another version or registry.
+The context stops the adapter and removes its container on exit.
+
+See the [RabbitMQ example](../learn/examples/testing/3-events/1-rabbitmq.md).

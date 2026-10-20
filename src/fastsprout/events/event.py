@@ -1,6 +1,6 @@
 import asyncio
 from datetime import timedelta
-from typing import Any, ClassVar, Protocol, Unpack, runtime_checkable
+from typing import Any, ClassVar, Protocol, Self, Unpack, runtime_checkable
 from uuid import UUID, uuid4
 
 from pydantic import ConfigDict, PrivateAttr
@@ -37,6 +37,15 @@ class Event(BaseSchema):
     @property
     def __event_id__(self) -> UUID:
         return self._event_id
+
+    @classmethod
+    def from_transport(cls, payload: str, event_id: UUID) -> Self:
+        """Restore the sender's identity when decoding a transported event."""
+        event = cls.model_validate_json(payload)
+        event.__pydantic_private__ = dict(
+            event.__pydantic_private__ or {}, _event_id=event_id
+        )
+        return event
 
 
 class ScheduleEvent(Event):
@@ -116,6 +125,10 @@ class EventResult[E: Eventable]:
             f"pending={len(self._pedding_events)}, "
             f"errors={self._error_events!r})"
         )
+
+    @property
+    def errors(self) -> tuple[BaseException, ...]:
+        return tuple(self._error_events)
 
     def add_pending(self, future: asyncio.Future[Any]) -> None:
         self._pedding_events.append(future)

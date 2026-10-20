@@ -43,6 +43,14 @@ testing-data = [
     "testcontainers[mysql,oracle,postgres]>=4.15,<5",
 ]
 
+events-rabbit = [
+    "fastsprout[events]",
+    "faststream[rabbit]>=0.7.5,<0.8",
+]
+testing-events = [
+    "fastsprout[events-rabbit,testing]",
+    "testcontainers[rabbitmq]>=4.15,<5",
+]
 
 [dependency-groups]
 dev = [

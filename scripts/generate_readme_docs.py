@@ -87,11 +87,11 @@ uv run --extra events python {example}
     "testing": """Pytest fixtures and tests declare typed BDD phases. Share cases
 through fixtures and base classes; property tests use Hypothesis. Database
 contexts prepare isolated tables and restore entity bindings. Run PostgreSQL,
-MySQL, MariaDB, and Oracle examples with Docker using pytest -m integration.
+MySQL, MariaDB, Oracle, and RabbitMQ examples with Docker using pytest -m integration.
 Run from the repository root:
 
 ```bash
-uv run --extra testing-data pytest -p fastsprout.testing.core.plugin -o addopts= {example}
+uv run --extra testing-data --extra testing-events pytest -p fastsprout.testing.core.plugin -o addopts= {example}
 ```
 """,
 }
