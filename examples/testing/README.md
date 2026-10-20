@@ -32,3 +32,5 @@ uv run --extra testing-data --extra testing-events pytest -p fastsprout.testing.
 | File | Shows |
 | --- | --- |
 | [03_events/01_rabbitmq.py](03_events/01_rabbitmq.py) | Deliver an EventBus event through a disposable RabbitMQ broker. |
+| [03_events/02_in_memory.py](03_events/02_in_memory.py) | Test multiple subscribers with the local Bubus-backed broker. |
+| [03_events/03_async_queue.py](03_events/03_async_queue.py) | Test local event delivery through an asyncio queue. |

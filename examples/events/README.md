@@ -31,3 +31,10 @@ uv run --extra events python examples/events/01_decorators/01_pub_pusher.py
 | --- | --- |
 | [03_bus/01_middleware.py](03_bus/01_middleware.py) | Run middleware for one event type and inspect its handler result. |
 | [03_bus/02_custom_event_bus.py](03_bus/02_custom_event_bus.py) | Use a Bubus-backed bus through a Depends provider override. |
+
+## 4. Brokers
+
+| File | Shows |
+| --- | --- |
+| [04_brokers/01_in_memory.py](04_brokers/01_in_memory.py) | Collect subscriber results from the local Bubus-backed broker. |
+| [04_brokers/02_async_queue.py](04_brokers/02_async_queue.py) | Deliver local events through asyncio.Queue and wait for queued work. |

@@ -77,3 +77,14 @@ results from other processes. Publication waits for the native client's
 acknowledgement. The default consumer acknowledges successful handlers and
 rejects failed handlers. Published messages cannot be retracted. Call
 `await adapter.stop()` to close an adapter used outside a testing context.
+
+## Local brokers
+
+`InMemoryBroker` is the default Bubus-backed adapter. `AsyncQueueBroker` schedules
+events through `asyncio.Queue` without invoking Bubus. It accepts a queue instance
+for backlog settings. Delivery starts in queue order and runs concurrently;
+`await queue.join()` waits for delivery to finish. `await broker.stop()` cancels
+unfinished work and stops the queue consumer.
+
+- [In-memory example](../learn/examples/events/4-brokers/1-in-memory.md)
+- [Async queue example](../learn/examples/events/4-brokers/2-async-queue.md)

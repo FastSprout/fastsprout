@@ -83,3 +83,12 @@ factory for native configuration. The public default image is
 The context stops the adapter and removes its container on exit.
 
 See the [RabbitMQ example](../learn/examples/testing/3-events/1-rabbitmq.md).
+
+## Local event brokers
+
+Local brokers use the same typed pytest phases without a Docker server.
+The `@given` fixture creates the broker and closes it after `@then`.
+The `@when` step publishes the event and waits for its subscribers.
+
+- [In-memory subscriber results](../learn/examples/testing/3-events/2-in-memory.md)
+- [Async queue delivery](../learn/examples/testing/3-events/3-async-queue.md)

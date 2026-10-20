@@ -12,9 +12,7 @@ from fastsprout.events import (
     EventState,
     sub,
 )
-from fastsprout.events.backend.implementation.transport_broker import (
-    TransportBroker,
-)
+from fastsprout.events.backend.in_memory import InMemoryBroker
 from fastsprout.testing.core import given, then, when
 
 
@@ -34,17 +32,17 @@ class Completion:
     pending_count: int
 
 
-class BaseTestTransportBroker:
-    def make_broker(self) -> AbstractAsyncContextManager[TransportBroker]:
+class BaseTestBroker:
+    def make_broker(self) -> AbstractAsyncContextManager[InMemoryBroker]:
         raise NotImplementedError
 
     @given("a real broker with automatic cleanup")
-    async def broker(self) -> AsyncIterator[TransportBroker]:
+    async def broker(self) -> AsyncIterator[InMemoryBroker]:
         async with self.make_broker() as broker:
             yield broker
 
     @given("an EventBus using the broker adapter")
-    def bus(self, broker: TransportBroker) -> EventBus:
+    def bus(self, broker: InMemoryBroker) -> EventBus:
         return EventBus(broker)
 
     @when("a message is published and all handlers finish")
@@ -58,7 +56,7 @@ class BaseTestTransportBroker:
             await state.wait()
         return state
 
-    @then("transport delivery preserves event identity and subscriber results")
+    @then("delivery preserves event identity and subscriber results")
     async def test_delivery(
         self, bus: EventBus, delivered: EventState[Message]
     ) -> None:

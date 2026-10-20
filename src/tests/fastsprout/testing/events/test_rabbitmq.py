@@ -14,14 +14,14 @@ from fastsprout.events.backend.rabbitmq import RabbitMQBroker
 from fastsprout.testing.core import then, when
 from fastsprout.testing.events import TestRabbitMQ
 from fastsprout.testing.events.rabbitmq import rabbit_url
-from tests.fastsprout.events.backend.base_test_transport_broker import (
-    BaseTestTransportBroker,
+from tests.fastsprout.events.backend.base_test_broker import (
+    BaseTestBroker,
     Message,
 )
 
 
 @pytest.mark.integration
-class TestRabbitMQContext(BaseTestTransportBroker):
+class TestRabbitMQContext(BaseTestBroker):
     def make_broker(self) -> AbstractAsyncContextManager[TransportBroker]:
         return TestRabbitMQ()
 
