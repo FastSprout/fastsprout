@@ -16,3 +16,11 @@
 ::: fastsprout.testing.data.postgresql.postgresql
     options:
       heading: TestPostgreSQL
+
+::: fastsprout.testing.data.mysql.mysql
+    options:
+      heading: TestMySQL
+
+::: fastsprout.testing.data.mariadb.mariadb
+    options:
+      heading: TestMariaDB

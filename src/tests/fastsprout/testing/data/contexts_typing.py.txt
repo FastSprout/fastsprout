@@ -1,6 +1,6 @@
 from typing import assert_type
 from fastsprout.data.backend.sql import SQLSignpost
-from fastsprout.testing.data import TestSQLite, TestPostgreSQL, TestSQLDatabase
+from fastsprout.testing.data import TestSQLite, TestPostgreSQL, TestSQLDatabase, TestMySQL, TestMariaDB
 
 class CRM(SQLSignpost): ...
 
@@ -16,3 +16,17 @@ async def postgres() -> None:
     async with TestPostgreSQL(signpost=CRM) as database:
         assert_type(database, TestSQLDatabase[CRM])
         assert_type(database.signpost, CRM)
+
+async def mysql() -> None:
+    async with TestMySQL(signpost=CRM) as database:
+        assert_type(database, TestSQLDatabase[CRM])
+        assert_type(database.signpost, CRM)
+    async with TestMySQL() as default_database:
+        assert_type(default_database, TestSQLDatabase[SQLSignpost])
+
+async def mariadb() -> None:
+    async with TestMariaDB(signpost=CRM) as database:
+        assert_type(database, TestSQLDatabase[CRM])
+        assert_type(database.signpost, CRM)
+    async with TestMariaDB() as default_database:
+        assert_type(default_database, TestSQLDatabase[SQLSignpost])

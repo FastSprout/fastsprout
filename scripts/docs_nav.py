@@ -17,6 +17,8 @@ TITLE_WORDS = {
     "sql": "SQL",
     "sqlite": "SQLite",
     "postgresql": "PostgreSQL",
+    "mysql": "MySQL",
+    "mariadb": "MariaDB",
 }
 
 type Navigation = list[dict[str, str | Navigation]]

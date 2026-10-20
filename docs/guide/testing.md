@@ -44,3 +44,13 @@ infrastructure fails integration tests. The CI container job requires a runner
 allowing privileged Docker-in-Docker services.
 
 See the [PostgreSQL example](../learn/examples/testing/2-data/2-postgresql.md).
+
+## MySQL and MariaDB
+
+`TestMySQL(*entities)` and `TestMariaDB(*entities)` reuse the SQL context's
+table, session, and binding lifecycle with the asyncmy driver. Pass a configured
+`MySqlContainer`, an engine factory, or a session factory for native settings.
+The default images are public `mysql:8.4` and `mariadb:11.4`; override `image=`
+to select another version or registry.
+
+See the [MySQL and MariaDB example](../learn/examples/testing/2-data/3-mysql.md).

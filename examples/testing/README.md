@@ -1,9 +1,9 @@
 # TESTING Examples
 
 Pytest fixtures and tests declare typed BDD phases. Share cases
-through fixtures and base classes; property tests use Hypothesis. SQLite and
-PostgreSQL contexts prepare isolated tables and restore entity bindings.
-Run PostgreSQL examples with Docker using pytest -m integration.
+through fixtures and base classes; property tests use Hypothesis. Database
+contexts prepare isolated tables and restore entity bindings. Run PostgreSQL,
+MySQL, and MariaDB examples with Docker using pytest -m integration.
 Run from the repository root:
 
 ```bash
@@ -24,3 +24,4 @@ uv run --extra testing-data pytest -p fastsprout.testing.core.plugin -o addopts=
 | --- | --- |
 | [02_data/01_sqlite.py](02_data/01_sqlite.py) | Reuse an isolated SQLite database across committed DataR operations. |
 | [02_data/02_postgresql.py](02_data/02_postgresql.py) | Run the same DataR operations against PostgreSQL in a disposable container. |
+| [02_data/03_mysql.py](02_data/03_mysql.py) | Run one reusable test against MySQL and MariaDB containers. |

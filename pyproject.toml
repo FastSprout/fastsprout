@@ -36,10 +36,11 @@ events = ["bubus>=1.5.6", "croniter>=6.2.4"]
 testing = ["hypothesis>=6.0", "pytest>=9.0.3", "pytest-asyncio>=1.4.0", "typeguard>=4.4,<5"]
 standard = ["fastsprout[data-sql,events]"]
 testing-data = [
+    "asyncmy>=0.2.10",
     "aiosqlite>=0.22.1",
     "asyncpg>=0.30",
     "fastsprout[data-sql,testing]",
-    "testcontainers[postgres]>=4.15,<5",
+    "testcontainers[mysql,postgres]>=4.15,<5",
 ]
 
 
