@@ -29,6 +29,14 @@ repos:
 
   - repo: local
     hooks:
+      - id: graphify
+        name: Update code knowledge graph
+        entry: uv run --system-certs graphify update .
+        language: system
+        types: [python]
+        pass_filenames: false
+        require_serial: true
+
       - id: pylint-too-many-lines
         name: pylint library rules
         entry: uv run --system-certs pylint
