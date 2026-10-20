@@ -135,7 +135,7 @@ async def test_service_and_function_dependencies_share_cache() -> None:
         execute.__wrapped__, dependencies=[documents.run.dependency]
     )
 
-    # when / then
+    # then
     assert_type(Documents.run.dependency, DependsClass)
     assert_type(documents.run.dependency, DependsClass)
     assert await documents.run(Input(42)) == 42

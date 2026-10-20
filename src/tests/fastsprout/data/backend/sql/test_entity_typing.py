@@ -1,9 +1,17 @@
 from pathlib import Path
+from subprocess import CompletedProcess
 
 import pytest
 
-from fastsprout.testing.core import when_then
+from fastsprout.testing.core import then, when
 from tests.type_checking import TypeChecker
+
+
+@when("SQL entity and query clients are checked")
+def checked_types(
+    type_checker: TypeChecker, case: str
+) -> CompletedProcess[str]:
+    return type_checker.run(Path(__file__).with_name(case))
 
 
 @pytest.mark.parametrize(
@@ -15,8 +23,10 @@ from tests.type_checking import TypeChecker
         "source_typing.py.txt",
     ],
 )
-@when_then("SQL entity and query contracts preserve their declared types")
+@then("SQL entity and query contracts preserve their declared types")
 def test_sql_entity_typing_contract(
-    type_checker: TypeChecker, case: str
+    type_checker: TypeChecker,
+    case: str,
+    checked_types: CompletedProcess[str],
 ) -> None:
-    type_checker.check(Path(__file__).with_name(case))
+    type_checker.verify(Path(__file__).with_name(case), checked_types)

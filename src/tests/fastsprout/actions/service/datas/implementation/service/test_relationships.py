@@ -145,7 +145,7 @@ class TestRelationships:
     ) -> None:
         # given
         missing = team_records.entity(name="Batman")
-        # when / then
+        # then
         async with DataR() as datar:
             with pytest.raises(LookupError, match="No TeamRecord"):
                 await datar.ability(TeamRecord).update(missing)

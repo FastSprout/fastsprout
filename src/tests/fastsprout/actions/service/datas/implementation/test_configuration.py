@@ -22,7 +22,7 @@ class TestOperationControls:
     async def test_switches_guard_overridden_actions(self) -> None:
         # given
         service = FixedCount(operations=frozenset({"get", "count"}))
-        # when / then
+        # then
         assert await service.count() == 99
         with pytest.raises(AttributeError, match="disabled"):
             await service.create(Record(name="Batman"))

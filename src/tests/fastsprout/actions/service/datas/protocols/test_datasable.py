@@ -8,5 +8,5 @@ class TestDataSable:
         # given
         source = Path(__file__).with_name("datasable_typing.py.txt")
 
-        # when / then
+        # then
         type_checker.check(source)

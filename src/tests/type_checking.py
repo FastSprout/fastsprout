@@ -11,7 +11,7 @@ class TypeChecker:
         self.directory = directory
         self.python_version = python_version
 
-    def _arguments(self, case: Path) -> list[str]:
+    def arguments(self, case: Path) -> list[str]:
         if self.name == "mypy":
             config = self.directory / "mypy.ini"
             config.write_text(
@@ -45,19 +45,29 @@ class TypeChecker:
 
     def check(self, source: Path) -> None:
         """Check both valid code and diagnostics marked on invalid lines."""
+        self.verify(source, self.run(source))
+
+    def run(self, source: Path) -> subprocess.CompletedProcess[str]:
         case = self.directory / "client.py"
-        code = source.read_text()
-        case.write_text(code)
-        result = subprocess.run(
-            [sys.executable, "-m", self.name, *self._arguments(case)],
+        case.write_text(source.read_text())
+        return subprocess.run(
+            [sys.executable, "-m", self.name, *self.arguments(case)],
             capture_output=True,
             text=True,
             check=False,
         )
+
+    def verify(
+        self, source: Path, result: subprocess.CompletedProcess[str]
+    ) -> None:
+        case = self.directory / "client.py"
+        code = source.read_text()
         assert result.returncode in (0, 1), result.stdout + result.stderr
         if self.name == "mypy":
             diagnostics = [
-                json.loads(line) for line in result.stdout.splitlines()
+                json.loads(line)
+                for line in result.stdout.splitlines()
+                if line.strip()
             ]
             positions = [
                 (item["line"], item["code"])

@@ -66,7 +66,7 @@ class TestInvocationDependencies:
         for _ in range(20):
             await guarded("update")
         if failure is not None:
-            # when / then
+            # then
             with pytest.raises(failure):
                 await guarded("abort")
 

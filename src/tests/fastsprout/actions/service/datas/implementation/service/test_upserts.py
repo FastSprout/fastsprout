@@ -80,7 +80,7 @@ class TestUpserts:
             "update": DataS(Record, update=None),
             "read": DataS(Record, read=None),
         }[schema]
-        # when / then
+        # then
         with pytest.raises(AttributeError, match="disabled"):
             await service.upsert(Record(name="Batman"))
         with pytest.raises(AttributeError, match="disabled"):

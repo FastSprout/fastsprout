@@ -6,7 +6,7 @@ from sqlmodel import Field as SQLField
 from fastsprout.core import Field, ReadField
 from fastsprout.data.backend.sql import SQLEntity, SQLQuery, SQLSignpost
 from fastsprout.data.backend.sql.streams import SQLEntityStream
-from fastsprout.testing.core import given, when_then
+from fastsprout.testing.core import given, then, when
 
 from .conftest import Hero
 
@@ -34,22 +34,25 @@ class TestMappedFieldGetters:
         await sql_session.flush()
         return SQLEntityStream(SQLQuery(NamedColumnEntity), sql_signpost)
 
-    @pytest.mark.parametrize("native", [False, True])
-    @when_then("field getters sort and project in SQL and Python")
-    async def test_field_getters(
+    @when("a field getter sorts and projects a mapped stream")
+    async def field_values(
         self, named_stream: SQLEntityStream[NamedColumnEntity], native: bool
-    ) -> None:
+    ) -> list[str]:
         stream = (
             named_stream
             if native
             else named_stream.filter(lambda row: row.id > 0)
         )
-        values = await (
+        return await (
             stream.sort(NamedColumnEntity.display_name, reverse=True)
             .to_values(NamedColumnEntity.display_name)
             .to_list()
         )
-        assert values == ["Lin", "Ada"]
+
+    @pytest.mark.parametrize("native", [False, True])
+    @then("field getters sort and project in SQL and Python")
+    def test_field_getters(self, field_values: list[str]) -> None:
+        assert field_values == ["Lin", "Ada"]
 
 
 class TestSQLEntityStream:

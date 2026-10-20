@@ -1,4 +1,3 @@
-import logging
 from collections.abc import Callable
 
 import pytest
@@ -11,7 +10,6 @@ from fastsprout.data.backend.sql.capabilities import (
     SQLDeletable,
     SQLFindable,
     SQLIterable,
-    SQLUpsertable,
 )
 from fastsprout.data.backend.sql.capabilities.updatable import (
     SQLUpdatable,
@@ -24,14 +22,12 @@ from fastsprout.data.capabilities.protocols import (
     UpdatableByQuery,
 )
 from fastsprout.data.capabilities.query import Expression, FieldPredicate
-from fastsprout.data.events import CreateEvent, UpdateEvent
 from fastsprout.data.streams.implementation import (
     SimpleAsyncEntityStream,
     SimpleAsyncValueStream,
 )
 from fastsprout.data.types import PredicateCallable
-from fastsprout.events import EventBus
-from fastsprout.testing.core import when_then
+from fastsprout.testing.core import then, when
 
 from .conftest import Hero
 
@@ -139,30 +135,49 @@ class TestSQLAbilitable:
 
         assert await sql_ability.bulk_update([]) == []
 
-    @when_then("updating a missing entity never inserts it")
-    @pytest.mark.parametrize("capability", [SQLAbilitable, SQLUpdatable])
-    async def test_update_missing_entity_does_not_insert(
+    @when("an ability updates a missing entity")
+    async def missing_update(
         self,
         capability: type[SQLUpdatable[Hero]],
         sql_signpost: SQLSignpost,
+    ) -> LookupError | None:
+        ability = capability(sql_signpost)
+        try:
+            await ability.update(Hero(id=100, name="Missing"))
+        except LookupError as error:
+            return error
+        return None
+
+    @then("updating a missing entity never inserts it")
+    @pytest.mark.parametrize("capability", [SQLAbilitable, SQLUpdatable])
+    async def test_update_missing_entity_does_not_insert(
+        self,
+        missing_update: LookupError | None,
         sql_session: AsyncSession,
     ) -> None:
-        ability = capability(sql_signpost)
-        with pytest.raises(LookupError, match="No Hero"):
-            await ability.update(Hero(id=100, name="Missing"))
+        assert isinstance(missing_update, LookupError)
+        assert "No Hero" in str(missing_update)
         assert await sql_session.get(Hero, 100) is None
 
-    @when_then("bulk deletion removes only the selected entities")
+    @when("the first four selected entities are bulk-deleted")
+    async def deleted_count(
+        self,
+        sql_ability: SQLAbilitable[Hero],
+        query: SQLQuery[Hero],
+    ) -> int:
+        query.order_by(Hero.id)
+        found = await sql_ability.stream(query).to_list()
+        return await sql_ability.bulk_delete(found[:4])
+
+    @then("bulk deletion removes only the selected entities")
     async def test_bulk_delete(
         self,
         sql_ability: SQLAbilitable[Hero],
         query: SQLQuery[Hero],
+        deleted_count: int,
     ) -> None:
-        query.order_by(Hero.id)
-        found = await sql_ability.stream(query).to_list()
-        deleted = await sql_ability.bulk_delete(found[:4])
         remaining = await sql_ability.stream(query).to_list()
-        assert deleted == 4
+        assert deleted_count == 4
         assert [hero.id for hero in remaining] == list(range(4, 10))
 
     @pytest.mark.parametrize("capability", [SQLAbilitable, SQLDeletable])
@@ -200,7 +215,7 @@ class TestSQLAbilitable:
         assert first is not None
         assert first.id == 6
         assert [hero.id for hero in found] == [6, 7]
-        # when / then
+        # then
         with pytest.raises(MultipleResultsFound):
             await ability.find_exactly_one(selected_query)
         selected_query.limit(1)
@@ -252,46 +267,3 @@ class TestSQLAbilitable:
             hero = await sql_session.get(Hero, key)
             assert hero is not None
             assert hero.name == ("updated" if key in (6, 7) else f"h{key}")
-
-
-class TestSQLUpsertable:
-    @pytest.mark.parametrize("capability", [SQLAbilitable, SQLUpsertable])
-    async def test_event_lookup_is_limited_to_input_ids(
-        self,
-        capability: type[SQLUpsertable[Hero]],
-        sql_signpost: SQLSignpost,
-        sql_session: AsyncSession,
-        caplog: pytest.LogCaptureFixture,
-    ) -> None:
-        # given
-        await sql_session.commit()
-        bus = EventBus()
-        ability = capability(sql_signpost, bus=bus)
-        inputs = [Hero(id=2, name="updated", age=20), Hero(id=10, name="new")]
-        # when
-        with caplog.at_level(logging.INFO, logger="sqlalchemy.engine"):
-            found = await ability.bulk_upsert(inputs)
-        async with ability.bind() as flow:
-            await flow.finalize()
-        # then
-        lookups = [
-            record.getMessage()
-            for record in caplog.records
-            if record.getMessage().startswith("SELECT hero.id")
-        ]
-        assert len(lookups) == 1
-        assert "WHERE hero.id IN" in lookups[0]
-        assert {(hero.id, hero.name) for hero in found} == {
-            (2, "updated"),
-            (10, "new"),
-        }
-        created = [
-            state.event.entity.id
-            async for state in await bus.get(CreateEvent[Hero])
-        ]
-        updated = [
-            state.event.entity.id
-            async for state in await bus.get(UpdateEvent[Hero])
-        ]
-        assert created == [10]
-        assert updated == [2]

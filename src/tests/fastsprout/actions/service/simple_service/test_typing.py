@@ -8,5 +8,5 @@ class TestServiceTyping:
         # given
         source = Path(__file__).with_name("service_typing.py.txt")
 
-        # when / then
+        # then
         type_checker.check(source)

@@ -8,7 +8,7 @@ from fastsprout.data.streams.implementation.base_common_stream import (
     BaseCommonStream,
 )
 from fastsprout.data.utils.iterable import resolve_any_iterable
-from fastsprout.testing.core import when_then
+from fastsprout.testing.core import then, when
 
 
 class Numbers:
@@ -19,8 +19,8 @@ class Numbers:
         return 7
 
 
-@when_then("stream adapter does not run owner dependencies")
-async def test_stream_adapter_does_not_run_owner_dependencies() -> None:
+@when("an owner method is adapted to a stream and consumed")
+async def owner_read() -> tuple[list[int], list[str]]:
     calls: list[str] = []
 
     def check() -> None:
@@ -33,14 +33,20 @@ async def test_stream_adapter_does_not_run_owner_dependencies() -> None:
         async def read(self) -> AsyncGenerator[int, None]:
             yield 7
 
-    assert await Source().read().to_list() == [7]
+    return await Source().read().to_list(), calls
+
+
+@then("stream adapter does not run owner dependencies")
+def test_stream_adapter_does_not_run_owner_dependencies(
+    owner_read: tuple[list[int], list[str]],
+) -> None:
+    values, calls = owner_read
+    assert values == [7]
     assert calls == []
 
 
-@when_then("stream accepts async iterable and closes chunk dependencies")
-async def test_stream_accepts_async_iterable_and_closes_chunk_dependencies() -> (
-    None
-):
+@when("one chunk is consumed from a dependency-backed async iterable")
+async def chunk_read() -> tuple[list[str], list[int], list[str], list[str]]:
     calls: list[str] = []
 
     async def resource() -> AsyncGenerator[int, None]:
@@ -57,17 +63,27 @@ async def test_stream_accepts_async_iterable_and_closes_chunk_dependencies() -> 
         return Numbers()
 
     stream = read()
-    assert calls == []
+    before = calls[:]
     async with aclosing(resolve_any_iterable(stream.chunked(2))) as chunks:
         chunk = await anext(chunks)
         assert_type(chunk, list[int])
-        assert chunk == [7, 7]
-        assert calls == ["open"]
-    assert calls == ["open", "close"]
+        during = calls[:]
+    return before, chunk, during, calls
 
 
-@when_then("stream closes source when stopped early")
-async def test_stream_closes_source_when_stopped_early() -> None:
+@then("stream accepts async iterable and closes chunk dependencies")
+def test_stream_accepts_async_iterable_and_closes_chunk_dependencies(
+    chunk_read: tuple[list[str], list[int], list[str], list[str]],
+) -> None:
+    before, chunk, during, after = chunk_read
+    assert before == []
+    assert chunk == [7, 7]
+    assert during == ["open"]
+    assert after == ["open", "close"]
+
+
+@when("a stream is closed after its first value")
+async def stopped_read() -> tuple[int, bool]:
     closed = False
 
     @BaseCommonStream.as_stream
@@ -80,5 +96,14 @@ async def test_stream_closes_source_when_stopped_early() -> None:
             closed = True
 
     async with aclosing(resolve_any_iterable(read())) as source:
-        assert await anext(source) == 1
+        first = await anext(source)
+    return first, closed
+
+
+@then("stream closes source when stopped early")
+def test_stream_closes_source_when_stopped_early(
+    stopped_read: tuple[int, bool],
+) -> None:
+    first, closed = stopped_read
+    assert first == 1
     assert closed

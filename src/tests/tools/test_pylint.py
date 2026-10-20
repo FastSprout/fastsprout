@@ -5,7 +5,7 @@ from pylint.lint import Run
 from pylint.reporters import CollectingReporter
 
 import tools.pylint.names as names
-from fastsprout.testing.core import when_then
+from fastsprout.testing.core import then, when
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -154,7 +154,19 @@ def test_public_alias_cannot_hide_import_outside_all(package: Path) -> None:
 
 
 class TestTestingPhases:
-    @when_then("BDD declarations follow their phase and typing contracts")
+    @when("a BDD declaration is checked by Pylint")
+    def diagnostics(
+        self, package: Path, declaration: str
+    ) -> list[tuple[str, int]]:
+        path = package / "phases_case.py"
+        path.write_text(
+            "from fastsprout.testing.core import given, when, then\n"
+            + declaration
+            + "\n"
+        )
+        return lint(path)
+
+    @then("BDD declarations follow their phase and typing contracts")
     @pytest.mark.parametrize(
         "declaration, expected",
         [
@@ -192,8 +204,8 @@ class TestTestingPhases:
                 [("redundant-test-phase-comment", 4)],
             ),
             (
-                "@when_then('result')\nasync def test_value() -> None:\n    # when / then\n    pass",
-                [("redundant-test-phase-comment", 4)],
+                "@then('result')\nasync def test_value() -> None:\n    # when / then\n    pass",
+                [("combined-test-phase-comment", 4)],
             ),
             (
                 "@given('context')\ndef context() -> str:\n    return '''\n    # given\n    '''",
@@ -218,12 +230,8 @@ class TestTestingPhases:
         ],
     )
     def test_declarations(
-        self, package: Path, declaration: str, expected: list[tuple[str, int]]
+        self,
+        diagnostics: list[tuple[str, int]],
+        expected: list[tuple[str, int]],
     ) -> None:
-        path = package / "phases_case.py"
-        path.write_text(
-            "from fastsprout.testing.core import given, when, then, when_then\n"
-            + declaration
-            + "\n"
-        )
-        assert lint(path) == expected
+        assert diagnostics == expected

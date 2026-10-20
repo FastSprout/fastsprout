@@ -11,7 +11,7 @@ from fastsprout.core import dataclass
 
 from .contracts import FIXTURE_CONTRACTS, StepContract, checked_signature
 
-__all__ = ["FixtureStep", "given", "then", "when", "when_then"]
+__all__ = ["FixtureStep", "given", "then", "when"]
 
 
 @dataclass(frozen=True)
@@ -61,13 +61,13 @@ def when(description: str) -> FixtureStep:
     return FixtureStep("when", description)
 
 
-def assertion[**P, R](
-    phase: Literal["then", "when_then"], description: str
+def then[**P, R](
+    description: str,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     def decorate(function: Callable[P, R]) -> Callable[P, R]:
         checked_signature(function)
         marked = pytest.mark.fastsprout_typed(
-            phase=phase, description=description
+            phase="then", description=description
         )(function)
         return (
             pytest.mark.asyncio(marked)
@@ -76,15 +76,3 @@ def assertion[**P, R](
         )
 
     return decorate
-
-
-def then[**P, R](
-    description: str,
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
-    return assertion("then", description)
-
-
-def when_then[**P, R](
-    description: str,
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
-    return assertion("when_then", description)

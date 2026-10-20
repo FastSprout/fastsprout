@@ -2,255 +2,256 @@ from uuid import uuid4
 
 import pytest
 
-from fastsprout.actions import DataS, Service
-from fastsprout.actions.service.datas.implementation import commands, queries
+from fastsprout.actions import DataS
 from fastsprout.data import DataR
 from fastsprout.data.backend.implementation.signpost import Signpost
-from fastsprout.data.capabilities.query import Eq, Gte, where
+from fastsprout.data.capabilities.query import Gte, where
 from fastsprout.data.router.exceptions import NoBackendError
-from fastsprout.data.streams.protocols import AsyncEntityStream
-from fastsprout.data.utils.iterable import resolve_any_iterable
-from fastsprout.testing.core import given, when_then
+from fastsprout.testing.core import given, then, when
 
 from ...common import (
     MemoryAbility,
     MemoryCreate,
-    MemoryPatch,
     MemoryQuery,
     MemoryRecord,
 )
+from .common import SelectedMemory, SelectedMemoryActions
 
 
-@given("an in-memory backend shared by ability and stream routing")
-def memory_backend(monkeypatch: pytest.MonkeyPatch) -> MemoryAbility:
-    backend = MemoryAbility()
+class TestSelectedActions:
+    @given("selected CRUD actions composed into a Service")
+    def service(self) -> SelectedMemoryActions:
+        return SelectedMemoryActions()
 
-    def ability(datar: DataR, entity: type[MemoryRecord]) -> MemoryAbility:
-        if entity is not backend.entity:
-            raise TypeError("Ability must use the service entity")
-        backend.contexts.append(datar)
-        return backend
+    @when("the selected create action persists a record")
+    async def created(
+        self, service: SelectedMemoryActions, memory_context: DataR
+    ) -> MemoryRecord:
+        return await service.create(
+            MemoryCreate("Batman"), datar=memory_context
+        )
 
-    def stream(
-        datar: DataR, query: MemoryQuery
-    ) -> AsyncEntityStream[MemoryRecord]:
-        return ability(datar, query.entity).stream(query)
-
-    monkeypatch.setattr(DataR, "ability", ability)
-    monkeypatch.setattr(DataR, "stream", stream)
-    return backend
-
-
-class SelectedMemoryActions(Service):
-    entity = MemoryRecord
-    read_schema = MemoryRecord
-    create_schema = MemoryCreate
-    chunk_size = 2
-
-    create = commands.create
-    bulk_create = commands.bulk_create
-    get = queries.get
-    delete = commands.delete
-
-
-class SelectedMemory(DataS[MemoryRecord]): ...
-
-
-class TestBackend:
-    @when_then("selected CRUD actions compose into an ordinary Service")
-    async def test_selected_actions_share_backend_context(
-        self, memory_backend: MemoryAbility
-    ) -> None:
-        service = SelectedMemoryActions()
-        async with DataR() as datar:
-            created = await service.create(MemoryCreate("Batman"), datar=datar)
-            assert await service.get(created.id, datar=datar) == created
-            added = await service.bulk_create(
-                (MemoryCreate(name) for name in ("Robin", "Batgirl")),
-                datar=datar,
-            ).to_list()
-            assert [row.name for row in added] == ["Robin", "Batgirl"]
-            assert await service.delete(created.id, datar=datar) == 1
-            assert await service.get(created.id, datar=datar) is None
-            assert all(context is datar for context in memory_backend.contexts)
-
-    @when_then("CRUD and paginated reads use the same non-SQL backend context")
-    @pytest.mark.parametrize("subclass", [False, True])
-    async def test_non_sql_crud_uses_entity_and_one_context(
+    @then("the selected get action reads the created record")
+    async def test_created(
         self,
-        memory_backend: MemoryAbility,
-        subclass: bool,
+        service: SelectedMemoryActions,
+        memory_context: DataR,
+        created: MemoryRecord,
     ) -> None:
-        service = SelectedMemory() if subclass else DataS(MemoryRecord)
+        assert await service.get(created.id, datar=memory_context) == created
+
+    @when("the selected bulk create action persists two more records")
+    async def added(
+        self,
+        service: SelectedMemoryActions,
+        memory_context: DataR,
+        created: MemoryRecord,
+    ) -> list[MemoryRecord]:
+        return await service.bulk_create(
+            (MemoryCreate(name) for name in ("Robin", "Batgirl")),
+            datar=memory_context,
+        ).to_list()
+
+    @then("selected bulk actions preserve their input order")
+    def test_added(self, added: list[MemoryRecord]) -> None:
+        assert [row.name for row in added] == ["Robin", "Batgirl"]
+
+    @when("the selected delete action removes the original record")
+    async def deleted(
+        self,
+        service: SelectedMemoryActions,
+        memory_context: DataR,
+        created: MemoryRecord,
+        added: list[MemoryRecord],
+    ) -> int:
+        return await service.delete(created.id, datar=memory_context)
+
+    @then("selected CRUD actions share one backend context")
+    async def test_deleted(
+        self,
+        service: SelectedMemoryActions,
+        memory_context: DataR,
+        memory_backend: MemoryAbility,
+        created: MemoryRecord,
+        deleted: int,
+    ) -> None:
+        assert deleted == 1
+        assert await service.get(created.id, datar=memory_context) is None
+        assert all(
+            context is memory_context for context in memory_backend.contexts
+        )
+
+
+@pytest.mark.parametrize("subclass", [False, True])
+class TestMemoryCRUD:
+    @given("a default or subclassed non-SQL data service")
+    def service(self, subclass: bool) -> DataS[MemoryRecord]:
+        return SelectedMemory() if subclass else DataS(MemoryRecord)
+
+    @when("a record is created through the default schema")
+    async def created(
+        self, service: DataS[MemoryRecord], memory_context: DataR
+    ) -> MemoryRecord:
+        return await service.create(
+            service.create_schema(name="Batman"), datar=memory_context
+        )
+
+    @then("default schemas and reads preserve the non-SQL entity")
+    async def test_created(
+        self,
+        service: DataS[MemoryRecord],
+        memory_context: DataR,
+        created: MemoryRecord,
+    ) -> None:
         assert service.read_schema is MemoryRecord
         assert service.create_schema is MemoryRecord
-        async with DataR() as datar:
-            created = await service.create(
-                service.create_schema(name="Batman"), datar=datar
-            )
-            assert isinstance(created, MemoryRecord)
-            assert type(created) is MemoryRecord
-            assert created.password == "initial"
-            assert created.system_key == "system"
-            found = await service.get(created.id, datar=datar)
-            assert found is not None
-            assert found.name == "Batman"
-            assert await service.exists(created.id, datar=datar)
-            assert not await service.exists(uuid4(), datar=datar)
-            assert await service.get(uuid4(), datar=datar) is None
-            updated = await service.update(
-                created.id, service.update_schema(name="Robin"), datar=datar
-            )
-            assert updated.name == "Robin"
-            patched = await service.patch(
-                created.id,
-                service.patch_schema(name="Robin", score=99),
-                datar=datar,
-            )
-            assert (patched.name, patched.score) == ("Robin", 99)
-            query = MemoryQuery(MemoryRecord).where(MemoryRecord.score.gte(20))
-            page = await service.list(query, datar=datar)
-            assert page.total == await service.count(query, datar=datar) == 1
-            assert [(row.id, row.score) for row in page.items] == [
-                (created.id, 99)
-            ]
-            assert await service.delete(created.id, datar=datar) == 1
-            assert await service.delete(created.id, datar=datar) == 0
-            assert await service.count(datar=datar) == 0
-            assert all(context is datar for context in memory_backend.contexts)
+        assert isinstance(created, MemoryRecord)
+        assert type(created) is MemoryRecord
+        assert created.password == "initial"
+        assert created.system_key == "system"
+        found = await service.get(created.id, datar=memory_context)
+        assert found is not None
+        assert found.name == "Batman"
+        assert await service.exists(created.id, datar=memory_context)
+        assert not await service.exists(uuid4(), datar=memory_context)
+        assert await service.get(uuid4(), datar=memory_context) is None
 
-    @when_then("non-SQL bulk actions accept sync and async schema inputs")
-    @pytest.mark.parametrize("asynchronous", [False, True])
-    async def test_bulk_schema_inputs(
-        self, memory_backend: MemoryAbility, asynchronous: bool
+    @when("the default update schema replaces the record's name")
+    async def updated(
+        self,
+        service: DataS[MemoryRecord],
+        memory_context: DataR,
+        created: MemoryRecord,
+    ) -> MemoryRecord:
+        return await service.update(
+            created.id,
+            service.update_schema(name="Robin"),
+            datar=memory_context,
+        )
+
+    @then("non-SQL update returns the updated entity")
+    def test_updated(self, updated: MemoryRecord) -> None:
+        assert updated.name == "Robin"
+
+    @when("the default patch schema changes the record's score")
+    async def patched(
+        self,
+        service: DataS[MemoryRecord],
+        memory_context: DataR,
+        updated: MemoryRecord,
+    ) -> MemoryRecord:
+        return await service.patch(
+            updated.id,
+            service.patch_schema(name="Robin", score=99),
+            datar=memory_context,
+        )
+
+    @then("non-SQL patch, list, and count agree on the stored entity")
+    async def test_patched(
+        self,
+        service: DataS[MemoryRecord],
+        memory_context: DataR,
+        patched: MemoryRecord,
     ) -> None:
-        service = DataS(
-            MemoryRecord, create=MemoryCreate, patch=MemoryPatch, chunk_size=2
-        )
-        async with DataR() as datar:
-            payloads = (
-                MemoryCreate(name) for name in ("Batman", "Robin", "Batgirl")
-            )
-            created = await service.bulk_create(
-                resolve_any_iterable(payloads) if asynchronous else payloads,
-                datar=datar,
-            ).to_list()
-            assert [row.name for row in created] == [
-                "Batman",
-                "Robin",
-                "Batgirl",
-            ]
-            patches = ((row.id, MemoryPatch(score=20)) for row in created)
-            patched = await service.bulk_patch(
-                resolve_any_iterable(patches) if asynchronous else patches,
-                datar=datar,
-            ).to_list()
-            assert [row.id for row in patched] == [row.id for row in created]
-            assert [row.score for row in patched] == [20, 20, 20]
-            identifiers = (row.id for row in patched)
-            assert (
-                await service.bulk_delete(
-                    resolve_any_iterable(identifiers)
-                    if asynchronous
-                    else identifiers,
-                    datar=datar,
-                )
-                == 3
-            )
-            assert memory_backend.items == {}
-            assert all(context is datar for context in memory_backend.contexts)
-
-
-@when_then("non sql query and bulk accept dataclass payloads")
-async def test_non_sql_query_and_bulk_accept_dataclass_payloads(
-    memory_backend: MemoryAbility,
-) -> None:
-    service = DataS(
-        MemoryRecord,
-        create=MemoryCreate,
-        patch=MemoryPatch,
-        chunk_size=2,
-    )
-    async with DataR() as datar:
-        for size in (0, -1):
-            invalid = DataS(MemoryRecord, chunk_size=size)
-            with pytest.raises(ValueError, match="chunk_size must be positive"):
-                invalid.bulk_create([])
-        created = await service.bulk_create(
-            (MemoryCreate(name) for name in ("Batman", "Batgirl", "Robin")),
-            datar=datar,
-        ).to_list()
-        query = (
-            MemoryQuery(MemoryRecord)
-            .where(where(MemoryRecord.name, "BAT"))
-            .limit(1)
-        )
-        page = await service.list(query, datar=datar)
-        assert page.total == 2
-        assert [row.name for row in page.items] == ["Batman"]
-        assert await service.count(query, datar=datar) == 2
-        selection = MemoryQuery(MemoryRecord, statement="Robin")
-        assert await service.count(selection, datar=datar) == 1
-        assert [
-            row.name
-            for row in (await service.list(selection, datar=datar)).items
-        ] == ["Robin"]
-        with pytest.raises(AttributeError, match="public field"):
-            await service.count(
-                MemoryQuery(MemoryRecord).where(
-                    where(MemoryRecord.system_key, Eq("system"))
-                ),
-                datar=datar,
-            )
-        patched = await service.bulk_patch(
-            ((row.id, MemoryPatch(score=20)) for row in created), datar=datar
-        ).to_list()
-        assert [row.score for row in patched] == [20, 20, 20]
-        updated = await service.bulk_update(
-            (row for row in patched), datar=datar
-        ).to_list()
-        assert [row.name for row in updated] == ["Batman", "Batgirl", "Robin"]
+        assert (patched.name, patched.score) == ("Robin", 99)
+        query = MemoryQuery(MemoryRecord).where(MemoryRecord.score.gte(20))
+        page = await service.list(query, datar=memory_context)
         assert (
-            await service.bulk_delete((row.id for row in updated), datar=datar)
-            == 3
+            page.total == await service.count(query, datar=memory_context) == 1
         )
-        assert await service.count(datar=datar) == 0
+        assert [(row.id, row.score) for row in page.items] == [(patched.id, 99)]
+
+    @when("the same non-SQL entity is deleted twice")
+    async def deleted(
+        self,
+        service: DataS[MemoryRecord],
+        memory_context: DataR,
+        patched: MemoryRecord,
+    ) -> tuple[int, int]:
+        return await service.delete(
+            patched.id, datar=memory_context
+        ), await service.delete(patched.id, datar=memory_context)
+
+    @then("deletion reports missing records and keeps one shared context")
+    async def test_deleted(
+        self,
+        service: DataS[MemoryRecord],
+        memory_context: DataR,
+        memory_backend: MemoryAbility,
+        deleted: tuple[int, int],
+    ) -> None:
+        assert deleted == (1, 0)
+        assert await service.count(datar=memory_context) == 0
+        assert all(
+            context is memory_context for context in memory_backend.contexts
+        )
 
 
-@when_then("non sql service subclass with query")
-async def test_non_sql_service_subclass_with_query(
-    memory_backend: MemoryAbility,
-) -> None:
+@when("a subclassed data service creates matching and non-matching entities")
+async def selected_memory(memory_backend: MemoryAbility) -> SelectedMemory:
     service = SelectedMemory()
     await service.create(service.create_schema(name="Batman", score=50))
     await service.create(service.create_schema(name="Robin", score=5))
-    query = MemoryQuery(MemoryRecord).where(where(MemoryRecord.score, Gte(20)))
-    assert await service.count(query) == 1
-    assert [row.name for row in (await service.list(query)).items] == ["Batman"]
+    return service
 
 
-@when_then("unregistered non sql backend fails explicitly")
-async def test_unregistered_non_sql_backend_fails_explicitly(
-    monkeypatch: pytest.MonkeyPatch,
+@then("non sql service subclass with query")
+async def test_non_sql_service_subclass_with_query(
+    selected_memory: SelectedMemory,
 ) -> None:
+    query = MemoryQuery(MemoryRecord).where(where(MemoryRecord.score, Gte(20)))
+    assert await selected_memory.count(query) == 1
+    assert [row.name for row in (await selected_memory.list(query)).items] == [
+        "Batman"
+    ]
+
+
+@when("a read uses a signpost without a registered backend")
+async def unregistered_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> NoBackendError | None:
     monkeypatch.setattr(
         MemoryRecord, "__signpost__", Signpost(lambda: None), raising=False
     )
     service = DataS(MemoryRecord)
-    with pytest.raises(NoBackendError, match="Not found backend"):
+    try:
         await service.get(uuid4())
+    except NoBackendError as error:
+        return error
+    return None
+
+
+@then("unregistered non sql backend fails explicitly")
+def test_unregistered_non_sql_backend_fails_explicitly(
+    unregistered_read: NoBackendError | None,
+) -> None:
+    assert isinstance(unregistered_read, NoBackendError)
+    assert "Not found backend" in str(unregistered_read)
 
 
 class DifferentMemoryRecord(MemoryRecord): ...
 
 
-@when_then("ability must match the service entity")
-async def test_ability_must_match_the_service_entity(
-    memory_backend: MemoryAbility,
-) -> None:
+@when("a query entity and then the selected ability mismatch the service")
+async def mismatched_ability(memory_backend: MemoryAbility) -> list[TypeError]:
     service = DataS(MemoryRecord)
-    with pytest.raises(TypeError, match="must select the CRUD entity"):
+    failures: list[TypeError] = []
+    try:
         await service.list(MemoryQuery(DifferentMemoryRecord))
+    except TypeError as error:
+        failures.append(error)
     memory_backend.entity = DifferentMemoryRecord
-    with pytest.raises(TypeError, match="must use the service entity"):
+    try:
         await service.count()
+    except TypeError as error:
+        failures.append(error)
+    return failures
+
+
+@then("ability must match the service entity")
+def test_ability_must_match_the_service_entity(
+    mismatched_ability: list[TypeError],
+) -> None:
+    assert len(mismatched_ability) == 2
+    assert "must select the CRUD entity" in str(mismatched_ability[0])
+    assert "must use the service entity" in str(mismatched_ability[1])

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from fastsprout.testing.core import given, then, when, when_then
+from fastsprout.testing.core import given, then, when
 from tests.type_checking import TypeChecker
 
 from .common import CartContext
@@ -75,13 +75,6 @@ class TestFunctionSteps:
         assert added is cart
         assert len(cart.products) == count
 
-    @when_then("the empty cart can be updated")
-    async def test_combined_phase(
-        self, cart: CartContext, count: int = 1
-    ) -> None:
-        cart.products.append("book")
-        assert len(cart.products) == count
-
 
 class TestFixtureLifetimes:
     @given("an iterator returned as the fixture value")
@@ -117,5 +110,5 @@ class TestTyping:
     def test_typing(self, type_checker: TypeChecker) -> None:
         # given
         source = Path(__file__).with_name("steps_typing.py.txt")
-        # when / then
+        # then
         type_checker.check(source)

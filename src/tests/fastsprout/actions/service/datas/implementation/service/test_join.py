@@ -51,7 +51,7 @@ class TestJoin:
             with pytest.raises(AttributeError):
                 rows[0][0].__getattribute__("system_key")
 
-            # when / then
+            # then
             with pytest.raises(AttributeError, match="public"):
                 _ = [
                     row

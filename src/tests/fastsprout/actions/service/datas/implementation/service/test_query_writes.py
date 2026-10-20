@@ -19,7 +19,7 @@ class TestQueryWrites:
         # given
         created = await records.create(Record(name="Batman"))
         query = sql.SQLQuery(Record)
-        # when / then
+        # then
         with pytest.raises(TypeError, match="query or field predicates"):
             if operation == "update_by_query":
                 await records.update_by_query(
@@ -80,7 +80,7 @@ class TestQueryWrites:
         # given
         created = await records.create(Record(name="Batman"))
         query = sql.SQLQuery(Record)
-        # when / then
+        # then
         with pytest.raises(AttributeError, match="not writable"):
             await records.update_by_query(
                 query.where(Record.score.gte(0)),
@@ -99,7 +99,7 @@ class TestQueryWrites:
         query = Record.score.gte(20) if direct else sql.SQLQuery(Record)
         no_update = DataS(Record, update=None)
         no_delete = DataS(Record, operations=frozenset({"count"}))
-        # when / then
+        # then
         assert await records.update_by_query(query, Record.score.set(20)) == 0
         assert await records.delete_by_query(query) == 0
         with pytest.raises(AttributeError, match="disabled"):
@@ -124,7 +124,7 @@ class TestQueryWrites:
             raise PermissionError("Denied")
 
         service = DataS(Record, dependencies=[Depends(reject)])
-        # when / then
+        # then
         async with DataR() as context:
             with pytest.raises(PermissionError, match="Denied"):
                 if operation == "update_by_query":
@@ -228,7 +228,7 @@ class TestQueryWrites:
         predicates = (predicate,) if additional else ()
         created = await records.create(Record(name="Batman"))
 
-        # when / then
+        # then
         with pytest.raises(error, match=message):
             if operation == "update_by_query":
                 await records.update_by_query(

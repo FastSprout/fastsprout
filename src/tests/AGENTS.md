@@ -3,17 +3,23 @@
 ## Structure and reuse
 
 Write new tests and extend existing tests using `fastsprout.testing` on pytest.
-Use `given`, `when`, `then`, and `when_then` from `fastsprout.testing.core`
+Use `given`, `when`, and `then` from `fastsprout.testing.core`
 for reusable BDD phases; use `fastsprout.testing.core.properties` for
 Hypothesis property tests. Reuse phase fixtures and shared test cases instead
 of repeating setup and execution in each test.
+
+Declare preconditions with `@given`, execute the operation with `@when`, and
+verify its result with `@then`. Connect phases through typed fixture arguments;
+their dependency graph determines execution order. Separate a combined scenario
+into these phases rather than relabeling the whole test as an assertion.
 
 Mirror the production package structure when placing tests.
 Follow `TestJoinedStreamContext` in
 `src/tests/fastsprout/data/router/test_join_context.py` as the test style reference.
 Group related tests in classes. In ordinary tests, mark setup, execution, and
-assertions with `# given`, `# when`, and `# then`; use `# when / then` for
-expected exceptions. BDD decorators (`@given`, `@when`, `@then`, `@when_then`)
+assertions with separate `# given`, `# when`, and `# then` sections.
+Do not combine execution and verification into one phase.
+BDD decorators (`@given`, `@when`, `@then`)
 already identify the phases; do not add phase comments inside those functions.
 Pylint checks phase decorator conflicts, missing type annotations, and
 redundant phase comments in BDD functions.

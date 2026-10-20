@@ -135,6 +135,7 @@ enable = [
     "conflicting-test-phases",
     "untyped-test-phase",
     "redundant-test-phase-comment",
+    "combined-test-phase-comment",
     "invalid-all-format",
     "invalid-all-object",
     "undefined-all-variable",

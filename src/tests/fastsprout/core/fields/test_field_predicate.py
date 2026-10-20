@@ -5,7 +5,7 @@ import pytest
 
 from fastsprout.core import BaseSchema, Field
 from fastsprout.core.fields.field_ref import FieldComparison, FieldRef
-from fastsprout.testing.core import given, then, when, when_then
+from fastsprout.testing.core import given, then, when
 
 
 class Record(BaseSchema):
@@ -13,10 +13,23 @@ class Record(BaseSchema):
 
 
 class TestFieldPredicate:
-    @when_then("field equality retains its operands and reference identity")
-    def test_field_equality(self) -> None:
-        field = Record.value
-        comparison = field == Record.value
+    @given("the record's integer field reference")
+    def value_field(self) -> FieldRef[Record, int, None]:
+        return Record.value
+
+    @when("two field references are compared")
+    def equality(
+        self, value_field: FieldRef[Record, int, None]
+    ) -> FieldComparison[Record, Record, int, None, None]:
+        return value_field == Record.value
+
+    @then("field equality retains its operands and reference identity")
+    def test_field_equality(
+        self,
+        value_field: FieldRef[Record, int, None],
+        equality: FieldComparison[Record, Record, int, None, None],
+    ) -> None:
+        field, comparison = value_field, equality
         other: FieldRef[Record, int, None] = FieldRef("other", Record, None)
         assert isinstance(comparison, FieldComparison)
         assert comparison.left is field
@@ -27,8 +40,10 @@ class TestFieldPredicate:
         assert field in {Record.value}
         assert (field == 1) is False
 
-    @when_then("membership consumes its source lazily and shares its values")
-    async def test_membership_is_lazy_and_shared(self) -> None:
+    @when(
+        "a lazy membership predicate is evaluated concurrently and then reused"
+    )
+    async def membership(self) -> tuple[bool, list[bool], bool, list[int]]:
         consumed: list[int] = []
 
         async def values() -> AsyncIterator[int]:
@@ -37,17 +52,25 @@ class TestFieldPredicate:
                 yield value
 
         predicate = Record.value.in_(values())
-        assert consumed == []
+        initially_empty = not consumed
         found = await gather(
             predicate(Record(value=2)), predicate(Record(value=7))
         )
         missing = await predicate(Record(value=4))
+        return initially_empty, list(found), missing, consumed
+
+    @then("membership consumes its source lazily and shares its values")
+    def test_membership_is_lazy_and_shared(
+        self, membership: tuple[bool, list[bool], bool, list[int]]
+    ) -> None:
+        initially_empty, found, missing, consumed = membership
+        assert initially_empty
         assert found == [True, True]
         assert not missing
         assert consumed == [2, 7]
 
-    @when_then("cancelling membership closes its source")
-    async def test_cancelled_membership_closes_source(self) -> None:
+    @when("membership evaluation is cancelled while waiting for its source")
+    async def cancelled_membership(self) -> tuple[CancelledError | None, bool]:
         started = Event()
         closed = Event()
         pending = Event()
@@ -64,18 +87,32 @@ class TestFieldPredicate:
         task = create_task(predicate(Record(value=1)))
         await started.wait()
         task.cancel()
-        with pytest.raises(CancelledError):
+        try:
             await task
-        assert closed.is_set()
+        except CancelledError as error:
+            return error, closed.is_set()
+        return None, closed.is_set()
+
+    @then("cancelling membership closes its source")
+    def test_cancelled_membership_closes_source(
+        self, cancelled_membership: tuple[CancelledError | None, bool]
+    ) -> None:
+        failure, closed = cancelled_membership
+        assert isinstance(failure, CancelledError)
+        assert closed
 
     @given("a record with the requested value")
     def record(self, value: int) -> Record:
         return Record(value=value)
 
+    @when("the field reference reads the record")
+    def retrieved_value(self, record: Record) -> int:
+        return Record.value(record)
+
     @then("a field reference reads its declared value as a stream getter")
     @pytest.mark.parametrize("value", [0, 7])
-    def test_getter(self, record: Record, value: int) -> None:
-        assert Record.value(record) == value
+    def test_getter(self, retrieved_value: int, value: int) -> None:
+        assert retrieved_value == value
 
     @when("the record is checked against an inclusive range")
     async def within_range(self, record: Record) -> bool:

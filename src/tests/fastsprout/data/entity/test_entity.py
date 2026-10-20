@@ -30,7 +30,7 @@ class TestEntity:
         copyfile(
             source.with_name("common.py"), type_checker.directory / "models.py"
         )
-        # when / then
+        # then
         type_checker.check(source)
 
     @pytest.mark.parametrize(
@@ -89,7 +89,7 @@ class TestEntity:
     ) -> None:
         # given
         created = create_type(name="item")
-        # when / then
+        # then
         with pytest.raises(AttributeError, match="not accessible"):
             created.__getattribute__("id")
         with pytest.raises(AttributeError, match="not accessible"):

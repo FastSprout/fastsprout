@@ -1,3 +1,3 @@
-from .steps import given, then, when, when_then
+from .steps import given, then, when
 
-__all__ = ["given", "then", "when", "when_then"]
+__all__ = ["given", "then", "when"]

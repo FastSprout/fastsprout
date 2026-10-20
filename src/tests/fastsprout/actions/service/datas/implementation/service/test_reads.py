@@ -11,13 +11,13 @@ from fastsprout.core.depends.scope import dependency_resources
 from fastsprout.core.fields.field_predicate import FieldPredicate
 from fastsprout.data import DataR, sql
 from fastsprout.data.utils.iterable import resolve_any_iterable
-from fastsprout.testing.core import given, when_then
+from fastsprout.testing.core import then, when
 
-from ...common import Record, RecordRead, RecordWrite, Team
+from ...common import Record, RecordRead, RecordWrite
 
 
 class TestReads:
-    @given("three heroes with distinct scores and a read DTO")
+    @when("three heroes with distinct scores are created for a read DTO")
     async def read_records(
         self, records: DataS[Record]
     ) -> DataS[Record, RecordRead]:
@@ -27,7 +27,7 @@ class TestReads:
         ).to_list()
         return DataS(Record, read=RecordRead)
 
-    @when_then("stream conditions preserve the read DTO")
+    @then("stream conditions preserve the read DTO")
     @pytest.mark.parametrize("direct", [False, True])
     @pytest.mark.parametrize("additional", [False, True])
     async def test_stream_conditions_preserve_read_dtos(
@@ -53,47 +53,7 @@ class TestReads:
                 row.__getattribute__("system_key")
         assert query.conditions == (predicate, *predicates)
 
-    @pytest.mark.parametrize("additional", [False, True])
-    @pytest.mark.parametrize(
-        "predicate, error, message",
-        [
-            (Team.name.eq("Batman"), TypeError, "belong to the service entity"),
-            (
-                Record.system_key.eq("system"),
-                AttributeError,
-                "not a public field",
-            ),
-        ],
-        ids=["foreign-entity", "internal-field"],
-    )
-    async def test_stream_field_guards(
-        self,
-        records: DataS[Record],
-        predicate: FieldPredicate[Record] | FieldPredicate[Team],
-        error: type[Exception],
-        message: str,
-        additional: bool,
-    ) -> None:
-        # given
-        first = Record.score.gte(0) if additional else predicate
-        rest = (predicate,) if additional else ()
-        # when / then
-        with pytest.raises(error, match=message):
-            await records.stream(first, *rest).to_list()
-        assert dependency_resources.get() is None
-
-    @when_then("read actions accept a Query or separate predicates")
-    async def test_reads_reject_query_with_separate_predicates(
-        self, records: DataS[Record]
-    ) -> None:
-        query = sql.SQLQuery(Record)
-        with pytest.raises(TypeError, match="query or field predicates"):
-            await records.stream(query, Record.score.gte(20)).to_list()
-        with pytest.raises(TypeError, match="query or field predicates"):
-            await records.find_exactly_one(query, Record.score.gte(20))
-        assert dependency_resources.get() is None
-
-    @when_then("Query and direct predicates preserve the read DTO")
+    @then("Query and direct predicates preserve the read DTO")
     @pytest.mark.parametrize("direct", [False, True])
     async def test_read_dtos_preserve_query_order_and_pagination(
         self, read_records: DataS[Record, RecordRead], direct: bool
@@ -117,24 +77,43 @@ class TestReads:
                 row.__getattribute__("system_key")
         assert len(all_rows) == len(streamed) == 1
 
-    @when_then("exact matches reject zero or multiple results")
+    @when("a Query or direct field predicate selects all records")
+    def selection(
+        self, direct: bool
+    ) -> sql.SQLQuery[Record] | FieldPredicate[Record]:
+        return Record.score.gte(0) if direct else sql.SQLQuery(Record)
+
+    @when("two matching records are persisted")
+    async def multiple_records(self, records: DataS[Record]) -> DataS[Record]:
+        await records.bulk_create(
+            Record(name=name) for name in ("a", "b")
+        ).to_list()
+        return records
+
+    @then("empty reads stay empty and exact matches reject zero results")
     @pytest.mark.parametrize("direct", [False, True])
     async def test_empty_and_multiple_results(
-        self, records: DataS[Record], direct: bool
+        self,
+        records: DataS[Record],
+        selection: sql.SQLQuery[Record] | FieldPredicate[Record],
     ) -> None:
         query = sql.SQLQuery(Record)
-        selection = Record.score.gte(0) if direct else query
         assert await records.find_first(query) is None
         assert await records.find_all(query) == []
         assert await records.stream(query).to_list() == []
         assert await records.stream(Record.score.gte(20)).to_list() == []
         with pytest.raises(NoResultFound):
             await records.find_exactly_one(selection)
-        await records.bulk_create(
-            Record(name=name) for name in ("a", "b")
-        ).to_list()
+
+    @then("exact matches reject multiple results")
+    @pytest.mark.parametrize("direct", [False, True])
+    async def test_multiple_results(
+        self,
+        multiple_records: DataS[Record],
+        selection: sql.SQLQuery[Record] | FieldPredicate[Record],
+    ) -> None:
         with pytest.raises(MultipleResultsFound):
-            await records.find_exactly_one(selection)
+            await multiple_records.find_exactly_one(selection)
 
     @pytest.mark.parametrize("direct", [False, True])
     @pytest.mark.parametrize("stop_early", [False, True])
@@ -188,7 +167,7 @@ class TestReads:
         # given
         service = DataS(Record, read=None)
         query = sql.SQLQuery(Record)
-        # when / then
+        # then
         with pytest.raises(AttributeError, match="disabled"):
             await service.find_first(query)
         with pytest.raises(AttributeError, match="disabled"):
@@ -260,7 +239,7 @@ class TestReads:
     ) -> None:
         # given
         missing = uuid4()
-        # when / then
+        # then
         async with DataR() as datar:
             assert await records.exists(missing, datar=datar) is False
             created = await records.create(Record(name="Batman"), datar=datar)
@@ -283,7 +262,7 @@ class TestReads:
             dependencies=[Depends(observe)],
             operations=frozenset({"exists"}),
         )
-        # when / then
+        # then
         async with DataR() as datar:
             created = await records.create(Record(name="Batman"), datar=datar)
             assert await service.exists(created.id, datar=datar) is True

@@ -61,7 +61,7 @@ async def query_contract(ability: SQLAbilitable[SQLUser]) -> None:
     other = SQLQuery(Team)
     protocol: Abilitable[SQLUser, SQLQuery[SQLUser]] = ability
 
-    # when / then
+    # then
     assert_type(await ability.find_first(query), SQLUser | None)
     assert_type(await ability.find_exactly_one(query), SQLUser)
     assert_type(await ability.find_all(query), Sequence[SQLUser])

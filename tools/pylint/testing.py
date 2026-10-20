@@ -13,7 +13,7 @@ __all__ = ["TestingPhasesChecker", "register"]
 
 PHASES = {
     f"fastsprout.testing.core.steps.{phase}"
-    for phase in ("given", "when", "then", "when_then")
+    for phase in ("given", "when", "then")
 }
 
 
@@ -26,7 +26,7 @@ class TestingPhasesChecker(BaseChecker):
             "C9507": (
                 "Use one BDD phase decorator per function",
                 "conflicting-test-phases",
-                "Use when_then for a combined action and assertion.",
+                "Declare given, when, and then in separate functions.",
             ),
             "C9508": (
                 "BDD phase requires a type annotation for %s",
@@ -38,6 +38,11 @@ class TestingPhasesChecker(BaseChecker):
                 "redundant-test-phase-comment",
                 "Do not repeat BDD phases with given/when/then comments.",
             ),
+            "C9510": (
+                "Use separate when and then phases",
+                "combined-test-phase-comment",
+                "Keep test execution and verification in distinct phases.",
+            ),
         }
         self.phase_comments: set[int] = set()
 
@@ -47,13 +52,22 @@ class TestingPhasesChecker(BaseChecker):
         if source is None:
             return
         with source:
-            self.phase_comments = {
-                token.start[0]
+            comments = [
+                token
                 for token in tokenize.tokenize(source.readline)
                 if token.type == tokenize.COMMENT
-                and re.fullmatch(
-                    r"#\s*(given|when|then)(\s*/\s*then)?\s*", token.string
-                )
+            ]
+            for token in comments:
+                if re.fullmatch(r"#\s*when\s*/\s*then\s*", token.string):
+                    self.add_message(
+                        "combined-test-phase-comment",
+                        node=node,
+                        line=token.start[0],
+                    )
+            self.phase_comments = {
+                token.start[0]
+                for token in comments
+                if re.fullmatch(r"#\s*(given|when|then)\s*", token.string)
             }
 
     def is_phase(self, decorator: nodes.NodeNG) -> bool:

@@ -99,7 +99,7 @@ class TestWorkflowFork:
 
         workflow = Workflow(first).fork(first, compute)
 
-        # when / then
+        # then
         with (
             pytest.raises(ValueError, match="Fork failed")
             if fail

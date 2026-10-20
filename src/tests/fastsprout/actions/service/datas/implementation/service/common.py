@@ -9,6 +9,8 @@ from fastsprout.actions.service.datas.implementation import commands, queries
 from fastsprout.core import Field, InternalField, ReadDTO, ReadField, WriteDTO
 from fastsprout.data import Relationship, sql
 
+from ...common import MemoryCreate, MemoryRecord
+
 engine = create_async_engine("sqlite+aiosqlite://", poolclass=StaticPool)
 backend = sql.SQLSignpost(async_sessionmaker(engine, expire_on_commit=False))
 
@@ -81,3 +83,18 @@ class SelectedHeroActions(Service):
 
 
 class OptionalTeamHeroCreate(WriteDTO, OptionalTeamHero): ...
+
+
+class SelectedMemoryActions(Service):
+    entity = MemoryRecord
+    read_schema = MemoryRecord
+    create_schema = MemoryCreate
+    chunk_size = 2
+
+    create = commands.create
+    bulk_create = commands.bulk_create
+    get = queries.get
+    delete = commands.delete
+
+
+class SelectedMemory(DataS[MemoryRecord]): ...

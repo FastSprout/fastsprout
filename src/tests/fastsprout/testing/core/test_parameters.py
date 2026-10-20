@@ -2,7 +2,7 @@ from inspect import Signature
 
 import pytest
 
-from fastsprout.testing.core import given, when_then
+from fastsprout.testing.core import given, then, when
 from fastsprout.testing.core.contracts import checked_signature
 from fastsprout.testing.core.parameters import StepPattern
 
@@ -23,10 +23,8 @@ def step_project(pytester: pytest.Pytester) -> pytest.Pytester:
 
 
 class TestParameters:
-    @when_then(
-        "parsed fields do not enable validation of shadowed legacy fixtures"
-    )
-    def test_shadowed_fixture(self, step_project: pytest.Pytester) -> None:
+    @when("typed and legacy modules with shadowed fixtures are run")
+    def shadowed_run(self, step_project: pytest.Pytester) -> pytest.RunResult:
         step_project.makeconftest(
             'pytest_plugins = ["fastsprout.testing.core.plugin"]\n'
             "import pytest\n@pytest.fixture\ndef count(): return 'legacy'\n"
@@ -37,10 +35,19 @@ class TestParameters:
             "def test_count(count: int) -> None: assert count == 1\n",
             test_legacy="def test_legacy(count): assert count == 'legacy'\n",
         )
-        result = step_project.runpytest("--no-cov")
-        result.assert_outcomes(passed=2)
+        return step_project.runpytest("--no-cov")
 
-    @when_then("step fields match literal text and preserve converted types")
+    @then("parsed fields do not validate shadowed legacy fixtures")
+    def test_shadowed_fixture(self, shadowed_run: pytest.RunResult) -> None:
+        shadowed_run.assert_outcomes(passed=2)
+
+    @when("text is matched against the compiled step pattern")
+    def matched(
+        self, contract: Signature, pattern: str, text: str
+    ) -> dict[str, str | int | float] | None:
+        return StepPattern.compile(pattern, contract).match(text)
+
+    @then("step fields match literal text and preserve converted types")
     @pytest.mark.parametrize(
         "pattern, text, expected",
         [
@@ -55,14 +62,22 @@ class TestParameters:
     )
     def test_matching(
         self,
-        contract: Signature,
-        pattern: str,
-        text: str,
+        matched: dict[str, str | int | float] | None,
         expected: dict[str, str | int | float] | None,
     ) -> None:
-        assert StepPattern.compile(pattern, contract).match(text) == expected
+        assert matched == expected
 
-    @when_then("invalid step declarations fail before parametrization")
+    @when("an invalid step declaration is compiled")
+    def compilation_error(
+        self, contract: Signature, pattern: str
+    ) -> ValueError | None:
+        try:
+            StepPattern.compile(pattern, contract)
+        except ValueError as error:
+            return error
+        return None
+
+    @then("invalid step declarations fail before parametrization")
     @pytest.mark.parametrize(
         "pattern",
         [
@@ -73,11 +88,27 @@ class TestParameters:
             "{count",
         ],
     )
-    def test_invalid_patterns(self, contract: Signature, pattern: str) -> None:
-        with pytest.raises(ValueError):
-            StepPattern.compile(pattern, contract)
+    def test_invalid_patterns(
+        self, compilation_error: ValueError | None
+    ) -> None:
+        assert isinstance(compilation_error, ValueError)
 
-    @when_then("invalid text cases report a collection error")
+    @when("a project containing invalid step cases is collected")
+    def invalid_run(
+        self,
+        step_project: pytest.Pytester,
+        cases: tuple[tuple[str, ...], ...],
+        description: str,
+    ) -> pytest.RunResult:
+        step_project.makepyfile(
+            "import pytest\nfrom fastsprout.testing.core import given, then\n"
+            "@given('plain step')\ndef context() -> int: return 1\n"
+            f"@pytest.mark.steps(*{cases!r})\n@then({description!r})\n"
+            "def test_count(context: int, count: int) -> None: pass\n"
+        )
+        return step_project.runpytest("--no-cov")
+
+    @then("invalid text cases report a collection error")
     @pytest.mark.parametrize(
         "cases, description, error",
         [
@@ -107,28 +138,22 @@ class TestParameters:
     )
     def test_invalid_cases(
         self,
-        step_project: pytest.Pytester,
-        cases: tuple[tuple[str, ...], ...],
-        description: str,
+        invalid_run: pytest.RunResult,
         error: str,
     ) -> None:
-        step_project.makepyfile(
-            "import pytest\nfrom fastsprout.testing.core import given, then\n"
-            "@given('plain step')\ndef context() -> int: return 1\n"
-            f"@pytest.mark.steps(*{cases!r})\n@then({description!r})\n"
-            "def test_count(context: int, count: int) -> None: pass\n"
-        )
-        result = step_project.runpytest("--no-cov")
-        result.assert_outcomes(errors=1)
-        assert error in result.stdout.str()
+        invalid_run.assert_outcomes(errors=1)
+        assert error in invalid_run.stdout.str()
 
-    @when_then("converted parameters still obey the consumer's annotation")
-    def test_wrong_type(self, step_project: pytest.Pytester) -> None:
+    @when("a step with an incompatible converted parameter is run")
+    def wrong_type_run(self, step_project: pytest.Pytester) -> pytest.RunResult:
         step_project.makepyfile(
             "import pytest\nfrom fastsprout.testing.core import then\n"
             "@pytest.mark.steps(('contains 1',))\n@then('contains {count}')\n"
             "def test_count(count: int) -> None: pass\n"
         )
-        result = step_project.runpytest("--no-cov")
-        result.assert_outcomes(failed=1)
-        assert "TypeCheckError" in result.stdout.str()
+        return step_project.runpytest("--no-cov")
+
+    @then("converted parameters still obey the consumer's annotation")
+    def test_wrong_type(self, wrong_type_run: pytest.RunResult) -> None:
+        wrong_type_run.assert_outcomes(failed=1)
+        assert "TypeCheckError" in wrong_type_run.stdout.str()
