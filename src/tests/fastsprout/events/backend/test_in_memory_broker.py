@@ -81,7 +81,7 @@ class TestInMemoryBroker(BaseTestBroker):
     )
     async def native_completions(
         self, bus: EventBus
-    ) -> tuple[Completion, EventResult[Message]]:
+    ) -> tuple[Completion, EventResult[Message, Message]]:
         release = asyncio.Event()
 
         @sub(Message, bus=bus)
@@ -106,7 +106,8 @@ class TestInMemoryBroker(BaseTestBroker):
 
     @then("FIRST_COMPLETED preserves pending work and both eventual results")
     def test_first_completed_keeps_other_result_pending(
-        self, native_completions: tuple[Completion, EventResult[Message]]
+        self,
+        native_completions: tuple[Completion, EventResult[Message, Message]],
     ) -> None:
         first, completed = native_completions
         assert first.values == (3,)
@@ -128,7 +129,7 @@ class TestAsyncQueueBroker(BaseTestBroker):
     @when("a handler publishes and awaits another queued event")
     async def nested_result(
         self, broker: AsyncQueueBroker
-    ) -> EventResult[Message]:
+    ) -> EventResult[Message, Message]:
         bus = EventBus(broker)
 
         @sub(Message, bus=bus)
@@ -145,7 +146,7 @@ class TestAsyncQueueBroker(BaseTestBroker):
 
     @then("nested publication completes without blocking the queue")
     def test_nested_publication(
-        self, nested_result: EventResult[Message]
+        self, nested_result: EventResult[Message, Message]
     ) -> None:
         done, pending = nested_result
         assert [item.value for item in done] == [1]
@@ -154,7 +155,7 @@ class TestAsyncQueueBroker(BaseTestBroker):
     @when("the queue is stopped with an unfinished handler")
     async def stopped_result(
         self, broker: AsyncQueueBroker
-    ) -> EventResult[Message]:
+    ) -> EventResult[Message, Message]:
         bus = EventBus(broker)
         entered = asyncio.Event()
         blocked = asyncio.Event()
@@ -172,7 +173,9 @@ class TestAsyncQueueBroker(BaseTestBroker):
             return await state.wait()
 
     @then("shutdown releases queue joins and cancels unfinished handlers")
-    def test_shutdown(self, stopped_result: EventResult[Message]) -> None:
+    def test_shutdown(
+        self, stopped_result: EventResult[Message, Message]
+    ) -> None:
         done, pending = stopped_result
         assert done == []
         assert pending == []

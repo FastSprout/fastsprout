@@ -31,6 +31,7 @@ uv run --extra events python examples/events/01_decorators/01_pub_pusher.py
 | --- | --- |
 | [03_bus/01_middleware.py](03_bus/01_middleware.py) | Run middleware for one event type and inspect its handler result. |
 | [03_bus/02_custom_event_bus.py](03_bus/02_custom_event_bus.py) | Use a Bubus-backed bus through a Depends provider override. |
+| [03_bus/03_result_schema.py](03_bus/03_result_schema.py) | Wait for a receipt from one event while retaining other subscriber results. |
 
 ## 4. Brokers
 

@@ -32,13 +32,15 @@ class TestWait:
         return bus
 
     @when("all subscribers finish")
-    async def completed(self, responding_bus: EventBus) -> EventResult[Message]:
+    async def completed(
+        self, responding_bus: EventBus
+    ) -> EventResult[Message, Message]:
         state = await responding_bus.publish(Message(value=1))
         return await state.wait()
 
     @then("wait collects both subscriber results without errors")
     def test_multiple_subscribers(
-        self, completed: EventResult[Message]
+        self, completed: EventResult[Message, Message]
     ) -> None:
         successful, pending = completed
         assert {event.value for event in successful} == {2, 3}
@@ -46,7 +48,7 @@ class TestWait:
         assert completed.errors == ()
 
     @when("a subscriber fails")
-    async def failed(self, bus: EventBus) -> EventResult[Message]:
+    async def failed(self, bus: EventBus) -> EventResult[Message, Message]:
         async def handler(event: Message) -> None:
             raise ValueError(event.value)
 
@@ -55,7 +57,9 @@ class TestWait:
         return await state.wait(return_when="FIRST_EXCEPTION")
 
     @then("FIRST_EXCEPTION retains the handler error")
-    def test_handler_errors(self, failed: EventResult[Message]) -> None:
+    def test_handler_errors(
+        self, failed: EventResult[Message, Message]
+    ) -> None:
         successful, pending = failed
         assert successful == []
         assert pending == []
@@ -98,13 +102,13 @@ class TestWait:
     @when("the pending subscriber is released")
     async def remaining_completion(
         self, first_completion: Completion
-    ) -> EventResult[Message]:
+    ) -> EventResult[Message, Message]:
         first_completion.release.set()
         return await first_completion.state.wait()
 
     @then("a subsequent wait retains all results")
     def test_remaining_completion(
-        self, remaining_completion: EventResult[Message]
+        self, remaining_completion: EventResult[Message, Message]
     ) -> None:
         successful, pending = remaining_completion
         assert {event.value for event in successful} == {2, 3}
@@ -129,13 +133,15 @@ class TestMultipleBrokers:
             await future_broker.stop()
 
     @when("both brokers complete their work")
-    async def completed(self, multi_bus: EventBus) -> EventResult[Message]:
+    async def completed(
+        self, multi_bus: EventBus
+    ) -> EventResult[Message, Message]:
         state = await multi_bus.publish(Message(value=1))
         return await state.wait()
 
     @then("wait includes results registered by either broker")
     def test_other_broker_results(
-        self, completed: EventResult[Message]
+        self, completed: EventResult[Message, Message]
     ) -> None:
         successful, pending = completed
         assert {event.value for event in successful} == {2, 3}

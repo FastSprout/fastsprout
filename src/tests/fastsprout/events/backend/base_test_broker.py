@@ -3,10 +3,9 @@ from asyncio import timeout
 from collections.abc import AsyncIterator
 from contextlib import AbstractAsyncContextManager
 
-from fastsprout.core import BaseSchema, dataclass
+from fastsprout.core import dataclass
 from fastsprout.events import (
     FIRST_COMPLETED,
-    Event,
     EventBus,
     EventResult,
     EventState,
@@ -15,13 +14,7 @@ from fastsprout.events import (
 from fastsprout.events.backend.in_memory import InMemoryBroker
 from fastsprout.testing.core import given, then, when
 
-
-class Message(Event):
-    value: int
-
-
-class Reply(BaseSchema):
-    value: int
+from ..event.common import Message, Reply
 
 
 @dataclass
@@ -66,6 +59,19 @@ class BaseTestBroker:
         assert await bus.get(delivered.event) is delivered
         assert not await bus.retract(delivered)
 
+    @when("the published event is awaited using its reply schema")
+    async def routed(
+        self, delivered: EventState[Message]
+    ) -> EventResult[Message, Reply]:
+        return await delivered.wait(Reply)
+
+    @then("schema routing works through the broker's shared event state")
+    def test_result_schema(self, routed: EventResult[Message, Reply]) -> None:
+        done, pending = routed
+        assert [reply.value for reply in done] == [2]
+        assert pending == []
+        assert routed.errors == ()
+
     @when("only the fast handler finishes")
     async def first_completion(
         self, bus: EventBus
@@ -104,19 +110,21 @@ class BaseTestBroker:
     @when("the remaining subscriber is released")
     async def completed(
         self, first_completion: Completion
-    ) -> EventResult[Message]:
+    ) -> EventResult[Message, Reply]:
         first_completion.release.set()
         async with timeout(15):
             return await first_completion.state.wait()
 
     @then("all subscriber results remain available after completion")
-    def test_all_completed(self, completed: EventResult[Message]) -> None:
+    def test_all_completed(
+        self, completed: EventResult[Message, Reply]
+    ) -> None:
         done, pending = completed
         assert sorted(reply.value for reply in done) == [1, 2]
         assert pending == []
 
     @when("a handler rejects the published message")
-    async def rejected(self, bus: EventBus) -> EventResult[Message]:
+    async def rejected(self, bus: EventBus) -> EventResult[Message, Reply]:
         @sub(Message, bus=bus)
         async def handler(event: Message) -> None:
             raise RuntimeError(f"rejected {event.value}")
@@ -126,14 +134,16 @@ class BaseTestBroker:
             return await state.wait()
 
     @then("subscriber failures remain available on the event result")
-    def test_handler_failure(self, rejected: EventResult[Message]) -> None:
+    def test_handler_failure(
+        self, rejected: EventResult[Message, Reply]
+    ) -> None:
         assert any(isinstance(error, RuntimeError) for error in rejected.errors)
         done, pending = rejected
         assert done == []
         assert pending == []
 
     @when("a handler is added between two publications")
-    async def late_delivery(self, bus: EventBus) -> EventResult[Message]:
+    async def late_delivery(self, bus: EventBus) -> EventResult[Message, Reply]:
         async with timeout(15):
             first = await bus.publish(Message(value=1))
             await first.wait()
@@ -147,7 +157,7 @@ class BaseTestBroker:
 
     @then("late subscriptions start on the next dispatch")
     def test_late_subscription(
-        self, late_delivery: EventResult[Message]
+        self, late_delivery: EventResult[Message, Reply]
     ) -> None:
         done, pending = late_delivery
         assert [reply.value for reply in done] == [2]
