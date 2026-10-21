@@ -28,14 +28,14 @@ from fastsprout.data.streams.implementation.base_common_stream import (
     BaseCommonStream,
 )
 from fastsprout.data.streams.protocols import (
-    AsyncCommonStream,
-    AsyncEntityStream,
+    AsyncCommonStreamable,
+    AsyncEntityStreamable,
 )
 from fastsprout.data.types import Valuable
 from fastsprout.data.utils.callable import resolve_any_callable
 from fastsprout.data.utils.iterable import resolve_any_iterable
 
-from ..protocols.owners import PageOwner, QueryOwner
+from ..protocols.owners import PageOwnable, QueryOwnable
 from ..schemas import read_source
 from ..types import Page
 from .payloads import find_entity
@@ -60,7 +60,7 @@ def validated[
     R: Valuable | Entitieable,
     Statement,
 ](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     datar: DataR,
     query: BaseQuery[E, Statement] | FieldPredicate[E] | None,
     *predicates: FieldPredicate[E],
@@ -91,7 +91,7 @@ async def count[
     R: Valuable | Entitieable,
     Statement,
 ](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: BaseQuery[E, Statement] | None = None,
     *,
     datar: DataR = Depends(),
@@ -104,7 +104,7 @@ async def list[
     R: Valuable | Entitieable,
     Statement,
 ](
-    self: PageOwner[E, R],
+    self: PageOwnable[E, R],
     query: BaseQuery[E, Statement] | None = None,
     *,
     datar: DataR = Depends(),
@@ -130,7 +130,7 @@ async def find_first[
     R: Valuable | Entitieable,
     Statement,
 ](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: BaseQuery[E, Statement],
     *,
     datar: DataR = Depends(),
@@ -146,7 +146,7 @@ async def find_exactly_one[
     R: Valuable | Entitieable,
     Statement,
 ](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: BaseQuery[E, Statement] | FieldPredicate[E],
     *predicates: FieldPredicate[E],
     datar: DataR = Depends(),
@@ -162,7 +162,7 @@ async def find_all[
     R: Valuable | Entitieable,
     Statement,
 ](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: BaseQuery[E, Statement],
     *,
     datar: DataR = Depends(),
@@ -178,34 +178,34 @@ def selected[
     R: Valuable | Entitieable,
     Statement,
 ](
-    self: QueryOwner[E, R], datar: DataR, query: BaseQuery[E, Statement]
-) -> AsyncEntityStream[E]:
+    self: QueryOwnable[E, R], datar: DataR, query: BaseQuery[E, Statement]
+) -> AsyncEntityStreamable[E]:
     return datar.stream(validated(self, datar, query))
 
 
 @overload
 def stream[E: Entitieable, R: Valuable | Entitieable, Statement](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: BaseQuery[E, Statement],
     *,
     datar: DataR = Depends(),
-) -> AsyncCommonStream[R]: ...
+) -> AsyncCommonStreamable[R]: ...
 
 
 @overload
 def stream[E: Entitieable, R: Valuable | Entitieable](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: FieldPredicate[E],
     /,
     *predicates: FieldPredicate[E],
     datar: DataR = Depends(),
-) -> AsyncCommonStream[R]: ...
+) -> AsyncCommonStreamable[R]: ...
 
 
 @BaseCommonStream.as_stream
 @stream_dependencies
 async def stream[E: Entitieable, R: Valuable | Entitieable, Statement](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: BaseQuery[E, Statement] | FieldPredicate[E],
     *predicates: FieldPredicate[E],
     datar: DataR = Depends(),
@@ -217,7 +217,7 @@ async def stream[E: Entitieable, R: Valuable | Entitieable, Statement](
 
 
 async def get[E: Entitieable, R: Valuable | Entitieable, Statement](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     identifier: IdentificatorType | BaseQuery[E, Statement],
     datar: DataR = Depends(),
 ) -> R | None:
@@ -228,7 +228,7 @@ async def get[E: Entitieable, R: Valuable | Entitieable, Statement](
 
 
 async def exists[E: Entitieable, R: Valuable | Entitieable, Statement](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     identifier: IdentificatorType | BaseQuery[E, Statement],
     datar: DataR = Depends(),
 ) -> bool:

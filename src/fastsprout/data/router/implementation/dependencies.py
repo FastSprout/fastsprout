@@ -21,13 +21,13 @@ from fastsprout.data.backend.protocols import DataAbilitable, Finalizable
 from fastsprout.data.capabilities import BaseQuery
 from fastsprout.data.entity import Entitieable, Signpostable
 from fastsprout.data.router.protocols import Routerable
-from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.data.streams.protocols import AsyncEntityStreamable
 from fastsprout.events import EventBus
 
-__all__ = ["AbilityDependencies", "AsyncOperation", "guard_ability"]
+__all__ = ["AbilityDependencies", "AsyncOperationable", "guard_ability"]
 
 
-class AsyncOperation[**P, R](Protocol):
+class AsyncOperationable[**P, R](Protocol):
     async def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
 
 
@@ -60,7 +60,7 @@ class AbilityDependencies:
     def coroutine[**P, R](
         self,
         function: Callable[P, Awaitable[R]],
-    ) -> AsyncOperation[P, R]:
+    ) -> AsyncOperationable[P, R]:
         @wraps(function)
         async def call(*args: P.args, **kwargs: P.kwargs) -> R:
             await self.check(function, *args, **kwargs)
@@ -134,7 +134,7 @@ def guard_ability[
 ) -> None:
     guard = AbilityDependencies(datar, dependencies)
 
-    def stream(query: BaseQuery[E, StatementT], /) -> AsyncEntityStream[E]:
+    def stream(query: BaseQuery[E, StatementT], /) -> AsyncEntityStreamable[E]:
         async def read(query: BaseQuery[E, StatementT]) -> None:
             """Provide the read operation's arguments to dependencies."""
 

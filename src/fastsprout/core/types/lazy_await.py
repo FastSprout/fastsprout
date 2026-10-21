@@ -9,7 +9,7 @@ from typing import overload
 
 from typing_extensions import TypeIs
 
-from .protocols.ables import ACloseable, AsyncIterableResolver, AwaitGenerator
+from .protocols.ables import ACloseable, AsyncIterableResolvable, AwaitGenerator
 
 __all__ = ["LazyAwait"]
 
@@ -60,7 +60,7 @@ class LazyAwait[R](Awaitable[R]):
         return self.resolve().__await__()
 
     async def __aiter__[T](
-        self: AsyncIterableResolver[T],
+        self: AsyncIterableResolvable[T],
     ) -> AsyncGenerator[T, None]:
         iterator = aiter(await self.resolve())
         scope = (

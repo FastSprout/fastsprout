@@ -8,7 +8,7 @@ from fastsprout.data.backend.sql import SQLEntity, SQLQuery
 from fastsprout.data.backend.sql.capabilities import SQLAbilitable
 from fastsprout.data.capabilities.protocols import Abilitable
 from fastsprout.data.entity import BaseEntity, Entitieable
-from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.data.streams.protocols import AsyncEntityStreamable
 
 class SQLUser(SQLEntity[int]):
     id: ReadField[int] = SQLField(primary_key=True)
@@ -65,7 +65,7 @@ async def query_contract(ability: SQLAbilitable[SQLUser]) -> None:
     assert_type(await ability.find_first(query), SQLUser | None)
     assert_type(await ability.find_exactly_one(query), SQLUser)
     assert_type(await ability.find_all(query), Sequence[SQLUser])
-    assert_type(ability.stream(query), AsyncEntityStream[SQLUser])
+    assert_type(ability.stream(query), AsyncEntityStreamable[SQLUser])
     assert_type(ability.iter(query), AsyncIterator[SQLUser])
     assert_type(ability.iter_per(query), AsyncIterator[Sequence[SQLUser]])
     assert_type(await ability.delete_by_query(query), int)

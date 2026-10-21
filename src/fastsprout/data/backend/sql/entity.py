@@ -40,7 +40,7 @@ from fastsprout.data.entity import Entitieable, Signpostable
 __all__ = [
     "SQL_ENTITY_REGISTRY",
     "SQLEntity",
-    "SQLEntityClass",
+    "SQLEntityClassable",
     "SQLSignpost",
     "SQLSource",
     "TypedSQLMeta",
@@ -241,7 +241,7 @@ class SQLEntity(
         validate_source(cls)
 
 
-class SQLEntityClass[E, S: SQLSource](Protocol):
+class SQLEntityClassable[E, S: SQLSource](Protocol):
     def __sql_entity__(self) -> type[E]: ...
 
     def __sql_source__(self) -> type[S]: ...

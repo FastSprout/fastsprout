@@ -7,7 +7,7 @@ from collections.abc import Iterable, Iterator
 
 from fastsprout.actions import Workflow
 from fastsprout.core import BaseSchema
-from fastsprout.core.action import BaseIterableAction
+from fastsprout.core.action import IterableActionable
 
 
 class DocumentRequest(BaseSchema):
@@ -36,7 +36,7 @@ async def render(document: Document) -> RenderedDocument:
     return RenderedDocument(content=document.content.encode())
 
 
-iterable: BaseIterableAction[DocumentRequest, Document] = load
+iterable: IterableActionable[DocumentRequest, Document] = load
 workflow = Workflow(iterable).then(render)
 
 

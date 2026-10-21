@@ -15,10 +15,10 @@ from fastsprout.events.event import Eventable, EventState
 if TYPE_CHECKING:
     from fastsprout.events.bus import EventBus
 
-__all__ = ["EventsMiddleware", "EventsMiddlewareFactory"]
+__all__ = ["EventsMiddleware", "EventsMiddlewareFactoryable"]
 
 
-class EventsMiddlewareFactory[**P](Protocol):
+class EventsMiddlewareFactoryable[**P](Protocol):
     def __init__(
         self, bus: EventBus, /, *args: P.args, **kwargs: P.kwargs
     ) -> None: ...
@@ -29,7 +29,7 @@ class EventsMiddlewareFactory[**P](Protocol):
 class EventsMiddleware[**P]:
     def __init__(
         self,
-        cls: type[EventsMiddlewareFactory[P]],
+        cls: type[EventsMiddlewareFactoryable[P]],
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> None:
@@ -45,13 +45,11 @@ class EventsMiddleware[**P]:
         if get_origin(annotation) is not EventState:
             return True
         event_type = get_args(annotation)[0]
-        return not isinstance(event_type, type) or isinstance(
-            event, event_type
-        )
+        return not isinstance(event_type, type) or isinstance(event, event_type)
 
-    def bind(self, bus: EventBus) -> EventsMiddlewareFactory[P]:
+    def bind(self, bus: EventBus) -> EventsMiddlewareFactoryable[P]:
         return cast(
-            EventsMiddlewareFactory[P],
+            EventsMiddlewareFactoryable[P],
             self.cls(bus, *self.args, **self.kwargs),
         )
 

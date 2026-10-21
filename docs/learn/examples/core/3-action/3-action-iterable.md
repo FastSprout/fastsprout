@@ -4,7 +4,7 @@
 
 Return greetings lazily from a class action or an async function.
 
-Both callables satisfy BaseIterableAction. Awaiting either one returns a
+Both callables satisfy IterableActionable. Awaiting either one returns a
 synchronous iterable; each GreetOut is created only when the caller iterates.
 
 ## Source
@@ -12,14 +12,14 @@ synchronous iterable; each GreetOut is created only when the caller iterates.
 ```python
 """Return greetings lazily from a class action or an async function.
 
-Both callables satisfy BaseIterableAction. Awaiting either one returns a
+Both callables satisfy IterableActionable. Awaiting either one returns a
 synchronous iterable; each GreetOut is created only when the caller iterates.
 """
 
 import asyncio
 from collections.abc import Iterable
 
-from fastsprout.core.action import BaseIterableAction
+from fastsprout.core.action import IterableActionable
 from fastsprout.core.fields import Field
 from fastsprout.core.schema import BaseSchema
 
@@ -33,7 +33,7 @@ class GreetOut(BaseSchema):
     message: Field[str]
 
 
-class GreetBatch(BaseIterableAction[GreetBatchIn, GreetOut]):
+class GreetBatch(IterableActionable[GreetBatchIn, GreetOut]):
     async def __call__(self, payload: GreetBatchIn, /) -> Iterable[GreetOut]:
         return (
             GreetOut(message=f"hello, {payload.name} #{i}")

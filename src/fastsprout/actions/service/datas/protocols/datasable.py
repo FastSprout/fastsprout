@@ -17,18 +17,18 @@ from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.router import DataR
 from fastsprout.data.streams.protocols import (
-    AsyncCommonStream,
+    AsyncCommonStreamable,
 )
 from fastsprout.data.types import MapperCallable, Valuable
 
 from ..types import DataSOperation, Page
 from .owners import (
-    CreateOwner,
-    EntityOwner,
-    PageOwner,
-    PatchOwner,
-    QueryOwner,
-    UpdateOwner,
+    CreateOwnable,
+    EntityOwnable,
+    PageOwnable,
+    PatchOwnable,
+    QueryOwnable,
+    UpdateOwnable,
 )
 
 __all__ = ["DataSable"]
@@ -66,12 +66,12 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
 
     @overload
     async def update(
-        self: UpdateOwner[E, R, U], entity: E, /, *, datar: DataR = ...
+        self: UpdateOwnable[E, R, U], entity: E, /, *, datar: DataR = ...
     ) -> R: ...
 
     @overload
     async def update(
-        self: UpdateOwner[E, R, U],
+        self: UpdateOwnable[E, R, U],
         identifier: IdentificatorType,
         data: E | U,
         /,
@@ -80,7 +80,7 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
     ) -> R: ...
 
     async def patch(
-        self: PatchOwner[E, R, P],
+        self: PatchOwnable[E, R, P],
         identifier: IdentificatorType,
         data: E | P,
         /,
@@ -89,59 +89,59 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
     ) -> R: ...
 
     async def delete(
-        self: EntityOwner[E, R],
+        self: EntityOwnable[E, R],
         identifier: IdentificatorType,
         datar: DataR = ...,
     ) -> int: ...
 
     async def upsert(
-        self: EntityOwner[E, R], entity: E, datar: DataR = ...
+        self: EntityOwnable[E, R], entity: E, datar: DataR = ...
     ) -> R: ...
 
     def bulk_create(
-        self: CreateOwner[E, R, C],
+        self: CreateOwnable[E, R, C],
         entities: AnyIterable[E | C],
         /,
         *,
         datar: DataR = ...,
-    ) -> AsyncCommonStream[R]: ...
+    ) -> AsyncCommonStreamable[R]: ...
 
     @overload
     def bulk_update(
-        self: UpdateOwner[E, R, U],
+        self: UpdateOwnable[E, R, U],
         entities: AnyIterable[E],
         /,
         *,
         datar: DataR = ...,
-    ) -> AsyncCommonStream[R]: ...
+    ) -> AsyncCommonStreamable[R]: ...
 
     @overload
     def bulk_update(
-        self: UpdateOwner[E, R, U],
+        self: UpdateOwnable[E, R, U],
         entities: AnyIterable[tuple[IdentificatorType, E | U]],
         /,
         *,
         datar: DataR = ...,
-    ) -> AsyncCommonStream[R]: ...
+    ) -> AsyncCommonStreamable[R]: ...
 
     def bulk_patch(
-        self: PatchOwner[E, R, P],
+        self: PatchOwnable[E, R, P],
         entities: AnyIterable[tuple[IdentificatorType, E | P]],
         /,
         *,
         datar: DataR = ...,
-    ) -> AsyncCommonStream[R]: ...
+    ) -> AsyncCommonStreamable[R]: ...
 
     def bulk_upsert(
-        self: EntityOwner[E, R],
+        self: EntityOwnable[E, R],
         entities: AnyIterable[E],
         /,
         *,
         datar: DataR = ...,
-    ) -> AsyncCommonStream[R]: ...
+    ) -> AsyncCommonStreamable[R]: ...
 
     def bulk_delete(
-        self: EntityOwner[E, R],
+        self: EntityOwnable[E, R],
         identifiers: AnyIterable[IdentificatorType],
         /,
         *,
@@ -150,7 +150,7 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
 
     @overload
     async def update_by_query[Statement, Value](
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         query: BaseQuery[E, Statement],
         /,
         *assignments: FieldAssignment[Value],
@@ -159,7 +159,7 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
 
     @overload
     async def update_by_query[Value](
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         query: FieldPredicate[E],
         /,
         *assignments: FieldAssignment[Value] | FieldPredicate[E],
@@ -168,7 +168,7 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
 
     @overload
     async def delete_by_query[Statement](
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         query: BaseQuery[E, Statement],
         *,
         datar: DataR = ...,
@@ -176,7 +176,7 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
 
     @overload
     async def delete_by_query(
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         query: FieldPredicate[E],
         /,
         *predicates: FieldPredicate[E],
@@ -184,47 +184,47 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
     ) -> int: ...
 
     async def get[Statement](
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         identifier: IdentificatorType | BaseQuery[E, Statement],
         datar: DataR = ...,
     ) -> R | None: ...
 
     async def exists[Statement](
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         identifier: IdentificatorType | BaseQuery[E, Statement],
         datar: DataR = ...,
     ) -> bool: ...
 
     async def count[Statement](
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         query: BaseQuery[E, Statement] | None = ...,
         *,
         datar: DataR = ...,
     ) -> int: ...
 
     async def list[Statement](
-        self: PageOwner[E, R],
+        self: PageOwnable[E, R],
         query: BaseQuery[E, Statement] | None = ...,
         *,
         datar: DataR = ...,
     ) -> Page[R]: ...
 
     async def find_first[Statement](
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         query: BaseQuery[E, Statement],
         *,
         datar: DataR = ...,
     ) -> R | None: ...
 
     async def find_exactly_one[Statement](
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         query: BaseQuery[E, Statement] | FieldPredicate[E],
         *predicates: FieldPredicate[E],
         datar: DataR = ...,
     ) -> R: ...
 
     async def find_all[Statement](
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         query: BaseQuery[E, Statement],
         *,
         datar: DataR = ...,
@@ -232,23 +232,23 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
 
     @overload
     def stream[Statement](
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         query: BaseQuery[E, Statement],
         *,
         datar: DataR = ...,
-    ) -> AsyncCommonStream[R]: ...
+    ) -> AsyncCommonStreamable[R]: ...
 
     @overload
     def stream(
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         query: FieldPredicate[E],
         /,
         *predicates: FieldPredicate[E],
         datar: DataR = ...,
-    ) -> AsyncCommonStream[R]: ...
+    ) -> AsyncCommonStreamable[R]: ...
 
     def map[O: Schema, Statement](
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         query: BaseQuery[E, Statement],
         mapper: MapperCallable[R, O],
         *,
@@ -263,7 +263,7 @@ class DataSable(Protocol[E, R, C, U, P, CreateSetting]):
         LeftOrm,
         RightOrm,
     ](
-        self: QueryOwner[E, R],
+        self: QueryOwnable[E, R],
         query: BaseQuery[E, Left],
         other: BaseQuery[Other, Right],
         *,

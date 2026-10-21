@@ -6,7 +6,7 @@ from fastsprout.core.types import LazyAwait
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.streams.implementation.base_common_stream import BaseCommonStream
-from fastsprout.data.streams.protocols import AsyncCommonStream, AsyncEntityStream, AsyncValueStream
+from fastsprout.data.streams.protocols import AsyncCommonStreamable, AsyncEntityStreamable, AsyncValueStreamable
 from fastsprout.data.types import Valuable
 
 
@@ -57,7 +57,7 @@ async def schema_inputs[E: Entitieable](
     assert_type(await service.create(CreateInput(name="Batman")), E)
     assert_type(await service.update(identifier, UpdateInput(name="Batman")), E)
     assert_type(await service.patch(identifier, PatchInput()), E)
-    assert_type(service.bulk_create([CreateInput(name="Batman")]), AsyncCommonStream[E])
+    assert_type(service.bulk_create([CreateInput(name="Batman")]), AsyncCommonStreamable[E])
     await service.create(UpdateInput(name="Batman"))  # error: reportArgumentType; mypy: arg-type
     await service.create(ForeignInput())  # error: reportArgumentType; mypy: arg-type
 
@@ -70,7 +70,7 @@ async def query_results[E: Entitieable, Statement](
     assert_type(await service.list(query), Page[E])
     assert_type(await service.count(query), int)
     stream = service.stream(query)
-    assert_type(stream, AsyncCommonStream[E])
+    assert_type(stream, AsyncCommonStreamable[E])
     assert_type(stream.to_list(), LazyAwait[list[E]])
     assert_type(stream.first(), LazyAwait[E | None])
     assert_type(stream.sum_by(lambda entity: 1), LazyAwait[int | None])
@@ -80,13 +80,13 @@ async def query_results[E: Entitieable, Statement](
         assert_type(chunk, list[E])
 
 
-def common_stream_contract[T: Valuable | Entitieable](stream: BaseCommonStream[T]) -> AsyncCommonStream[T]:
+def common_stream_contract[T: Valuable | Entitieable](stream: BaseCommonStream[T]) -> AsyncCommonStreamable[T]:
     return stream
 
 
-def entity_stream_contract[E: Entitieable](stream: AsyncEntityStream[E]) -> AsyncCommonStream[E]:
+def entity_stream_contract[E: Entitieable](stream: AsyncEntityStreamable[E]) -> AsyncCommonStreamable[E]:
     return stream
 
 
-def value_stream_contract[T: Valuable](stream: AsyncValueStream[T]) -> AsyncCommonStream[T]:
+def value_stream_contract[T: Valuable](stream: AsyncValueStreamable[T]) -> AsyncCommonStreamable[T]:
     return stream

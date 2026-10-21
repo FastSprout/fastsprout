@@ -7,7 +7,7 @@ from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.streams.entity_stream import SQLEntityStream
 from fastsprout.data.capabilities.protocols import Streamable
 from fastsprout.data.capabilities.query import BaseQuery
-from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.data.streams.protocols import AsyncEntityStreamable
 
 __all__ = ["SQLStreamable"]
 
@@ -17,5 +17,5 @@ class SQLStreamable[E: SQLEntity[Any]](
 ):
     def stream(
         self, query: BaseQuery[E, Select[tuple[E]]], /
-    ) -> AsyncEntityStream[E]:
+    ) -> AsyncEntityStreamable[E]:
         return SQLEntityStream(query, self._signpost)

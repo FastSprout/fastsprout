@@ -8,7 +8,7 @@ from fastsprout.core.fields.field_predicate import FieldPredicate
 from fastsprout.data import DataR
 from fastsprout.data.backend.sql import SQLEntity, SQLJoinedQuery, SQLQuery, SQLSignpost
 from fastsprout.data.backend.sql.capabilities import SQLAbilitable
-from fastsprout.data.streams.protocols import AsyncEntityStream, AsyncJoinedStream
+from fastsprout.data.streams.protocols import AsyncEntityStreamable, AsyncJoinedStreamable
 
 
 class CRM(SQLSignpost): ...
@@ -93,7 +93,7 @@ async def joined_sources(datar: DataR) -> None:
         nested.where(nested.Or(Hero.name.eq("Batman"))),
         SQLJoinedQuery[CRM, FieldPredicate[Team] | FieldPredicate[Country], Hero, Team, Country],
     )
-    assert_type(datar.stream(nested), AsyncJoinedStream[Hero, Team, Country])
+    assert_type(datar.stream(nested), AsyncJoinedStreamable[Hero, Team, Country])
     async for hero, team, country in datar.stream(nested):
         assert_type(hero, Hero)
         assert_type(team, Team)
@@ -132,5 +132,5 @@ def scoped_joins(source: CRM) -> None:
 async def scoped_reads(ability: SQLAbilitable[Hero], source: CRM) -> None:
     query = SQLQuery(Hero, source=source)
     assert_type(await ability.find_first(query), Hero | None)
-    assert_type(ability.stream(query), AsyncEntityStream[Hero])
+    assert_type(ability.stream(query), AsyncEntityStreamable[Hero])
     assert_type(ability.iter(query), AsyncIterator[Hero])

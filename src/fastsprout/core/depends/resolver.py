@@ -3,11 +3,11 @@ from typing import Protocol, runtime_checkable
 
 from fastsprout.core.types.schema import Schema
 
-__all__ = ["DependencyResolver"]
+__all__ = ["DependencyResolvable"]
 
 
 @runtime_checkable
-class DependencyResolver(Protocol):
+class DependencyResolvable(Protocol):
     def resolve[T: Schema](
         self,
         annotation: type[T],

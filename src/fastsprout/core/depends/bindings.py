@@ -12,7 +12,7 @@ from fastsprout.core.types.protocols.ables import Hashable
 from .scope import current_dependency_cache
 
 __all__ = [
-    "DependencyBindings",
+    "DependencyBindable",
     "bind_arguments",
     "cache_key",
     "dependency_bindings",
@@ -21,7 +21,7 @@ __all__ = [
 ]
 
 
-class DependencyBindings(Protocol):
+class DependencyBindable(Protocol):
     cache_keys: set[Hashable]
 
     def bind(self, arguments: BoundArguments) -> None: ...
@@ -31,13 +31,13 @@ class DependencyBindings(Protocol):
     ) -> UUID | None: ...
 
 
-current_bindings: ContextVar[DependencyBindings | None] = ContextVar(
+current_bindings: ContextVar[DependencyBindable | None] = ContextVar(
     "fastsprout_dependency_bindings", default=None
 )
 
 
 @contextmanager
-def dependency_bindings(bindings: DependencyBindings) -> Iterator[None]:
+def dependency_bindings(bindings: DependencyBindable) -> Iterator[None]:
     token = current_bindings.set(bindings)
     try:
         yield

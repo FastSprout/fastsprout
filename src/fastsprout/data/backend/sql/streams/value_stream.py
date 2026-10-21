@@ -16,7 +16,7 @@ from fastsprout.data.streams.implementation import SimpleAsyncValueStream
 from fastsprout.data.streams.implementation.base_common_stream import (
     BaseCommonStream,
 )
-from fastsprout.data.streams.protocols import AsyncValueStream
+from fastsprout.data.streams.protocols import AsyncValueStreamable
 from fastsprout.data.types import (
     GetterCallable,
     Valuable,
@@ -26,7 +26,7 @@ __all__ = ["SQLValueStream"]
 
 
 class SQLValueStream[T: Valuable](
-    SimpleAsyncValueStream[T], AsyncValueStream[T], SQLDataBackend
+    SimpleAsyncValueStream[T], AsyncValueStreamable[T], SQLDataBackend
 ):
     """Single-column stream backed by a SQLAlchemy `Select`.
 
@@ -73,10 +73,10 @@ class SQLValueStream[T: Valuable](
         self,
         key: GetterCallable[T, R] | None = None,
         reverse: bool = False,
-    ) -> AsyncValueStream[T]:
+    ) -> AsyncValueStreamable[T]:
         if key is not None:
             return cast(
-                AsyncValueStream[T],
+                AsyncValueStreamable[T],
                 SimpleAsyncValueStream(self).sort(key, reverse=reverse),
             )
         sub = self._stmt.subquery()

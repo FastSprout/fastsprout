@@ -7,18 +7,18 @@ from collections.abc import (
 )
 from typing import Protocol
 
-__all__ = ["AsyncJoinedStream", "JoinKey"]
+__all__ = ["AsyncJoinedStreamable", "JoinKey"]
 
 type JoinKey[T] = Callable[[T], Hashable | Awaitable[Hashable]]
 
 
-class AsyncJoinedStream[*Ts](Protocol):
+class AsyncJoinedStreamable[*Ts](Protocol):
     def join[T](
         self,
         stream: AsyncIterable[T],
         *,
         on: tuple[JoinKey[tuple[*Ts]], JoinKey[T]],
-    ) -> "AsyncJoinedStream[*Ts, T]": ...
+    ) -> "AsyncJoinedStreamable[*Ts, T]": ...
 
     def __aiter__(self) -> AsyncGenerator[tuple[*Ts], None]: ...
 

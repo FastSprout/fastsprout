@@ -10,7 +10,7 @@ from weakref import WeakValueDictionary
 
 from fastsprout.core.depends import DependsClass, inject_depends
 from fastsprout.core.depends.invocation import (
-    DependencyOwner,
+    DependencyOwnable,
     with_dependencies,
 )
 
@@ -44,7 +44,7 @@ class GroupFunctionAction[**P, R](FunctionAction[P, R]):
     def __get__[Owner](
         self, instance: Owner | None, owner: type[Owner] | None = None
     ) -> FunctionAction[P, R]:
-        if isinstance(instance, DependencyOwner) and instance.dependencies:
+        if isinstance(instance, DependencyOwnable) and instance.dependencies:
             return FunctionAction(
                 self.target,
                 dependencies=(*instance.dependencies, *self.dependencies),

@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from fastsprout.data import DataR
 from fastsprout.data.backend.sql.entity import SQL_ENTITY_REGISTRY
-from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.data.streams.protocols import AsyncEntityStreamable
 from fastsprout.testing.core import given
 
 from ...common import (
@@ -28,7 +28,7 @@ def memory_backend(monkeypatch: pytest.MonkeyPatch) -> MemoryAbility:
 
     def stream(
         datar: DataR, query: MemoryQuery
-    ) -> AsyncEntityStream[MemoryRecord]:
+    ) -> AsyncEntityStreamable[MemoryRecord]:
         return ability(datar, query.entity).stream(query)
 
     monkeypatch.setattr(DataR, "ability", ability)

@@ -16,7 +16,7 @@ import asyncio
 
 from fastsprout.actions import Workflow
 from fastsprout.core import BaseSchema
-from fastsprout.core.action import BaseNullableAction
+from fastsprout.core.action import NullableActionable
 
 
 class DocumentRequest(BaseSchema):
@@ -37,7 +37,7 @@ async def render(document: Document) -> Document:
     return Document(content=document.content.upper())
 
 
-nullable: BaseNullableAction[DocumentRequest, Document] = find
+nullable: NullableActionable[DocumentRequest, Document] = find
 lookup = Workflow(nullable).then(render)
 
 

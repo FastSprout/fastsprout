@@ -2,13 +2,13 @@
 
 <!-- example-source: examples/actions/04_workflow/09_iterable/02_class.py -->
 
-Compose a BaseIterableAction class without collecting its generator.
+Compose a IterableActionable class without collecting its generator.
 The workflow reads and renders documents one at a time using async for.
 
 ## Source
 
 ```python
-"""Compose a BaseIterableAction class without collecting its generator.
+"""Compose a IterableActionable class without collecting its generator.
 The workflow reads and renders documents one at a time using async for.
 """
 
@@ -17,7 +17,7 @@ from collections.abc import Iterable, Iterator
 
 from fastsprout.actions import Workflow
 from fastsprout.core import BaseSchema
-from fastsprout.core.action import BaseIterableAction
+from fastsprout.core.action import IterableActionable
 
 
 class DocumentRequest(BaseSchema):
@@ -32,7 +32,7 @@ class RenderedDocument(BaseSchema):
     content: bytes
 
 
-class LoadDocuments(BaseIterableAction[DocumentRequest, Document]):
+class LoadDocuments(IterableActionable[DocumentRequest, Document]):
     def documents(self, payload: DocumentRequest) -> Iterator[Document]:
         for text in payload.contents:
             print("Reading:", text)

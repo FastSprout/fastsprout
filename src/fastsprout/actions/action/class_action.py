@@ -2,7 +2,7 @@
 
 from collections.abc import Sequence
 
-from fastsprout.core.action import BaseAction
+from fastsprout.core.action import Actionable
 from fastsprout.core.depends import DependsClass
 from fastsprout.core.depends.invocation import with_dependencies
 from fastsprout.core.types.schema import Schema
@@ -10,7 +10,7 @@ from fastsprout.core.types.schema import Schema
 __all__ = ["Action"]
 
 
-class Action[I: Schema, O: Schema](BaseAction[I, O]):
+class Action[I: Schema, O: Schema](Actionable[I, O]):
     """Base for a class action with one typed input and output."""
 
     dependencies: Sequence[DependsClass] = ()

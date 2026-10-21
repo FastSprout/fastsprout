@@ -6,7 +6,7 @@ from sqlmodel import Field as SQLField
 from fastsprout.core import Field, ReadField
 from fastsprout.data.backend.sql import SQLEntity, SQLQuery, SQLSignpost
 from fastsprout.data.backend.sql.streams import SQLEntityStream
-from fastsprout.data.streams.protocols import AsyncValueStream
+from fastsprout.data.streams.protocols import AsyncValueStreamable
 from fastsprout.testing.core import given, then, when
 
 from .conftest import Hero
@@ -133,11 +133,11 @@ class TestSQLValueStream:
     @given("the ages projected from the entity stream")
     def values(
         self, entity_stream: SQLEntityStream[Hero]
-    ) -> AsyncValueStream[int]:
+    ) -> AsyncValueStreamable[int]:
         return entity_stream.to_values(Hero.age)
 
     @when("the value stream is summed")
-    async def total(self, values: AsyncValueStream[int]) -> int | None:
+    async def total(self, values: AsyncValueStreamable[int]) -> int | None:
         return await values.sum()
 
     @then("sum includes all projected ages")
@@ -145,7 +145,7 @@ class TestSQLValueStream:
         assert total == sum(range(10))
 
     @when("the projected values are counted")
-    async def count(self, values: AsyncValueStream[int]) -> int:
+    async def count(self, values: AsyncValueStreamable[int]) -> int:
         return await values.count()
 
     @then("projection preserves the number of rows")
@@ -153,7 +153,7 @@ class TestSQLValueStream:
         assert count == 10
 
     @when("the three smallest values are requested")
-    async def found(self, values: AsyncValueStream[int]) -> list[int]:
+    async def found(self, values: AsyncValueStreamable[int]) -> list[int]:
         return await values.sort().take(3).to_list()
 
     @then("sort and take return the first three ages")

@@ -31,8 +31,8 @@ from fastsprout.data.streams.implementation import (
     SimpleAsyncEntityStream,
 )
 from fastsprout.data.streams.protocols import (
-    AsyncEntityStream,
-    AsyncValueStream,
+    AsyncEntityStreamable,
+    AsyncValueStreamable,
 )
 from fastsprout.data.types import (
     GetterCallable,
@@ -61,7 +61,7 @@ def get_column[E, T](
 
 
 class SQLEntityStream[E: SQLEntity[Any]](
-    SimpleAsyncEntityStream[E], AsyncEntityStream[E], SQLDataBackend
+    SimpleAsyncEntityStream[E], AsyncEntityStreamable[E], SQLDataBackend
 ):
     """Entity stream backed by a SQLAlchemy `Select`.
 
@@ -105,7 +105,7 @@ class SQLEntityStream[E: SQLEntity[Any]](
 
     def join[F: Entitieable, Key: Hashable, LeftOrm, RightOrm](
         self,
-        other: AsyncEntityStream[F],
+        other: AsyncEntityStreamable[F],
         *,
         on: tuple[FieldRef[E, Key, LeftOrm], FieldRef[F, Key, RightOrm]],
     ) -> JoinedStream[E, F]:
@@ -172,7 +172,7 @@ class SQLEntityStream[E: SQLEntity[Any]](
         self,
         key: GetterCallable[E, R],
         reverse: bool = False,
-    ) -> AsyncEntityStream[E]:
+    ) -> AsyncEntityStreamable[E]:
         column = (
             None if self.query is not None else get_column(key, self.statement)
         )
@@ -203,7 +203,7 @@ class SQLEntityStream[E: SQLEntity[Any]](
 
     def to_values[K: HashableAndValuable](  # pyright: ignore[reportIncompatibleMethodOverride]
         self, mapper: MapperCallable[E, K]
-    ) -> AsyncValueStream[K]:
+    ) -> AsyncValueStreamable[K]:
         sub = self.statement.subquery()
         column = None if self.query is not None else get_column(mapper, sub)
         if column is None:

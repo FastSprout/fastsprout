@@ -10,12 +10,12 @@ from fastsprout.core import Undefined, UndefinedType, dataclass
 from fastsprout.core.fields.field_ref import FieldRef
 from fastsprout.core.types import OrderedValue
 from fastsprout.data.entity import Entitieable, Signpostable
-from fastsprout.data.streams.protocols import AsyncJoinedStream
+from fastsprout.data.streams.protocols import AsyncJoinedStreamable
 
 from .operators import And, Eq, Gt, Lt, Nand, Or, Xor
 from .predicate import Expression, FieldPredicate
 
-__all__ = ["BaseQuery", "JoinedQuery"]
+__all__ = ["BaseQuery", "JoinedQueryable"]
 
 E = TypeVar("E", bound=Entitieable[Any])
 StatementT = TypeVar("StatementT")
@@ -102,7 +102,7 @@ class BaseQuery(ABC, Generic[E, StatementT, RowT]):
 
 
 @runtime_checkable
-class JoinedQuery[E: Entitieable[Any], ProductT, *Ts](Protocol):
+class JoinedQueryable[E: Entitieable[Any], ProductT, *Ts](Protocol):
     """Bind a multi-entity query to a routed backend context."""
 
     @property
@@ -110,4 +110,4 @@ class JoinedQuery[E: Entitieable[Any], ProductT, *Ts](Protocol):
 
     def stream(
         self, signpost: Signpostable[AbstractAsyncContextManager[ProductT]]
-    ) -> AsyncJoinedStream[*Ts]: ...
+    ) -> AsyncJoinedStreamable[*Ts]: ...

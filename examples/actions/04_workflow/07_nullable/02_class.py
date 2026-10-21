@@ -1,4 +1,4 @@
-"""Use a BaseNullableAction class as a workflow step.
+"""Use a NullableActionable class as a workflow step.
 A missing document produces no elements, so the next action does not run.
 """
 
@@ -6,7 +6,7 @@ import asyncio
 
 from fastsprout.actions import Workflow
 from fastsprout.core import BaseSchema
-from fastsprout.core.action import BaseNullableAction
+from fastsprout.core.action import NullableActionable
 
 
 class DocumentRequest(BaseSchema):
@@ -17,7 +17,7 @@ class Document(BaseSchema):
     content: str
 
 
-class FindDocument(BaseNullableAction[DocumentRequest, Document]):
+class FindDocument(NullableActionable[DocumentRequest, Document]):
     async def __call__(self, payload: DocumentRequest) -> Document | None:
         if payload.name == "guide":
             return Document(content="FastSprout")

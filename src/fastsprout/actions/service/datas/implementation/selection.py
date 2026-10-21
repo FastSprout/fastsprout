@@ -14,7 +14,7 @@ from fastsprout.data.types import MapperCallable, Valuable
 from fastsprout.data.utils.callable import resolve_any_callable
 from fastsprout.data.utils.iterable import resolve_any_iterable
 
-from ..protocols.owners import QueryOwner
+from ..protocols.owners import QueryOwnable
 from ..schemas import read_source
 from .queries import public_condition, selected, validated
 
@@ -28,7 +28,7 @@ async def map[
     O: Schema,
     Statement,
 ](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: BaseQuery[E, Statement],
     mapper: MapperCallable[R, O],
     *,
@@ -53,7 +53,7 @@ async def join[
     LeftOrm,
     RightOrm,
 ](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: BaseQuery[E, Left],
     other: BaseQuery[F, Right],
     *,

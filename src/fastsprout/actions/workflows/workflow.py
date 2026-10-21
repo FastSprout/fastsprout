@@ -7,7 +7,7 @@ from typing import Generic, overload
 
 from typing_extensions import TypeVar
 
-from fastsprout.core.action import BaseIteratorAction
+from fastsprout.core.action import IteratorActionable
 from fastsprout.core.types.schema import Schema
 
 from .execution import execute, routed
@@ -22,7 +22,7 @@ SourceT = TypeVar("SourceT", bound=Schema | None, default=None)
 
 
 class Workflow(
-    BaseIteratorAction[InputT, OutputT], Generic[InputT, OutputT, SourceT]
+    IteratorActionable[InputT, OutputT], Generic[InputT, OutputT, SourceT]
 ):
     """Yield each step's results and pass each element to the next step."""
 

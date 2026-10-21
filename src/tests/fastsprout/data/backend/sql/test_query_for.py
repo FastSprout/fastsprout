@@ -6,7 +6,7 @@ from fastsprout.core import Undefined
 from fastsprout.data import DataR
 from fastsprout.data.backend.sql import SQLQuery, SQLSignpost
 from fastsprout.data.backend.sql.capabilities import SQLAbilitable
-from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.data.streams.protocols import AsyncEntityStreamable
 from fastsprout.testing.core import given, then, when
 
 from .conftest import Hero
@@ -74,7 +74,7 @@ class TestQueryFor:
     @when("DataR constructs an ability and its query")
     async def routed_query(
         self, sql_signpost: SQLSignpost, monkeypatch: pytest.MonkeyPatch
-    ) -> AsyncIterator[tuple[type[Hero], AsyncEntityStream[Hero]]]:
+    ) -> AsyncIterator[tuple[type[Hero], AsyncEntityStreamable[Hero]]]:
         monkeypatch.setattr(Hero, "__signpost__", sql_signpost, raising=False)
         async with DataR() as datar:
             ability = datar.ability(Hero)
@@ -83,7 +83,7 @@ class TestQueryFor:
 
     @then("the routed ability retains the entity owner")
     async def test_router_binds_owner(
-        self, routed_query: tuple[type[Hero], AsyncEntityStream[Hero]]
+        self, routed_query: tuple[type[Hero], AsyncEntityStreamable[Hero]]
     ) -> None:
         entity, stream = routed_query
         assert entity is Hero

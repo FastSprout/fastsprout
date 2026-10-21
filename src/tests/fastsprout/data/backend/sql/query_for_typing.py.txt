@@ -9,7 +9,7 @@ from fastsprout.data.backend.sql.capabilities import SQLAbilitable
 from fastsprout.data.capabilities.protocols import Abilitable
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
-from fastsprout.data.streams.protocols import AsyncEntityStream, AsyncValueStream
+from fastsprout.data.streams.protocols import AsyncEntityStreamable, AsyncValueStreamable
 
 
 class Hero(SQLEntity[int]):
@@ -31,10 +31,10 @@ def queries(ability: SQLAbilitable[Hero], signpost: SQLSignpost) -> None:
     query: BaseQuery[Hero, Select[tuple[Hero]]] = ability.query_for()
     shared: Abilitable[Hero, BaseQuery[Hero, Select[tuple[Hero]]], SQLQuery[Hero]] = ability
     assert_type(shared.query_for(), SQLQuery[Hero])
-    assert_type(shared.stream(query), AsyncEntityStream[Hero])
-    assert_type(ability.stream(query), AsyncEntityStream[Hero])
-    assert_type(ability.stream(query).sort(Hero.name), AsyncEntityStream[Hero])
-    assert_type(ability.stream(query).to_values(Hero.name), AsyncValueStream[str])
+    assert_type(shared.stream(query), AsyncEntityStreamable[Hero])
+    assert_type(ability.stream(query), AsyncEntityStreamable[Hero])
+    assert_type(ability.stream(query).sort(Hero.name), AsyncEntityStreamable[Hero])
+    assert_type(ability.stream(query).to_values(Hero.name), AsyncValueStreamable[str])
     ability.query_for(Team)  # error: reportArgumentType; mypy: arg-type
     protocol.query_for(Team)  # error: reportArgumentType; mypy: arg-type
 

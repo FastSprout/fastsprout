@@ -9,7 +9,7 @@ from typing import Annotated, Concatenate, Protocol
 from annotated_types import Ge
 
 from fastsprout.core.depends.invocation import (
-    DependencyOwner,
+    DependencyOwnable,
     with_dependencies,
 )
 from fastsprout.core.depends.scope import async_invocation_scope
@@ -24,7 +24,7 @@ from fastsprout.data.utils.iterable import chunked, resolve_any_iterable
 __all__ = ["batch_count", "batch_stream"]
 
 
-class BatchOwner(DependencyOwner, Protocol):
+class BatchOwnable(DependencyOwnable, Protocol):
     chunk_size: Annotated[int, Ge(1)]
 
 
@@ -38,7 +38,7 @@ class Batch[T]:
         return resolve_any_iterable(self.values)
 
 
-def batches[Owner: BatchOwner, Input, Result, **P](
+def batches[Owner: BatchOwnable, Input, Result, **P](
     function: Callable[
         Concatenate[Owner, AnyIterable[Input], P], Awaitable[Result]
     ],
@@ -76,7 +76,7 @@ def batches[Owner: BatchOwner, Input, Result, **P](
 
 
 def batch_stream[
-    Owner: BatchOwner,
+    Owner: BatchOwnable,
     Input,
     Result: Valuable | Entitieable,
     **P,
@@ -110,7 +110,7 @@ def batch_stream[
     return call
 
 
-def batch_count[Owner: BatchOwner, Input, **P](
+def batch_count[Owner: BatchOwnable, Input, **P](
     function: Callable[
         Concatenate[Owner, AnyIterable[Input], P], Awaitable[int]
     ],

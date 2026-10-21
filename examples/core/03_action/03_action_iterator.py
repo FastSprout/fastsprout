@@ -1,9 +1,9 @@
-"""BaseIteratorAction — async streaming (async-gen). Class and function styles."""
+"""IteratorActionable — async streaming (async-gen). Class and function styles."""
 
 import asyncio
 from collections.abc import AsyncIterator
 
-from fastsprout.core.action import BaseIteratorAction
+from fastsprout.core.action import IteratorActionable
 from fastsprout.core.fields import Field
 from fastsprout.core.schema import BaseSchema
 
@@ -17,7 +17,7 @@ class GreetOut(BaseSchema):
     message: Field[str]
 
 
-class GreetBatch(BaseIteratorAction[GreetBatchIn, GreetOut]):
+class GreetBatch(IteratorActionable[GreetBatchIn, GreetOut]):
     async def __call__(
         self, payload: GreetBatchIn, /
     ) -> AsyncIterator[GreetOut]:

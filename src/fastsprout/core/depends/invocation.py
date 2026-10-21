@@ -22,11 +22,11 @@ from .injector import inject_depends
 from .marker import DependsClass
 from .scope import async_invocation_scope
 
-__all__ = ["DependencyOwner", "stream_dependencies", "with_dependencies"]
+__all__ = ["DependencyOwnable", "stream_dependencies", "with_dependencies"]
 
 
 @runtime_checkable
-class DependencyOwner(Protocol):
+class DependencyOwnable(Protocol):
     @property
     def dependencies(self) -> Sequence[DependsClass]: ...
 
@@ -89,7 +89,7 @@ def with_dependencies[**P, R](
         )
         owner = bindings.arguments.arguments.get("self")
         inherited = (
-            owner.dependencies if isinstance(owner, DependencyOwner) else ()
+            owner.dependencies if isinstance(owner, DependencyOwnable) else ()
         )
         checks = (*inherited, *dependencies)
         bindings.providers = {

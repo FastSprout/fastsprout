@@ -13,15 +13,15 @@ from fastsprout.data.types import (
     PredicateCallable,
 )
 
-from .common_stream import AsyncCommonStream
-from .joined_stream import AsyncJoinedStream
-from .value_stream import AsyncValueStream
+from .common_stream import AsyncCommonStreamable
+from .joined_stream import AsyncJoinedStreamable
+from .value_stream import AsyncValueStreamable
 
-__all__ = ["AsyncEntityStream"]
+__all__ = ["AsyncEntityStreamable"]
 
 
 @runtime_checkable
-class AsyncEntityStream[E: Entitieable](AsyncCommonStream[E], Protocol):
+class AsyncEntityStreamable[E: Entitieable](AsyncCommonStreamable[E], Protocol):
     """Composable async stream of entities.
 
     Transformations are lazy. Terminal operations materialize results.
@@ -30,47 +30,49 @@ class AsyncEntityStream[E: Entitieable](AsyncCommonStream[E], Protocol):
 
     def join[F: Entitieable, Key: Hashable, LeftOrm, RightOrm](
         self,
-        other: "AsyncEntityStream[F]",
+        other: "AsyncEntityStreamable[F]",
         *,
         on: tuple[FieldRef[E, Key, LeftOrm], FieldRef[F, Key, RightOrm]],
-    ) -> AsyncJoinedStream[E, F]: ...
+    ) -> AsyncJoinedStreamable[E, F]: ...
 
     def concat(
-        self, *others: "AsyncEntityStream[E] | AnyIterable[E]"
-    ) -> "AsyncEntityStream[E]": ...
+        self, *others: "AsyncEntityStreamable[E] | AnyIterable[E]"
+    ) -> "AsyncEntityStreamable[E]": ...
 
     def map[R: Entitieable](
         self, mapper: MapperCallable[E, R]
-    ) -> "AsyncEntityStream[R]": ...
+    ) -> "AsyncEntityStreamable[R]": ...
 
     def sort[R: RichComparisonable[Any]](
         self, key: GetterCallable[E, R], reverse: bool = False
-    ) -> "AsyncEntityStream[E]": ...
+    ) -> "AsyncEntityStreamable[E]": ...
     def filter(
         self, predicate: PredicateCallable[E]
-    ) -> "AsyncEntityStream[E]": ...
+    ) -> "AsyncEntityStreamable[E]": ...
     def only_of[R: Entitieable[Any]](
         self, entity: type[R]
-    ) -> "AsyncEntityStream[R]":
+    ) -> "AsyncEntityStreamable[R]":
         """Narrow to one entity type — pull subtypes out of a mixed
         stream. One pass per consumption: to take several views without
         re-reading the source, materialize first (`to_list`), then
         split the list."""
         ...
 
-    def distinct(self) -> "AsyncEntityStream[E]": ...
-    def peek(self, consumer: ConsumerCallable[E]) -> "AsyncEntityStream[E]": ...
+    def distinct(self) -> "AsyncEntityStreamable[E]": ...
+    def peek(
+        self, consumer: ConsumerCallable[E]
+    ) -> "AsyncEntityStreamable[E]": ...
 
     # Slicing
-    def take(self, n: int) -> "AsyncEntityStream[E]": ...
-    def drop(self, n: int) -> "AsyncEntityStream[E]": ...
+    def take(self, n: int) -> "AsyncEntityStreamable[E]": ...
+    def drop(self, n: int) -> "AsyncEntityStreamable[E]": ...
     def take_while(
         self, predicate: PredicateCallable[E]
-    ) -> "AsyncEntityStream[E]": ...
+    ) -> "AsyncEntityStreamable[E]": ...
     def drop_while(
         self, predicate: PredicateCallable[E]
-    ) -> "AsyncEntityStream[E]": ...
+    ) -> "AsyncEntityStreamable[E]": ...
 
     def to_values[K: HashableAndValuable](
         self, mapper: MapperCallable[E, K]
-    ) -> AsyncValueStream[K]: ...
+    ) -> AsyncValueStreamable[K]: ...

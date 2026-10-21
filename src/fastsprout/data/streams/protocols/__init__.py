@@ -1,11 +1,11 @@
-from .common_stream import AsyncCommonStream
-from .entity_stream import AsyncEntityStream
-from .joined_stream import AsyncJoinedStream
-from .value_stream import AsyncValueStream
+from .common_stream import AsyncCommonStreamable
+from .entity_stream import AsyncEntityStreamable
+from .joined_stream import AsyncJoinedStreamable
+from .value_stream import AsyncValueStreamable
 
 __all__ = [
-    "AsyncCommonStream",
-    "AsyncEntityStream",
-    "AsyncJoinedStream",
-    "AsyncValueStream",
+    "AsyncCommonStreamable",
+    "AsyncEntityStreamable",
+    "AsyncJoinedStreamable",
+    "AsyncValueStreamable",
 ]

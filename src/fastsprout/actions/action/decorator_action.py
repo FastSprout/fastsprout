@@ -6,7 +6,7 @@ from types import MethodType
 from typing import Self, TypeGuard, get_type_hints, overload
 
 from fastsprout.core.depends import DependsClass, inject_depends
-from fastsprout.core.types import AsyncFunction, AsyncMethod
+from fastsprout.core.types import AsyncFunctionable, AsyncMethodable
 from fastsprout.core.types.schema import Schema
 
 from .class_action import Action
@@ -88,17 +88,19 @@ class ActionDecorator:
 
     @overload
     def __call__[Owner, **P, R](
-        self, target: AsyncMethod[Owner, P, R]
+        self, target: AsyncMethodable[Owner, P, R]
     ) -> MethodAction[Owner, P, R]: ...
 
     @overload
     def __call__[**P, R](
-        self, target: AsyncFunction[P, R]
+        self, target: AsyncFunctionable[P, R]
     ) -> FunctionAction[P, R]: ...
 
     def __call__[T, Owner, **P, R](
         self,
-        target: type[T] | AsyncMethod[Owner, P, R] | Callable[P, Awaitable[R]],
+        target: type[T]
+        | AsyncMethodable[Owner, P, R]
+        | Callable[P, Awaitable[R]],
     ) -> type[T] | MethodAction[Owner, P, R] | FunctionAction[P, R]:
         if isinstance(target, type):
             if self.dependencies:
@@ -108,11 +110,11 @@ class ActionDecorator:
 
     def function[Owner, **P, R](
         self,
-        target: AsyncMethod[Owner, P, R] | Callable[P, Awaitable[R]],
+        target: AsyncMethodable[Owner, P, R] | Callable[P, Awaitable[R]],
     ) -> MethodAction[Owner, P, R] | FunctionAction[P, R]:
         def is_method(
-            candidate: AsyncMethod[Owner, P, R] | Callable[P, Awaitable[R]],
-        ) -> TypeGuard[AsyncMethod[Owner, P, R]]:
+            candidate: AsyncMethodable[Owner, P, R] | Callable[P, Awaitable[R]],
+        ) -> TypeGuard[AsyncMethodable[Owner, P, R]]:
             return (
                 inspect.iscoroutinefunction(candidate)
                 and next(iter(inspect.signature(candidate).parameters), None)
@@ -138,7 +140,7 @@ def action[T](
 
 @overload
 def action[Owner, **P, R](
-    target: AsyncMethod[Owner, P, R],
+    target: AsyncMethodable[Owner, P, R],
     *,
     dependencies: Sequence[DependsClass] = (),
 ) -> MethodAction[Owner, P, R]: ...
@@ -146,7 +148,7 @@ def action[Owner, **P, R](
 
 @overload
 def action[**P, R](
-    target: AsyncFunction[P, R],
+    target: AsyncFunctionable[P, R],
     *,
     dependencies: Sequence[DependsClass] = (),
 ) -> FunctionAction[P, R]: ...
@@ -154,7 +156,7 @@ def action[**P, R](
 
 def action[T, Owner, **P, R](
     target: type[T]
-    | AsyncMethod[Owner, P, R]
+    | AsyncMethodable[Owner, P, R]
     | Callable[P, Awaitable[R]]
     | None = None,
     *,

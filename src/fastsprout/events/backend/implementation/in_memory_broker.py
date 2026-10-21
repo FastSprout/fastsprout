@@ -16,9 +16,9 @@ if TYPE_CHECKING:
     from bubus import EventBus as BubusEventBus
 
 from fastsprout.core.action import (
-    BaseAction,
-    BaseNullableAction,
-    BaseSequenceAction,
+    Actionable,
+    NullableActionable,
+    SequenceActionable,
 )
 from fastsprout.events.backend.protocols import Brokerable
 from fastsprout.events.event import (
@@ -63,9 +63,9 @@ class InMemoryBroker(Brokerable):
     def subscribe[E: Event](
         self,
         event_type: type[E],
-        handler: BaseNullableAction[E, Any]
-        | BaseAction[E, Any]
-        | BaseSequenceAction[E, Any],
+        handler: NullableActionable[E, Any]
+        | Actionable[E, Any]
+        | SequenceActionable[E, Any],
     ) -> None:
         self.handlers.append(
             (event_type, cast(Callable[[Event], Awaitable[object]], handler))

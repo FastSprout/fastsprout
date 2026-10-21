@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from .action import BaseAction, BaseActionGroup, BaseTriggerAction
+from .action import Actionable, ActionGroupable, TriggerActionable
 from .context import Context
 from .decorators import (
     hidden_lazy_await,
@@ -42,11 +42,10 @@ from .types.iterable import Chunk
 from .types.undefined import Undefined, UndefinedType
 
 __all__ = [
-    "BaseAction",
-    "BaseActionGroup",
+    "ActionGroupable",
+    "Actionable",
     "BaseFastSproutError",
     "BaseSchema",
-    "BaseTriggerAction",
     "Chunk",
     "Context",
     "DependencyInjector",
@@ -67,6 +66,7 @@ __all__ = [
     "ReadField",
     "ReadWriteDTO",
     "Schema",
+    "TriggerActionable",
     "Undefined",
     "UndefinedType",
     "WriteDTO",

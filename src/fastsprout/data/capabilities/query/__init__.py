@@ -1,4 +1,4 @@
-from .base_query import BaseQuery, JoinedQuery
+from .base_query import BaseQuery, JoinedQueryable
 from .operators import (
     And,
     Between,
@@ -29,7 +29,7 @@ __all__ = [
     "Gt",
     "Gte",
     "In",
-    "JoinedQuery",
+    "JoinedQueryable",
     "Lt",
     "Lte",
     "Nand",

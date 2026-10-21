@@ -43,7 +43,7 @@ from fastsprout.data.capabilities.query import (
 )
 from fastsprout.data.capabilities.query.predicate import evaluate
 from fastsprout.data.entity import Entitieable, Signpostable
-from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.data.streams.protocols import AsyncEntityStreamable
 from fastsprout.data.utils.iterable import achain
 
 FILTER_CASES: tuple[tuple[Filter[int], set[int]], ...] = (
@@ -178,7 +178,7 @@ class MemoryAbility:
         assert source is self.entity
         return MemoryQuery(source)
 
-    def stream(self, query: MemoryQuery) -> AsyncEntityStream[MemoryRecord]:
+    def stream(self, query: MemoryQuery) -> AsyncEntityStreamable[MemoryRecord]:
         assert query.entity is self.entity
         condition: Expression[MemoryRecord] = And(*query.conditions)
         stream = SimpleAsyncEntityStream(

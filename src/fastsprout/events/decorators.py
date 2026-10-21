@@ -5,11 +5,11 @@ from typing import Any, Protocol, cast, overload
 
 from fastsprout.core import Depends
 from fastsprout.core.action import (
-    BaseAction,
-    BaseNullableAction,
-    BaseSequenceAction,
-    BaseSequenceTriggerAction,
-    BaseTriggerAction,
+    Actionable,
+    NullableActionable,
+    SequenceActionable,
+    SequenceTriggerActionable,
+    TriggerActionable,
 )
 from fastsprout.core.depends import DependsClass, inject_depends
 from fastsprout.core.schema import Schema
@@ -19,64 +19,64 @@ from fastsprout.events.event import Event, ScheduleEvent
 __all__ = ["pub", "sub"]
 
 
-class PubDecorator(Protocol):
+class PubDecoratorable(Protocol):
     @overload
     def __call__[E: Event, R: Schema](
         self,
-        func: BaseAction[E, R],
-    ) -> BaseAction[E, R]: ...
+        func: Actionable[E, R],
+    ) -> Actionable[E, R]: ...
 
     @overload
     def __call__[E: Event, R: Schema | None](
         self,
-        func: BaseNullableAction[E, R],
-    ) -> BaseNullableAction[E, R]: ...
+        func: NullableActionable[E, R],
+    ) -> NullableActionable[E, R]: ...
 
     @overload
     def __call__[T: Event](
         self,
-        func: BaseTriggerAction[T],
-    ) -> BaseTriggerAction[T]: ...
+        func: TriggerActionable[T],
+    ) -> TriggerActionable[T]: ...
 
     @overload
     def __call__[T: Event](
         self,
-        func: BaseSequenceTriggerAction[T],
-    ) -> BaseSequenceTriggerAction[T]: ...
+        func: SequenceTriggerActionable[T],
+    ) -> SequenceTriggerActionable[T]: ...
 
 
-class SchedulePubDecorator(Protocol):
+class SchedulePubDecoratorable(Protocol):
     @overload
     def __call__[T: ScheduleEvent](
         self,
-        func: BaseTriggerAction[T],
-    ) -> BaseTriggerAction[T]: ...
+        func: TriggerActionable[T],
+    ) -> TriggerActionable[T]: ...
 
     @overload
     def __call__[T: ScheduleEvent](
         self,
-        func: BaseSequenceTriggerAction[T],
-    ) -> BaseSequenceTriggerAction[T]: ...
+        func: SequenceTriggerActionable[T],
+    ) -> SequenceTriggerActionable[T]: ...
 
 
-class SubDecorator(Protocol):
+class SubDecoratorable(Protocol):
     @overload
     def __call__[E: Event, R: Schema | None](
         self,
-        func: BaseNullableAction[E, R],
-    ) -> BaseNullableAction[E, R]: ...
+        func: NullableActionable[E, R],
+    ) -> NullableActionable[E, R]: ...
 
     @overload
     def __call__[E: Event, R: Schema](
         self,
-        func: BaseSequenceAction[E, R],
-    ) -> BaseSequenceAction[E, R]: ...
+        func: SequenceActionable[E, R],
+    ) -> SequenceActionable[E, R]: ...
 
     @overload
     def __call__[E: Event, R: Schema](
         self,
-        func: BaseAction[E, R],
-    ) -> BaseAction[E, R]: ...
+        func: Actionable[E, R],
+    ) -> Actionable[E, R]: ...
 
 
 async def emit_result(bus: EventBus, result: Any) -> None:
@@ -91,20 +91,20 @@ async def emit_result(bus: EventBus, result: Any) -> None:
 @overload
 def pub(
     *,
-    bus: EventBus = Depends(),  # noqa: B008
+    bus: EventBus = Depends(),
     on: str | timedelta,
-) -> SchedulePubDecorator: ...
+) -> SchedulePubDecoratorable: ...
 
 
 @overload
-def pub(*, bus: EventBus = Depends(), on: None = None) -> PubDecorator: ...  # noqa: B008
+def pub(*, bus: EventBus = Depends(), on: None = None) -> PubDecoratorable: ...
 
 
 def pub(
     *,
-    bus: EventBus = Depends(),  # noqa: B008
+    bus: EventBus = Depends(),
     on: str | timedelta | None = None,
-) -> PubDecorator | SchedulePubDecorator:
+) -> PubDecoratorable | SchedulePubDecoratorable:
     def wrapper(func: Any) -> Any:
         injected_func = inject_depends(func)
 
@@ -129,13 +129,13 @@ def pub(
 
         return publish_result
 
-    return cast(PubDecorator, wrapper)
+    return cast(PubDecoratorable, wrapper)
 
 
 def sub[T: Event, R: Schema](
     *event_types: type[T],
-    bus: EventBus = Depends(),  # noqa: B008
-) -> SubDecorator:
+    bus: EventBus = Depends(),
+) -> SubDecoratorable:
     def wrapper(func: Any) -> Any:
         injected_func = inject_depends(func)
         selected_bus = (
@@ -147,4 +147,4 @@ def sub[T: Event, R: Schema](
             selected_bus.subscribe(event_type, injected_func)
         return injected_func
 
-    return cast(SubDecorator, wrapper)
+    return cast(SubDecoratorable, wrapper)

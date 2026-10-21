@@ -1,9 +1,9 @@
-"""BaseSequenceAction — eager collection (list/tuple). Class and function styles."""
+"""SequenceActionable — eager collection (list/tuple). Class and function styles."""
 
 import asyncio
 from collections.abc import Sequence
 
-from fastsprout.core.action import BaseSequenceAction
+from fastsprout.core.action import SequenceActionable
 from fastsprout.core.fields import Field
 from fastsprout.core.schema import BaseSchema
 
@@ -17,7 +17,7 @@ class GreetOut(BaseSchema):
     message: Field[str]
 
 
-class GreetBatch(BaseSequenceAction[GreetBatchIn, GreetOut]):
+class GreetBatch(SequenceActionable[GreetBatchIn, GreetOut]):
     async def __call__(self, payload: GreetBatchIn, /) -> Sequence[GreetOut]:
         return [
             GreetOut(message=f"hello, {payload.name} #{i}")

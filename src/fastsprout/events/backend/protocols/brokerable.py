@@ -3,8 +3,11 @@ from typing import Any, Protocol, Unpack, overload, runtime_checkable
 
 from typing_extensions import TypeVarTuple
 
-from fastsprout.core import BaseAction
-from fastsprout.core.action import BaseNullableAction, BaseSequenceAction
+from fastsprout.core import Actionable
+from fastsprout.core.action import (
+    NullableActionable,
+    SequenceActionable,
+)
 from fastsprout.events.event import (
     Event,
     Eventable,
@@ -25,9 +28,9 @@ class Brokerable(Protocol):
     def subscribe[E: Event](
         self,
         event_type: type[E],
-        handler: BaseNullableAction[E, Any]
-        | BaseAction[E, Any]
-        | BaseSequenceAction[E, Any],
+        handler: NullableActionable[E, Any]
+        | Actionable[E, Any]
+        | SequenceActionable[E, Any],
     ) -> None: ...
 
     @overload

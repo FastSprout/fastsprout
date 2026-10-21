@@ -16,7 +16,7 @@ from fastsprout.data import DataR
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable, Signpostable
 from fastsprout.data.types import Valuable
-from fastsprout.data.streams.protocols import AsyncCommonStream
+from fastsprout.data.streams.protocols import AsyncCommonStreamable
 from fastsprout.data.streams.implementation.base_common_stream import BaseCommonStream
 
 
@@ -125,8 +125,8 @@ async def batch_checks(
     deletes: AnyIterable[IdentificatorType],
 ) -> None:
     default = DataS(Hero)
-    created: AsyncCommonStream[Hero] = default.bulk_create(heroes)
-    updated: AsyncCommonStream[Hero] = default.bulk_update(heroes)
+    created: AsyncCommonStreamable[Hero] = default.bulk_create(heroes)
+    updated: AsyncCommonStreamable[Hero] = default.bulk_update(heroes)
     assert_type(await created.to_list(), list[Hero])
     assert_type(await updated.to_list(), list[Hero])
     assert_type(await default.bulk_create(heroes).to_list(), list[Hero])
@@ -199,7 +199,7 @@ async def selection_checks[Statement](query: BaseQuery[Hero, Statement], other: 
     assert_type(await service.find_first(query), HeroRead | None)
     assert_type(await service.find_exactly_one(query), HeroRead)
     assert_type(await service.find_all(query), list[HeroRead])
-    assert_type(service.stream(query), AsyncCommonStream[HeroRead])
+    assert_type(service.stream(query), AsyncCommonStreamable[HeroRead])
     async for item in service.stream(query):
         assert_type(item, HeroRead)
     async for summary in service.map(query, lambda hero: HeroSummary(label=hero.name)):
@@ -217,7 +217,7 @@ async def query_reads[Statement](
     assert_type(await service.find_first(query), HeroRead | None)
     assert_type(await service.find_exactly_one(query), HeroRead)
     assert_type(await service.find_all(query), list[HeroRead])
-    assert_type(service.stream(query), AsyncCommonStream[HeroRead])
+    assert_type(service.stream(query), AsyncCommonStreamable[HeroRead])
     assert_type(await contract.find_first(query), HeroRead | None)
     assert_type(await contract.find_exactly_one(query), HeroRead)
     assert_type(await contract.find_all(query), list[HeroRead])
@@ -264,12 +264,12 @@ def stream_predicate_types[Statement](
     service: DataS[Hero, HeroRead], contract: DataSable[Hero, HeroRead],
     query: BaseQuery[Hero, Statement],
 ) -> None:
-    assert_type(service.stream(query), AsyncCommonStream[HeroRead])
-    assert_type(service.stream(Hero.score.gte(20)), AsyncCommonStream[HeroRead])
-    assert_type(service.stream(Hero.score.gte(20), Hero.name.eq("Robin")), AsyncCommonStream[HeroRead])
-    assert_type(contract.stream(query), AsyncCommonStream[HeroRead])
-    assert_type(contract.stream(Hero.score.gte(20)), AsyncCommonStream[HeroRead])
-    assert_type(contract.stream(Hero.score.gte(20), Hero.name.eq("Robin")), AsyncCommonStream[HeroRead])
+    assert_type(service.stream(query), AsyncCommonStreamable[HeroRead])
+    assert_type(service.stream(Hero.score.gte(20)), AsyncCommonStreamable[HeroRead])
+    assert_type(service.stream(Hero.score.gte(20), Hero.name.eq("Robin")), AsyncCommonStreamable[HeroRead])
+    assert_type(contract.stream(query), AsyncCommonStreamable[HeroRead])
+    assert_type(contract.stream(Hero.score.gte(20)), AsyncCommonStreamable[HeroRead])
+    assert_type(contract.stream(Hero.score.gte(20), Hero.name.eq("Robin")), AsyncCommonStreamable[HeroRead])
     service.stream(query, Hero.score.gte(20))  # error: reportArgumentType; mypy: call-overload
     contract.stream(query, Hero.score.gte(20))  # error: reportArgumentType; mypy: call-overload
     service.stream(Other.name.eq("Robin"))  # error: reportCallIssue, reportArgumentType; mypy: arg-type

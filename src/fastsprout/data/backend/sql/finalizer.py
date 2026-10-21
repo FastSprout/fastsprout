@@ -6,11 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastsprout.data.backend.protocols import Finalizable
 
-__all__ = ["SQLFinalizable", "TransactionState"]
+__all__ = ["SQLFinalizable", "TransactionStateable"]
 
 
 @runtime_checkable
-class TransactionState(Protocol):
+class TransactionStateable(Protocol):
     @property
     def in_transaction(self) -> bool: ...
 
@@ -44,7 +44,7 @@ class SQLFinalizable(Finalizable):
             driver = raw.driver_connection
             # SQLite legacy mode does not start a transaction for SELECT or SAVEPOINT.
             if (
-                isinstance(driver, TransactionState)
+                isinstance(driver, TransactionStateable)
                 and not driver.in_transaction
             ):
                 await connection.exec_driver_sql("BEGIN")

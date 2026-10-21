@@ -14,7 +14,7 @@ __all__ = [
     "Readable",
     "SQLExtraReadable",
     "SQLExtraWritable",
-    "SQLFields",
+    "SQLFieldable",
     "SQLReadable",
     "WriteField",
 ]
@@ -63,14 +63,14 @@ class ExtraWritable(Protocol):
 if TYPE_CHECKING:
     from sqlalchemy import Table
 
-    class SQLFields(Protocol):
+    class SQLFieldable(Protocol):
         __table__: ClassVar[Table]
 
-    class SQLReadable(Readable, SQLFields, Protocol): ...
+    class SQLReadable(Readable, SQLFieldable, Protocol): ...
 
-    class SQLExtraReadable(ExtraReadable, SQLFields, Protocol): ...
+    class SQLExtraReadable(ExtraReadable, SQLFieldable, Protocol): ...
 
-    class SQLExtraWritable(ExtraWritable, SQLFields, Protocol): ...
+    class SQLExtraWritable(ExtraWritable, SQLFieldable, Protocol): ...
 
 
 class Writable(Protocol):
@@ -82,7 +82,7 @@ class Writable(Protocol):
     ]: ...
 
 
-class Internal(Protocol):
+class Internalable(Protocol):
     @property
     def fastsprout_visibility(self) -> Literal["entity"]: ...
 
@@ -99,7 +99,7 @@ class WriteField[T](Field[T, Writable]):
     __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"write"})
 
 
-class InternalField[T](Field[T, Internal]):
+class InternalField[T](Field[T, Internalable]):
     """Accessible on the entity, excluded from every public DTO."""
 
     __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"internal"})

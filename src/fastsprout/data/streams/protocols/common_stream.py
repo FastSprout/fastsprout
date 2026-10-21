@@ -13,11 +13,11 @@ from fastsprout.data.types import (
     Valuable,
 )
 
-__all__ = ["AsyncCommonStream"]
+__all__ = ["AsyncCommonStreamable"]
 
 
 @runtime_checkable
-class AsyncCommonStream[T: Valuable | Entitieable](Protocol):
+class AsyncCommonStreamable[T: Valuable | Entitieable](Protocol):
     def to_list(self) -> LazyAwait[list[T]]: ...
     def to_set(self) -> LazyAwait[set[T]]: ...
     def to_dict[K: Hashable, V](

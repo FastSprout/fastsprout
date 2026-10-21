@@ -8,7 +8,7 @@ __all__ = [
     "ANextable",
     "Addable",
     "AllComparisonsable",
-    "AsyncIterableResolver",
+    "AsyncIterableResolvable",
     "AwaitGenerator",
     "Awaitable",
     "Boolable",
@@ -45,7 +45,7 @@ class ACloseable(Protocol):
     async def aclose(self) -> None: ...
 
 
-class AsyncIterableResolver[T](Protocol):
+class AsyncIterableResolvable[T](Protocol):
     async def resolve(self) -> AsyncIterable[T]: ...
 
 
@@ -65,20 +65,20 @@ class ANextable[T](Protocol):
     def __anext__(self) -> Awaitable[T]: ...
 
 
-class AIterator[T](ANextable[T], Protocol):
-    def __aiter__(self) -> "AIterator[T]": ...
+class AIteratorable[T](ANextable[T], Protocol):
+    def __aiter__(self) -> "AIteratorable[T]": ...
 
 
 class AIterable[T](Protocol):
-    def __aiter__(self) -> AIterator[T]: ...
+    def __aiter__(self) -> AIteratorable[T]: ...
 
 
-class Iterator[T](Nextable[T], Protocol):
-    def __iter__(self) -> "Iterator[T]": ...
+class Iteratorable[T](Nextable[T], Protocol):
+    def __iter__(self) -> "Iteratorable[T]": ...
 
 
 class Iterable[T](Protocol):
-    def __iter__(self) -> Iterator[T]: ...
+    def __iter__(self) -> Iteratorable[T]: ...
 
 
 class Callable[**P, R](Protocol):

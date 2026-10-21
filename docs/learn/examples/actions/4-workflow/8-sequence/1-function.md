@@ -17,7 +17,7 @@ from collections.abc import Sequence
 
 from fastsprout.actions import Workflow
 from fastsprout.core import BaseSchema
-from fastsprout.core.action import BaseSequenceAction
+from fastsprout.core.action import SequenceActionable
 
 
 class DocumentRequest(BaseSchema):
@@ -40,7 +40,7 @@ async def render(document: Document) -> RenderedDocument:
     return RenderedDocument(content=document.content.encode())
 
 
-sequence: BaseSequenceAction[DocumentRequest, Document] = load
+sequence: SequenceActionable[DocumentRequest, Document] = load
 workflow = Workflow(sequence).then(render)
 
 

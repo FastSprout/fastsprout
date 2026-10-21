@@ -28,10 +28,10 @@ The SQL entity examples need `--extra data-sql`.
 
 | File | Shows |
 | --- | --- |
-| [03_action/01_base_action.py](03_action/01_base_action.py) | BaseAction — single typed result. Class and function styles. |
-| [03_action/02_action_sequence.py](03_action/02_action_sequence.py) | BaseSequenceAction — eager collection (list/tuple). Class and function styles. |
+| [03_action/01_base_action.py](03_action/01_base_action.py) | Actionable — single typed result. Class and function styles. |
+| [03_action/02_action_sequence.py](03_action/02_action_sequence.py) | SequenceActionable — eager collection (list/tuple). Class and function styles. |
 | [03_action/03_action_iterable.py](03_action/03_action_iterable.py) | Return greetings lazily from a class action or an async function. |
-| [03_action/03_action_iterator.py](03_action/03_action_iterator.py) | BaseIteratorAction — async streaming (async-gen). Class and function styles. |
+| [03_action/03_action_iterator.py](03_action/03_action_iterator.py) | IteratorActionable — async streaming (async-gen). Class and function styles. |
 
 ## 4. DTO
 

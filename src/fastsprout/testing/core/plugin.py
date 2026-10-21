@@ -37,7 +37,7 @@ __all__ = [
 ]
 
 
-class FixtureDefinition(Protocol):
+class FixtureDefinitionable(Protocol):
     @property
     def func(self) -> Hashable: ...
 
@@ -46,10 +46,10 @@ class FixtureDefinition(Protocol):
 
 
 @runtime_checkable
-class FixtureResolver(Protocol):
+class FixtureResolvable(Protocol):
     def getfixturedefs(
         self, argname: str, node: pytest.Item
-    ) -> Sequence[FixtureDefinition] | None: ...
+    ) -> Sequence[FixtureDefinitionable] | None: ...
 
 
 TYPED_FIXTURES: pytest.StashKey[set[Hashable]] = pytest.StashKey()
@@ -92,7 +92,7 @@ def fixture_names(item: pytest.Function) -> set[str]:
 
 def fixture_functions(item: pytest.Function) -> Iterator[Hashable]:
     resolver = item.config.pluginmanager.get_plugin("funcmanage")
-    if not isinstance(resolver, FixtureResolver):
+    if not isinstance(resolver, FixtureResolvable):
         raise pytest.UsageError("Pytest fixture resolver is unavailable")
     for name in fixture_names(item):
         for definition in reversed(resolver.getfixturedefs(name, item) or ()):

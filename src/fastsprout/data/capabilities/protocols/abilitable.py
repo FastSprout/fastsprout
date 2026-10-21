@@ -11,7 +11,7 @@ from .deletable import Deletable
 from .findable import Findable
 from .iterable import Iterable
 from .streamable import Streamable
-from .updatable import Updatable, UpdatableByQuery
+from .updatable import Updatable, UpdatableByQueryable
 from .upsertable import Upsertable
 
 __all__ = ["Abilitable"]
@@ -30,7 +30,7 @@ class Abilitable(
     Streamable[E, Q],
     Updatable[E],
     Upsertable[E],
-    UpdatableByQuery[E, Q],
+    UpdatableByQueryable[E, Q],
     Protocol[E, Q, QueryOut],
 ):
     def query_for(

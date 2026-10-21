@@ -16,7 +16,7 @@ from fastsprout.data.backend.sql.capabilities.updatable import (
 from fastsprout.data.capabilities.protocols import (
     Deletable,
     Iterable,
-    UpdatableByQuery,
+    UpdatableByQueryable,
 )
 from fastsprout.data.capabilities.query import Expression, FieldPredicate
 from fastsprout.data.streams.implementation import (
@@ -258,7 +258,7 @@ class TestSQLAbilitable:
         sql_signpost: SQLSignpost,
         selected_query: SQLQuery[Hero],
     ) -> int:
-        ability: UpdatableByQuery[Hero, SQLQuery[Hero]] = capability(
+        ability: UpdatableByQueryable[Hero, SQLQuery[Hero]] = capability(
             sql_signpost
         )
         return await ability.update_by_query(

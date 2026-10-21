@@ -5,7 +5,7 @@ import pytest
 from fastsprout.data import DataR
 from fastsprout.data.backend.sql import SQLQuery, SQLSignpost
 from fastsprout.data.capabilities.query import Expression, FieldPredicate
-from fastsprout.data.streams.protocols import AsyncJoinedStream
+from fastsprout.data.streams.protocols import AsyncJoinedStreamable
 from fastsprout.testing.core import then, when
 
 from .base_test_joined_query import (
@@ -42,7 +42,7 @@ class TestJoinedConditions(BaseTestSQLJoinedQuery):
         selects: list[str],
         condition: Expression[Hero],
         before_join: bool,
-    ) -> AsyncIterator[AsyncJoinedStream[Hero, QueryTeam, QueryCountry]]:
+    ) -> AsyncIterator[AsyncJoinedStreamable[Hero, QueryTeam, QueryCountry]]:
         assert isinstance(condition, FieldPredicate)
         query = SQLQuery(Hero).join(QueryTeam, Hero.age == QueryTeam.id)
         group = query.Or(
@@ -71,7 +71,7 @@ class TestJoinedConditions(BaseTestSQLJoinedQuery):
         selects: list[str],
         consumed: list[int],
         kind: str,
-        grouped_stream: AsyncJoinedStream[Hero, QueryTeam, QueryCountry],
+        grouped_stream: AsyncJoinedStreamable[Hero, QueryTeam, QueryCountry],
     ) -> None:
         assert selects == []
         assert consumed == []

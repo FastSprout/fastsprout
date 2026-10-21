@@ -1,5 +1,5 @@
 """Nest async iterator workflows and consume their results lazily.
-The stream also works as BaseIteratorAction and feeds each document to render.
+The stream also works as IteratorActionable and feeds each document to render.
 """
 
 import asyncio
@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 
 from fastsprout.actions import Workflow
 from fastsprout.core import BaseSchema
-from fastsprout.core.action import BaseIteratorAction
+from fastsprout.core.action import IteratorActionable
 
 
 class DocumentRequest(BaseSchema):
@@ -35,7 +35,7 @@ async def render(document: Document) -> RenderedDocument:
 
 load_documents = Workflow(load)
 nested = Workflow(load_documents)
-stream: BaseIteratorAction[DocumentRequest, Document] = nested
+stream: IteratorActionable[DocumentRequest, Document] = nested
 workflow = Workflow(stream).then(render)
 
 

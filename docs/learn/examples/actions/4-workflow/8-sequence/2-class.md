@@ -2,13 +2,13 @@
 
 <!-- example-source: examples/actions/04_workflow/08_sequence/02_class.py -->
 
-Compose a BaseSequenceAction class with a rendering action.
+Compose a SequenceActionable class with a rendering action.
 The renderer receives one document at a time from the sequence.
 
 ## Source
 
 ```python
-"""Compose a BaseSequenceAction class with a rendering action.
+"""Compose a SequenceActionable class with a rendering action.
 The renderer receives one document at a time from the sequence.
 """
 
@@ -17,7 +17,7 @@ from collections.abc import Sequence
 
 from fastsprout.actions import Workflow
 from fastsprout.core import BaseSchema
-from fastsprout.core.action import BaseSequenceAction
+from fastsprout.core.action import SequenceActionable
 
 
 class DocumentRequest(BaseSchema):
@@ -32,7 +32,7 @@ class RenderedDocument(BaseSchema):
     content: bytes
 
 
-class LoadDocuments(BaseSequenceAction[DocumentRequest, Document]):
+class LoadDocuments(SequenceActionable[DocumentRequest, Document]):
     async def __call__(self, payload: DocumentRequest) -> Sequence[Document]:
         return tuple(Document(content=text) for text in payload.contents)
 

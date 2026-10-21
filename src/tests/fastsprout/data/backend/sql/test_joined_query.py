@@ -9,7 +9,7 @@ from fastsprout.data.backend.sql import SQLJoinedQuery, SQLQuery, SQLSignpost
 from fastsprout.data.backend.sql.entity import SQLSource
 from fastsprout.data.capabilities.query import Expression, FieldPredicate
 from fastsprout.data.exceptions import NoSessionError
-from fastsprout.data.streams.protocols import AsyncJoinedStream
+from fastsprout.data.streams.protocols import AsyncJoinedStreamable
 from fastsprout.testing.core import then, when
 
 from .base_test_joined_query import (
@@ -19,7 +19,7 @@ from .base_test_joined_query import (
 )
 from .conftest import Hero
 
-type JoinedRows = AsyncJoinedStream[Hero, QueryTeam, QueryCountry]
+type JoinedRows = AsyncJoinedStreamable[Hero, QueryTeam, QueryCountry]
 type Orderings = tuple[tuple[str, bool], ...]
 
 
@@ -52,7 +52,7 @@ class TestSQLJoinedQuery(BaseTestSQLJoinedQuery):
     @when("conditions and pagination are configured before or after a join")
     async def option_stream(
         self, selects: list[str], before_join: bool
-    ) -> AsyncIterator[AsyncJoinedStream[Hero, QueryTeam]]:
+    ) -> AsyncIterator[AsyncJoinedStreamable[Hero, QueryTeam]]:
         base = SQLQuery(Hero)
         if before_join:
             base.where(Hero.age.gte(3)).order_by(Hero.id).offset(1).limit(1)
@@ -67,7 +67,7 @@ class TestSQLJoinedQuery(BaseTestSQLJoinedQuery):
     async def test_query_options(
         self,
         selects: list[str],
-        option_stream: AsyncJoinedStream[Hero, QueryTeam],
+        option_stream: AsyncJoinedStreamable[Hero, QueryTeam],
     ) -> None:
         assert [(hero.id, team.id) async for hero, team in option_stream] == [
             (4, 4)
@@ -204,7 +204,7 @@ class TestSQLJoinedQuery(BaseTestSQLJoinedQuery):
     @when("the DataR context is closed before its joined stream is consumed")
     async def closed_stream(
         self, joined_source: SQLSignpost
-    ) -> AsyncJoinedStream[Hero, QueryTeam]:
+    ) -> AsyncJoinedStreamable[Hero, QueryTeam]:
         query = SQLQuery(Hero).join(QueryTeam, Hero.age == QueryTeam.id)
         async with DataR() as datar:
             stream = datar.stream(query)
@@ -212,7 +212,7 @@ class TestSQLJoinedQuery(BaseTestSQLJoinedQuery):
 
     @then("joined streams cannot outlive their DataR context")
     async def test_closed_context(
-        self, closed_stream: AsyncJoinedStream[Hero, QueryTeam]
+        self, closed_stream: AsyncJoinedStreamable[Hero, QueryTeam]
     ) -> None:
         with pytest.raises(NoSessionError):
             await closed_stream.to_list()
@@ -221,7 +221,7 @@ class TestSQLJoinedQuery(BaseTestSQLJoinedQuery):
     async def guarded_stream(
         self, selects: list[str], allowed: bool
     ) -> AsyncIterator[
-        tuple[AsyncJoinedStream[Hero, QueryTeam], list[type[Hero]]]
+        tuple[AsyncJoinedStreamable[Hero, QueryTeam], list[type[Hero]]]
     ]:
         checked: list[type[Hero]] = []
 
@@ -245,7 +245,7 @@ class TestSQLJoinedQuery(BaseTestSQLJoinedQuery):
         selects: list[str],
         allowed: bool,
         guarded_stream: tuple[
-            AsyncJoinedStream[Hero, QueryTeam], list[type[Hero]]
+            AsyncJoinedStreamable[Hero, QueryTeam], list[type[Hero]]
         ],
     ) -> None:
         stream, checked = guarded_stream

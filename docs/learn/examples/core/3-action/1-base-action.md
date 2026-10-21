@@ -2,16 +2,16 @@
 
 <!-- example-source: examples/core/03_action/01_base_action.py -->
 
-BaseAction — single typed result. Class and function styles.
+Actionable — single typed result. Class and function styles.
 
 ## Source
 
 ```python
-"""BaseAction — single typed result. Class and function styles."""
+"""Actionable — single typed result. Class and function styles."""
 
 import asyncio
 
-from fastsprout.core.action import BaseAction
+from fastsprout.core.action import Actionable
 from fastsprout.core.fields import Field
 from fastsprout.core.schema import BaseSchema
 
@@ -24,7 +24,7 @@ class GreetOut(BaseSchema):
     message: Field[str]
 
 
-class Greet(BaseAction[GreetIn, GreetOut]):
+class Greet(Actionable[GreetIn, GreetOut]):
     async def __call__(self, payload: GreetIn, /) -> GreetOut:
         return GreetOut(message=f"hello, {payload.name}")
 

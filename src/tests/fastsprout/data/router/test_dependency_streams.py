@@ -9,7 +9,7 @@ from fastsprout.data.backend.sql.capabilities.iterable import SQLIterable
 from fastsprout.data.backend.sql.streams.entity_stream import SQLEntityStream
 from fastsprout.data.capabilities.protocols import Abilitable
 from fastsprout.data.capabilities.query import BaseQuery
-from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.data.streams.protocols import AsyncEntityStreamable
 
 from .conftest import JoinOrder
 
@@ -20,7 +20,7 @@ class IteratorAbility(
 ):
     def stream(
         self, query: BaseQuery[JoinOrder, Select[tuple[JoinOrder]]], /
-    ) -> AsyncEntityStream[JoinOrder]:
+    ) -> AsyncEntityStreamable[JoinOrder]:
         return SimpleAsyncEntityStream(super().iter(query))
 
 

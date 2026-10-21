@@ -2,7 +2,7 @@
 
 import asyncio
 
-from fastsprout.core import BaseAction, BaseSchema, Field
+from fastsprout.core import Actionable, BaseSchema, Field
 
 
 class GreetingInput(BaseSchema):
@@ -13,7 +13,7 @@ class Greeting(BaseSchema):
     message: Field[str]
 
 
-class Greet(BaseAction[GreetingInput, Greeting]):
+class Greet(Actionable[GreetingInput, Greeting]):
     async def __call__(self, payload: GreetingInput, /) -> Greeting:
         return Greeting(message=f"Hello, {payload.name}!")
 

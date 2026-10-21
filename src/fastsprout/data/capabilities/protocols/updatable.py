@@ -9,7 +9,7 @@ from fastsprout.core.types import AnyIterable
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
 
-__all__ = ["Updatable", "UpdatableByQuery"]
+__all__ = ["Updatable", "UpdatableByQueryable"]
 
 
 @runtime_checkable
@@ -24,7 +24,7 @@ class Updatable[E: Entitieable](Protocol):
 
 
 @runtime_checkable
-class UpdatableByQuery[E: Entitieable, Q: BaseQuery](Protocol):
+class UpdatableByQueryable[E: Entitieable, Q: BaseQuery](Protocol):
     async def update_by_query(
         self,
         query: Q,

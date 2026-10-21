@@ -13,9 +13,9 @@ except ImportError:
     croniter = None
 
 from fastsprout.core.action import (
-    BaseAction,
-    BaseNullableAction,
-    BaseSequenceAction,
+    Actionable,
+    NullableActionable,
+    SequenceActionable,
 )
 from fastsprout.core.depends import inject_depends
 from fastsprout.events.backend.implementation import InMemoryBroker
@@ -28,7 +28,7 @@ from fastsprout.events.event import (
 )
 from fastsprout.events.middleware import (
     EventsMiddleware,
-    EventsMiddlewareFactory,
+    EventsMiddlewareFactoryable,
 )
 
 __all__ = ["IN_MEMORY_EVENT_BUS", "EventBus"]
@@ -107,9 +107,9 @@ class EventBus:
     def subscribe[E: Event](
         self,
         event_type: type[E],
-        handler: BaseNullableAction[E, Any]
-        | BaseAction[E, Any]
-        | BaseSequenceAction[E, Any],
+        handler: NullableActionable[E, Any]
+        | Actionable[E, Any]
+        | SequenceActionable[E, Any],
     ) -> None:
         for broker in self.__brokers:
             broker.subscribe(event_type, handler)
@@ -184,9 +184,13 @@ class EventBus:
                 delay = on.total_seconds()
             else:
                 if croniter is None:
-                    raise ModuleNotFoundError("Install fastsprout[events] for cron")
+                    raise ModuleNotFoundError(
+                        "Install fastsprout[events] for cron"
+                    )
                 now = datetime.now(UTC)
-                delay = (croniter(on, now).get_next(datetime) - now).total_seconds()
+                delay = (
+                    croniter(on, now).get_next(datetime) - now
+                ).total_seconds()
             await asyncio.sleep(max(0, delay))
             await action()
 
@@ -208,7 +212,7 @@ class EventBus:
 
     def add_middleware[**P](
         self,
-        middleware: type[EventsMiddlewareFactory[P]],
+        middleware: type[EventsMiddlewareFactoryable[P]],
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> None:

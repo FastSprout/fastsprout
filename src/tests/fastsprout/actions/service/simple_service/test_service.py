@@ -6,7 +6,7 @@ import pytest
 
 from fastsprout.actions import Action, Service, action
 from fastsprout.core import (
-    BaseActionGroup,
+    ActionGroupable,
     Depends,
     Schema,
     dataclass,
@@ -61,7 +61,7 @@ async def test_service_inherits_actions(
     await heroes.boost(StrengthenHero(10))
 
     # then
-    assert isinstance(heroes, BaseActionGroup)
+    assert isinstance(heroes, ActionGroupable)
     assert_type(result, StrengthenHero)
     assert result.power == 10
     assert checks == ["check"] * 4

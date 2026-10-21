@@ -7,9 +7,9 @@ from pydantic import TypeAdapter
 
 from fastsprout.core import BaseSchema
 from fastsprout.core.action import (
-    BaseAction,
-    BaseNullableAction,
-    BaseSequenceAction,
+    Actionable,
+    NullableActionable,
+    SequenceActionable,
 )
 from fastsprout.core.schema import Schema
 from fastsprout.events.event import Event, Eventable, EventState
@@ -49,9 +49,9 @@ class TransportBroker(InMemoryBroker, ABC):
     def subscribe[E: Event](
         self,
         event_type: type[E],
-        handler: BaseAction[E, Schema]
-        | BaseNullableAction[E, Schema | None]
-        | BaseSequenceAction[E, Schema],
+        handler: Actionable[E, Schema]
+        | NullableActionable[E, Schema | None]
+        | SequenceActionable[E, Schema],
     ) -> None:
         super().subscribe(event_type, handler)
         if event_type in self.registered_events:

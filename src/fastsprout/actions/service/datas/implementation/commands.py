@@ -15,10 +15,10 @@ from fastsprout.data.types import Valuable
 from fastsprout.data.utils.iterable import achain
 
 from ..protocols.owners import (
-    CreateOwner,
-    EntityOwner,
-    PatchOwner,
-    UpdateOwner,
+    CreateOwnable,
+    EntityOwnable,
+    PatchOwnable,
+    UpdateOwnable,
 )
 from .batches import batch_count, batch_stream
 from .payloads import (
@@ -53,7 +53,7 @@ P = TypeVar("P", bound=Schema | Entitieable, default=E)
 
 
 async def create(
-    self: CreateOwner[E, R, C], entity: E | C, datar: DataR = Depends()
+    self: CreateOwnable[E, R, C], entity: E | C, datar: DataR = Depends()
 ) -> R:
     payload = await prepare_new_entity(
         self.entity, self.create_schema, entity, datar
@@ -64,13 +64,13 @@ async def create(
 
 @overload
 async def update(
-    self: UpdateOwner[E, R, U], entity: E, /, *, datar: DataR = Depends()
+    self: UpdateOwnable[E, R, U], entity: E, /, *, datar: DataR = Depends()
 ) -> R: ...
 
 
 @overload
 async def update(
-    self: UpdateOwner[E, R, U],
+    self: UpdateOwnable[E, R, U],
     entity: IdentificatorType,
     data: E | U,
     /,
@@ -80,7 +80,7 @@ async def update(
 
 
 async def update(
-    self: UpdateOwner[E, R, U],
+    self: UpdateOwnable[E, R, U],
     entity: E | IdentificatorType,
     data: E | U | None = None,
     /,
@@ -100,7 +100,7 @@ async def update(
 
 
 async def patch(
-    self: PatchOwner[E, R, P],
+    self: PatchOwnable[E, R, P],
     identifier: IdentificatorType,
     data: E | P,
     /,
@@ -120,7 +120,7 @@ async def patch(
 
 
 async def delete(
-    self: EntityOwner[E, R],
+    self: EntityOwnable[E, R],
     identifier: IdentificatorType,
     datar: DataR = Depends(),
 ) -> int:
@@ -131,7 +131,7 @@ async def delete(
 
 
 async def upsert(
-    self: EntityOwner[E, R], entity: E, datar: DataR = Depends()
+    self: EntityOwnable[E, R], entity: E, datar: DataR = Depends()
 ) -> R:
     prepared = await prepare_upsert(self.entity, entity, datar)
     result = await datar.ability(self.entity).upsert(prepared)
@@ -140,7 +140,7 @@ async def upsert(
 
 @batch_stream
 async def bulk_create(
-    self: CreateOwner[E, R, C],
+    self: CreateOwnable[E, R, C],
     entities: AnyIterable[E | C],
     /,
     *,
@@ -159,7 +159,7 @@ async def bulk_create(
 
 @overload
 def bulk_update(
-    self: UpdateOwner[E, R, U],
+    self: UpdateOwnable[E, R, U],
     entities: AnyIterable[E],
     /,
     *,
@@ -169,7 +169,7 @@ def bulk_update(
 
 @overload
 def bulk_update(
-    self: UpdateOwner[E, R, U],
+    self: UpdateOwnable[E, R, U],
     entities: AnyIterable[tuple[IdentificatorType, E | U]],
     /,
     *,
@@ -179,7 +179,7 @@ def bulk_update(
 
 @batch_stream
 async def bulk_update(
-    self: UpdateOwner[E, R, U],
+    self: UpdateOwnable[E, R, U],
     entities: AnyIterable[E | tuple[IdentificatorType, E | U]],
     /,
     *,
@@ -204,7 +204,7 @@ async def bulk_update(
 
 @batch_stream
 async def bulk_patch(
-    self: PatchOwner[E, R, P],
+    self: PatchOwnable[E, R, P],
     entities: AnyIterable[tuple[IdentificatorType, E | P]],
     /,
     *,
@@ -225,7 +225,7 @@ async def bulk_patch(
 
 @batch_stream
 async def bulk_upsert(
-    self: EntityOwner[E, R],
+    self: EntityOwnable[E, R],
     entities: AnyIterable[E],
     /,
     *,
@@ -244,7 +244,7 @@ async def bulk_upsert(
 
 @batch_count
 async def bulk_delete(
-    self: EntityOwner[E, R],
+    self: EntityOwnable[E, R],
     identifiers: AnyIterable[IdentificatorType],
     /,
     *,

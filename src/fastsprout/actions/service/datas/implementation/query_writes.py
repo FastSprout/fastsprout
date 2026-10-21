@@ -11,7 +11,7 @@ from fastsprout.data.entity import Entitieable
 from fastsprout.data.router import DataR
 from fastsprout.data.types import Valuable
 
-from ..protocols.owners import QueryOwner
+from ..protocols.owners import QueryOwnable
 from . import queries
 
 __all__ = ["delete_by_query", "update_by_query"]
@@ -19,7 +19,7 @@ __all__ = ["delete_by_query", "update_by_query"]
 
 @overload
 async def delete_by_query[E: Entitieable, R: Valuable | Entitieable, Statement](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: BaseQuery[E, Statement],
     *,
     datar: DataR = Depends(),
@@ -28,7 +28,7 @@ async def delete_by_query[E: Entitieable, R: Valuable | Entitieable, Statement](
 
 @overload
 async def delete_by_query[E: Entitieable, R: Valuable | Entitieable](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: FieldPredicate[E],
     /,
     *predicates: FieldPredicate[E],
@@ -37,7 +37,7 @@ async def delete_by_query[E: Entitieable, R: Valuable | Entitieable](
 
 
 async def delete_by_query[E: Entitieable, R: Valuable | Entitieable, Statement](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: BaseQuery[E, Statement] | FieldPredicate[E],
     *predicates: FieldPredicate[E],
     datar: DataR = Depends(),
@@ -54,7 +54,7 @@ async def update_by_query[
     Statement,
     Value,
 ](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: BaseQuery[E, Statement],
     /,
     *assignments: FieldAssignment[Value],
@@ -64,7 +64,7 @@ async def update_by_query[
 
 @overload
 async def update_by_query[E: Entitieable, R: Valuable | Entitieable, Value](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: FieldPredicate[E],
     /,
     *assignments: FieldAssignment[Value] | FieldPredicate[E],
@@ -78,7 +78,7 @@ async def update_by_query[
     Statement,
     Value,
 ](
-    self: QueryOwner[E, R],
+    self: QueryOwnable[E, R],
     query: BaseQuery[E, Statement] | FieldPredicate[E],
     /,
     *assignments: FieldAssignment[Value] | FieldPredicate[E],

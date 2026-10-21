@@ -12,7 +12,7 @@ The core package includes schemas, fields, actions, and DTOs. Use the optional
 ## Your first action
 
 This example defines an input schema, an output schema, and a class implementing
-`BaseAction`. The source lives in [`docs_src/quickstart.py`](https://github.com/FastSprout/fastsprout/blob/development/docs_src/quickstart.py)
+`Actionable`. The source lives in [`docs_src/quickstart.py`](https://github.com/FastSprout/fastsprout/blob/development/docs_src/quickstart.py)
 so it can be run and checked independently of this page.
 
 <!-- example-source: docs_src/quickstart.py -->
@@ -22,7 +22,7 @@ so it can be run and checked independently of this page.
 
 import asyncio
 
-from fastsprout.core import BaseAction, BaseSchema, Field
+from fastsprout.core import Actionable, BaseSchema, Field
 
 
 class GreetingInput(BaseSchema):
@@ -33,7 +33,7 @@ class Greeting(BaseSchema):
     message: Field[str]
 
 
-class Greet(BaseAction[GreetingInput, Greeting]):
+class Greet(Actionable[GreetingInput, Greeting]):
     async def __call__(self, payload: GreetingInput, /) -> Greeting:
         return Greeting(message=f"Hello, {payload.name}!")
 

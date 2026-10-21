@@ -11,15 +11,15 @@ from fastsprout.data.backend.protocols import (
     Finalizable,
 )
 from fastsprout.data.capabilities import BaseQuery
-from fastsprout.data.capabilities.query import JoinedQuery
+from fastsprout.data.capabilities.query import JoinedQueryable
 from fastsprout.data.entity import Entitieable, Signpostable
 from fastsprout.data.router.exceptions import DataRError, NoBackendError
 from fastsprout.data.router.protocols import Routerable
 from fastsprout.data.streams.context import StreamContext
 from fastsprout.data.streams.implementation import JoinedStream
 from fastsprout.data.streams.protocols import (
-    AsyncEntityStream,
-    AsyncJoinedStream,
+    AsyncEntityStreamable,
+    AsyncJoinedStreamable,
 )
 from fastsprout.events import EventBus
 
@@ -195,22 +195,24 @@ class DataR(Routerable):
 
     @overload
     def stream[E: Entitieable[Any], ContextT, *Ts](
-        self, q: JoinedQuery[E, ContextT, *Ts]
-    ) -> AsyncJoinedStream[*Ts]: ...
+        self, q: JoinedQueryable[E, ContextT, *Ts]
+    ) -> AsyncJoinedStreamable[*Ts]: ...
 
     @overload
     def stream[E: Entitieable[Any], StatementT](
         self, q: BaseQuery[E, StatementT]
-    ) -> AsyncEntityStream[E]: ...
+    ) -> AsyncEntityStreamable[E]: ...
 
     def stream[E: Entitieable[Any], StatementT, ContextT, *Ts](
-        self, q: BaseQuery[E, StatementT] | JoinedQuery[E, ContextT, *Ts]
-    ) -> AsyncEntityStream[E] | AsyncJoinedStream[*Ts]:
-        if isinstance(q, JoinedQuery):
+        self, q: BaseQuery[E, StatementT] | JoinedQueryable[E, ContextT, *Ts]
+    ) -> AsyncEntityStreamable[E] | AsyncJoinedStreamable[*Ts]:
+        if isinstance(q, JoinedQueryable):
             signpost = self.__init_bindings__.add(q.entity)
             if self.dependencies:
 
-                async def read(query: JoinedQuery[E, ContextT, *Ts]) -> None:
+                async def read(
+                    query: JoinedQueryable[E, ContextT, *Ts],
+                ) -> None:
                     """Provide the joined read's arguments to dependencies."""
 
                 signpost = AbilityDependencies(self, self.dependencies).stream(

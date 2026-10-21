@@ -20,7 +20,7 @@ if TYPE_CHECKING:
         Readable,
         SQLExtraReadable,
         SQLExtraWritable,
-        SQLFields,
+        SQLFieldable,
         SQLReadable,
     )
 
@@ -123,7 +123,7 @@ class Field(Generic[T, FieldOwner]):  # default type parameter on Python 3.12
         ) -> FieldRef[E, T, Mapped[T]]: ...
 
         @overload
-        def __get__[E: SQLFields](
+        def __get__[E: SQLFieldable](
             self: "Field[T, object]",
             instance: None,
             owner: type[E],

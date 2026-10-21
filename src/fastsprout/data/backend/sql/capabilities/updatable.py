@@ -16,7 +16,7 @@ from fastsprout.data.backend.sql.predicates import native_conditions
 from fastsprout.data.backend.sql.streams import SQLEntityStream
 from fastsprout.data.capabilities.protocols import (
     Updatable,
-    UpdatableByQuery,
+    UpdatableByQueryable,
 )
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
@@ -121,7 +121,7 @@ class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLDataBackend):
 
 
 class SQLUpdatableByQuery[E: SQLEntity[Any]](
-    UpdatableByQuery[E, BaseQuery[E, Select[tuple[E]]]], SQLDataBackend
+    UpdatableByQueryable[E, BaseQuery[E, Select[tuple[E]]]], SQLDataBackend
 ):
     async def update_by_query(
         self,

@@ -12,11 +12,11 @@ from typing import (
 from fastsprout.core.depends import DependsClass
 from fastsprout.data.backend.protocols import DataAbilitable, Finalizable
 from fastsprout.data.capabilities import BaseQuery
-from fastsprout.data.capabilities.query import JoinedQuery
+from fastsprout.data.capabilities.query import JoinedQueryable
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.streams.protocols import (
-    AsyncEntityStream,
-    AsyncJoinedStream,
+    AsyncEntityStreamable,
+    AsyncJoinedStreamable,
 )
 from fastsprout.events import EventBus
 
@@ -50,13 +50,13 @@ class Routerable(Finalizable, Protocol):
 
     @overload
     def stream[E: Entitieable[Any], ContextT, *Ts](
-        self, q: JoinedQuery[E, ContextT, *Ts]
-    ) -> AsyncJoinedStream[*Ts]: ...
+        self, q: JoinedQueryable[E, ContextT, *Ts]
+    ) -> AsyncJoinedStreamable[*Ts]: ...
 
     @overload
     def stream[E: Entitieable[Any], StatementT](
         self, q: BaseQuery[E, StatementT]
-    ) -> AsyncEntityStream[E]: ...
+    ) -> AsyncEntityStreamable[E]: ...
 
     def join[E: Entitieable[Any], StatementT](
         self, q: BaseQuery[E, StatementT]

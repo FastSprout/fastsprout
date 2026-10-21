@@ -2,40 +2,40 @@ from typing import Annotated, Protocol
 
 from annotated_types import Ge
 
-from fastsprout.core.depends.invocation import DependencyOwner
+from fastsprout.core.depends.invocation import DependencyOwnable
 
 from ..types import Page
 
 __all__ = [
-    "CreateOwner",
-    "EntityOwner",
-    "PageOwner",
-    "PatchOwner",
-    "QueryOwner",
-    "UpdateOwner",
+    "CreateOwnable",
+    "EntityOwnable",
+    "PageOwnable",
+    "PatchOwnable",
+    "QueryOwnable",
+    "UpdateOwnable",
 ]
 
 
-class QueryOwner[E, R](Protocol):
+class QueryOwnable[E, R](Protocol):
     entity: type[E]
     read_schema: type[R]
 
 
-class PageOwner[E, R](QueryOwner[E, R], Protocol):
+class PageOwnable[E, R](QueryOwnable[E, R], Protocol):
     page_schema: type[Page[R]]
 
 
-class EntityOwner[E, R](QueryOwner[E, R], DependencyOwner, Protocol):
+class EntityOwnable[E, R](QueryOwnable[E, R], DependencyOwnable, Protocol):
     chunk_size: Annotated[int, Ge(1)]
 
 
-class CreateOwner[E, R, C](EntityOwner[E, R], Protocol):
+class CreateOwnable[E, R, C](EntityOwnable[E, R], Protocol):
     create_schema: type[C]
 
 
-class UpdateOwner[E, R, U](EntityOwner[E, R], Protocol):
+class UpdateOwnable[E, R, U](EntityOwnable[E, R], Protocol):
     update_schema: type[U]
 
 
-class PatchOwner[E, R, P](EntityOwner[E, R], Protocol):
+class PatchOwnable[E, R, P](EntityOwnable[E, R], Protocol):
     patch_schema: type[P]

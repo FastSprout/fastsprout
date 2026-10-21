@@ -7,7 +7,7 @@ from uuid import UUID
 
 from .bindings import bind_arguments, cache_key, dependency_key, enter_provider
 from .marker import DependsClass
-from .resolver import DependencyResolver
+from .resolver import DependencyResolvable
 from .scope import (
     async_invocation_scope,
     current_dependency_cache,
@@ -41,12 +41,12 @@ class DependencyInjector:
     def marker(
         parameter: inspect.Parameter, annotation: Any
     ) -> tuple[Any, Any]:
-        if isinstance(parameter.default, DependsClass | DependencyResolver):
+        if isinstance(parameter.default, DependsClass | DependencyResolvable):
             return parameter.default, annotation
         if get_origin(annotation) is Annotated:
             value_type, *metadata = get_args(annotation)
             for item in metadata:
-                if isinstance(item, DependsClass | DependencyResolver):
+                if isinstance(item, DependsClass | DependencyResolvable):
                     return item, value_type
         return None, annotation
 
@@ -141,7 +141,7 @@ class DependencyInjector:
         parameters = bound.signature.parameters
         for name in parameters.keys() & supplied.arguments.keys() - {"self"}:
             value = supplied.arguments[name]
-            if isinstance(value, DependsClass | DependencyResolver):
+            if isinstance(value, DependsClass | DependencyResolvable):
                 continue
             parameter = parameters[name]
             marker, _ = self.marker(parameter, parameter.annotation)
@@ -157,7 +157,7 @@ class DependencyInjector:
         cache: dict[object, Any],
         active: set[Callable[..., Any]],
     ) -> Any:
-        if isinstance(marker, DependencyResolver):
+        if isinstance(marker, DependencyResolvable):
             return marker.resolve(
                 annotation,
                 lambda provider: self.resolve_dependency(
@@ -190,7 +190,7 @@ class DependencyInjector:
         active: set[Callable[..., Any]],
         supplied: inspect.BoundArguments | None = None,
     ) -> Any:
-        if isinstance(marker, DependencyResolver):
+        if isinstance(marker, DependencyResolvable):
             return await marker.aresolve(
                 annotation,
                 lambda provider: self.aresolve_dependency(

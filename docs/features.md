@@ -5,7 +5,7 @@ FastSprout is organized in layers so an application can use the pieces it needs.
 ## Core
 
 [`BaseSchema`](api/core.md) and typed fields describe input and output data.
-[`BaseAction`](api/core.md) gives class and function actions the same typed call
+[`Actionable`](api/core.md) gives class and function actions the same typed call
 shape. DTO visibility controls which fields are readable or writable. Start with
 the [typed action guide](getting-started.md) or the [core examples](learn/examples/index.md).
 

@@ -9,7 +9,7 @@ from typing import cast
 from fastsprout.core import hidden_lazy_await, lazy_await
 from fastsprout.core.types import AnyIterable
 from fastsprout.core.types.protocols.ables import RichComparisonable
-from fastsprout.data.streams.protocols import AsyncValueStream
+from fastsprout.data.streams.protocols import AsyncValueStreamable
 from fastsprout.data.types import (
     ConsumerCallable,
     GetterCallable,
@@ -26,10 +26,10 @@ __all__ = ["SimpleAsyncValueStream"]
 
 
 class SimpleAsyncValueStream[T: Valuable](
-    BaseCommonStream[T], AsyncValueStream[T]
+    BaseCommonStream[T], AsyncValueStreamable[T]
 ):
     @hidden_lazy_await
-    async def concat(self, *others: "AsyncValueStream[T] | AnyIterable[T]"):
+    async def concat(self, *others: "AsyncValueStreamable[T] | AnyIterable[T]"):
         return SimpleAsyncValueStream[T](
             achain(self, *(cast(tuple[AsyncIterable, ...], others)))
         )

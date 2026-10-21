@@ -22,7 +22,7 @@ from fastsprout.data.streams.implementation import JoinedStream
 from fastsprout.data.types import PredicateCallable
 
 from .data_backend import SQLDataBackend
-from .entity import SQLEntity, SQLEntityClass, SQLSource, validate_source
+from .entity import SQLEntity, SQLEntityClassable, SQLSource, validate_source
 from .predicates import compile_predicate, native_conditions, row_filter
 
 __all__ = ["SQLJoinedQuery", "SQLQuery", "compile_predicate"]
@@ -39,7 +39,7 @@ class SQLQuery(BaseQuery[E, Select[tuple[E]]], Generic[E, SourceT]):
 
     def __init__(
         self,
-        entity: SQLEntityClass[E, SourceT],
+        entity: SQLEntityClassable[E, SourceT],
         statement: Select[tuple[E]] | None = None,
         limit_value: int | UndefinedType | None = Undefined,
         offset_value: Annotated[int, Ge(0)] = 0,

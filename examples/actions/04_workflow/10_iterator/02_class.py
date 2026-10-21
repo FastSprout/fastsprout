@@ -1,4 +1,4 @@
-"""Nest workflows built from a BaseIteratorAction class.
+"""Nest workflows built from a IteratorActionable class.
 Each document passes through the nested workflow to a rendering action.
 """
 
@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 
 from fastsprout.actions import Workflow
 from fastsprout.core import BaseSchema
-from fastsprout.core.action import BaseIteratorAction
+from fastsprout.core.action import IteratorActionable
 
 
 class DocumentRequest(BaseSchema):
@@ -22,7 +22,7 @@ class RenderedDocument(BaseSchema):
     content: bytes
 
 
-class LoadDocuments(BaseIteratorAction[DocumentRequest, Document]):
+class LoadDocuments(IteratorActionable[DocumentRequest, Document]):
     async def __call__(
         self, payload: DocumentRequest
     ) -> AsyncIterator[Document]:

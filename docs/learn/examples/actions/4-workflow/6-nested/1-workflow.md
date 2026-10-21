@@ -16,7 +16,7 @@ import asyncio
 
 from fastsprout.actions import Workflow, action
 from fastsprout.core import Schema, dataclass, typed_fields
-from fastsprout.core.action import BaseIteratorAction
+from fastsprout.core.action import IteratorActionable
 
 
 @dataclass
@@ -51,7 +51,7 @@ async def render(document: Document) -> RenderedDocument:
 
 prepare = Workflow(normalize).then(validate)
 renderer = Workflow(render)
-publish: BaseIteratorAction[Document, RenderedDocument] = Workflow(
+publish: IteratorActionable[Document, RenderedDocument] = Workflow(
     prepare
 ).then(renderer)
 
