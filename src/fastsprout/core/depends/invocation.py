@@ -9,7 +9,13 @@ from collections.abc import (
 )
 from contextlib import aclosing
 from functools import wraps
-from inspect import BoundArguments, Signature, signature
+from inspect import (
+    BoundArguments,
+    Signature,
+    isasyncgenfunction,
+    isgeneratorfunction,
+    signature,
+)
 from typing import Protocol, runtime_checkable
 from uuid import UUID, uuid4
 
@@ -52,9 +58,11 @@ class InvocationBindings:
     ) -> UUID | None:
         arguments = signature.bind_partial()
         self.bind(arguments)
+        resource = isasyncgenfunction(provider) or isgeneratorfunction(provider)
         return (
             self.token
-            if arguments.arguments or provider in self.providers
+            if arguments.arguments
+            or (provider in self.providers and not resource)
             else None
         )
 
