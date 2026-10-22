@@ -17,34 +17,8 @@ so it can be run and checked independently of this page.
 
 <!-- example-source: docs_src/quickstart.py -->
 
-```python
-"""A runnable typed action for the Getting Started guide."""
-
-import asyncio
-
-from fastsprout.core import Actionable, BaseSchema, Field
-
-
-class GreetingInput(BaseSchema):
-    name: Field[str]
-
-
-class Greeting(BaseSchema):
-    message: Field[str]
-
-
-class Greet(Actionable[GreetingInput, Greeting]):
-    async def __call__(self, payload: GreetingInput, /) -> Greeting:
-        return Greeting(message=f"Hello, {payload.name}!")
-
-
-async def main() -> None:
-    greeting = await Greet()(GreetingInput(name="world"))
-    print(greeting.message)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+```{.python}
+--8<-- "docs_src/quickstart.py"
 ```
 
 Run it from the repository root:

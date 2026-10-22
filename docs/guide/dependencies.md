@@ -16,7 +16,7 @@ as in `checks.access.dependency` below. For ordinary Service methods and
 Here, publishing and archiving both require access and content checks.
 Publishing an empty document fails before `publish` runs.
 
-```python
+```{.python}
 --8<-- "examples/actions/02_action_group/01_service/03_dependencies.py"
 ```
 

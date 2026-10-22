@@ -32,13 +32,11 @@ def example_parts(path: Path) -> tuple[tuple[int, str], ...]:
         name for name in path.parts[:-1] if re.fullmatch(r"\d+_[a-z_]+", name)
     ]
     return tuple(
-        part
-        for name in (*chapters, path.stem)
-        for part in _numbered_parts(name)
+        part for name in (*chapters, path.stem) for part in numbered_parts(name)
     )
 
 
-def _numbered_parts(name: str) -> tuple[tuple[int, str], ...]:
+def numbered_parts(name: str) -> tuple[tuple[int, str], ...]:
     parts: list[tuple[int, str]] = []
     number: int | None = None
     words: list[str] = []
@@ -59,7 +57,7 @@ def title_words(words: list[str]) -> str:
     return " ".join(TITLE_WORDS.get(word, word.title()) for word in words)
 
 
-def _common_words(words: list[list[str]]) -> list[str]:
+def common_words(words: list[list[str]]) -> list[str]:
     return [
         parts[0]
         for parts in takewhile(
@@ -71,10 +69,10 @@ def _common_words(words: list[list[str]]) -> list[str]:
 
 def shared_name(titles: list[str]) -> str:
     words = [title.split() for title in titles]
-    prefix = _common_words(words)
+    prefix = common_words(words)
     if prefix:
         return " ".join(prefix)
-    suffix = _common_words([list(reversed(item)) for item in words])
+    suffix = common_words([list(reversed(item)) for item in words])
     return " ".join(reversed(suffix))
 
 
@@ -105,10 +103,10 @@ def example_pages(docs_dir: Path, layer: str) -> Navigation:
             for part in page.relative_to(layer_dir).parts
         ),
     )
-    return _example_nav(pages, layer_dir, layer)
+    return example_nav(pages, layer_dir, layer)
 
 
-def _example_nav(
+def example_nav(
     pages: list[Path], layer_dir: Path, layer: str, depth: int = 0
 ) -> Navigation:
     items: Navigation = []
@@ -126,7 +124,7 @@ def _example_nav(
             number, title = example_parts(Path(name))[0]
             items.append(
                 {
-                    f"{number}. {title}": _example_nav(
+                    f"{number}. {title}": example_nav(
                         descendants, layer_dir, layer, depth + 1
                     )
                 }
@@ -208,7 +206,7 @@ def run_python_example(source: Path, root: Path) -> str:
     )
     if not output:
         raise ValueError(f"{source.relative_to(root)} did not print a result")
-    return output
+    return "\n".join(line.rstrip() for line in output.splitlines())
 
 
 def replace_result_block(markdown: str, output: str) -> str:
@@ -234,12 +232,14 @@ def replace_result_block(markdown: str, output: str) -> str:
     )
 
 
-def replace_source_block(markdown: str, source: Path) -> str:
-    block = re.search(r"(?ms)^```python\n.*?^```[ \t]*$", markdown)
+def replace_source_block(markdown: str, source: Path, root: Path) -> str:
+    block = re.search(
+        r"(?ms)^```(?:python|\{\.python\})\n.*?^```[ \t]*$", markdown
+    )
     if block is None:
         raise ValueError(f"Missing Python code block for {source}")
     replacement = (
-        f"```python\n{source.read_text(encoding='utf-8').rstrip()}\n```"
+        f'```{{.python}}\n--8<-- "{source.relative_to(root).as_posix()}"\n```'
     )
     return markdown[: block.start()] + replacement + markdown[block.end() :]
 
@@ -249,7 +249,7 @@ def render_example_output(markdown: str, root: Path) -> str:
         return markdown
     source = example_source(markdown, root)
     output = run_python_example(source, root)
-    updated = replace_source_block(markdown, source)
+    updated = replace_source_block(markdown, source, root)
     return replace_result_block(updated, output)
 
 
