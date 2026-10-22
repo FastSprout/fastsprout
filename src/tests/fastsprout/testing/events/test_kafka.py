@@ -21,6 +21,7 @@ from tests.fastsprout.events.backend.base_test_broker import (
 
 
 @pytest.mark.integration
+@pytest.mark.docker
 class TestKafkaContext(BaseTestBroker):
     def make_broker(self) -> AbstractAsyncContextManager[TransportBroker]:
         return TestKafka()

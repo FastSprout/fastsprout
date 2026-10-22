@@ -14,6 +14,7 @@ from .conftest import ContextRecord
 
 
 @pytest.mark.integration
+@pytest.mark.docker
 class TestMySQLContext(BaseTestSQLDatabase):
     image = "mysql:8.4"
 
