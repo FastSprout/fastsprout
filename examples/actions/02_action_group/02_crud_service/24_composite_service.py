@@ -6,15 +6,12 @@ invocation. All operations share the explicitly supplied DataR context.
 import asyncio
 from uuid import UUID, uuid4
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from common import backend, database
 from sqlmodel import Field as SQLField
 
 from fastsprout.actions import DataS, Service, action
 from fastsprout.core import Depends, Field, ReadField
 from fastsprout.data import DataR, sql
-
-engine = create_async_engine("sqlite+aiosqlite://")
-backend = sql.SQLSignpost(async_sessionmaker(engine, expire_on_commit=False))
 
 
 class Team(sql.SQLEntity[UUID]):
@@ -59,14 +56,9 @@ async def manage_game(datar: DataR, game: GameService = Depends()) -> None:
 
 
 async def main() -> None:
-    try:
-        async with engine.begin() as connection:
-            await connection.run_sync(Team.__table__.create)
-            await connection.run_sync(Hero.__table__.create)
+    async with database():
         async with DataR() as datar:
             await manage_game(datar)
-    finally:
-        await engine.dispose()
 
 
 if __name__ == "__main__":

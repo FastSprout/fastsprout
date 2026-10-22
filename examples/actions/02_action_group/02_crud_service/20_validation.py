@@ -5,17 +5,12 @@ Configure DataS with .dependency or Depends(action).
 import asyncio
 from uuid import UUID, uuid4
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
+from common import backend, database
 from sqlmodel import Field as SQLField
 
 from fastsprout.actions import DataS, WriteOperation, action
 from fastsprout.core import Depends, Field, ReadField
 from fastsprout.data import DataR, sql
-from fastsprout.data.backend.sql.entity import SQL_ENTITY_REGISTRY
-
-engine = create_async_engine("sqlite+aiosqlite://", poolclass=StaticPool)
-backend = sql.SQLSignpost(async_sessionmaker(engine, expire_on_commit=False))
 
 
 class Hero(sql.SQLEntity[UUID]):
@@ -47,10 +42,7 @@ creator = DataS(Hero, dependencies=[normalize_hero.dependency])
 
 
 async def main() -> None:
-    try:
-        async with engine.begin() as connection:
-            await connection.run_sync(SQL_ENTITY_REGISTRY.metadata.create_all)
-
+    async with database():
         async with DataR() as datar:
             created = await creator.create(
                 creator.create_schema(name="  Batman  "), datar=datar
@@ -66,8 +58,6 @@ async def main() -> None:
                 await heroes.delete(created.id, datar=datar)
             except PermissionError as error:
                 print("Rejected:", error)
-    finally:
-        await engine.dispose()
 
 
 if __name__ == "__main__":

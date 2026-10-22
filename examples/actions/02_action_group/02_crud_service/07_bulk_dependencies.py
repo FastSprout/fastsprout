@@ -7,18 +7,13 @@ import asyncio
 from collections.abc import Sequence
 from uuid import UUID, uuid4
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
+from common import backend, database
 from sqlmodel import Field as SQLField
 
 from fastsprout.actions import DataS
 from fastsprout.actions.service.datas import DataSOperation
 from fastsprout.core import Depends, Field, ReadField, dataclass
 from fastsprout.data import DataR, sql
-from fastsprout.data.backend.sql.entity import SQL_ENTITY_REGISTRY
-
-engine = create_async_engine("sqlite+aiosqlite://", poolclass=StaticPool)
-backend = sql.SQLSignpost(async_sessionmaker(engine, expire_on_commit=False))
 
 
 class Hero(sql.SQLEntity[UUID]):
@@ -68,10 +63,7 @@ catalog = DataS(Hero)
 
 
 async def main() -> None:
-    try:
-        async with engine.begin() as connection:
-            await connection.run_sync(SQL_ENTITY_REGISTRY.metadata.create_all)
-
+    async with database():
         async with context as datar:
             try:
                 await heroes.bulk_create(
@@ -101,8 +93,6 @@ async def main() -> None:
             except PermissionError as error:
                 print("Rejected:", error)
             print("Remaining:", await catalog.count(datar=datar))
-    finally:
-        await engine.dispose()
 
 
 if __name__ == "__main__":

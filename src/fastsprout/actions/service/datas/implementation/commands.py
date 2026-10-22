@@ -1,3 +1,4 @@
+from collections.abc import Iterable, Sequence
 from typing import overload
 
 from typing_extensions import TypeVar
@@ -17,6 +18,7 @@ from ..protocols.owners import (
     CreateOwnable,
     EntityOwnable,
     PatchOwnable,
+    QueryOwnable,
     UpdateOwnable,
 )
 from .batches import batch_count, batch_stream
@@ -195,10 +197,7 @@ async def bulk_update(
             entity = await materialize(self.entity, item, datar, creating=False)
         prepared.append(entity)
     updated = await datar.ability(self.entity).bulk_update(prepared)
-    by_id = {entity.id: entity for entity in updated}
-    return [
-        project_read(by_id[entity.id], self.read_schema) for entity in prepared
-    ]
+    return ordered_results(self, prepared, updated)
 
 
 @batch_stream
@@ -216,10 +215,7 @@ async def bulk_patch(
         async for key, data in achain(entities)
     ]
     updated = await datar.ability(self.entity).bulk_update(prepared)
-    by_id = {entity.id: entity for entity in updated}
-    return [
-        project_read(by_id[entity.id], self.read_schema) for entity in prepared
-    ]
+    return ordered_results(self, prepared, updated)
 
 
 @batch_stream
@@ -235,6 +231,12 @@ async def bulk_upsert(
         async for entity in achain(entities)
     ]
     results = await datar.ability(self.entity).bulk_upsert(prepared)
+    return ordered_results(self, prepared, results)
+
+
+def ordered_results(
+    self: QueryOwnable[E, R], prepared: Sequence[E], results: Iterable[E]
+) -> list[R]:
     by_id = {entity.id: entity for entity in results}
     return [
         project_read(by_id[entity.id], self.read_schema) for entity in prepared

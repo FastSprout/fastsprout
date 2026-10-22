@@ -31,8 +31,8 @@ async def resolve_any_iterable[S](
 class Chunk[T](AsyncIterable[T]):
     """A lazy input batch that dependencies may replace."""
 
-    def __init__(self, source: AsyncIterable[T]) -> None:
-        self.source: AsyncIterable[T] = source
+    def __init__(self, source: AnyIterable[T]) -> None:
+        self.source: AnyIterable[T] = source
 
     def __aiter__(self) -> AsyncIterator[T]:
-        return aiter(self.source)
+        return resolve_any_iterable(self.source)

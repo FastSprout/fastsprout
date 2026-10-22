@@ -5,17 +5,12 @@ The same query serves both list and count.
 import asyncio
 from uuid import UUID, uuid4
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
+from common import backend, database
 from sqlmodel import Field as SQLField
 
 from fastsprout.actions import DataS
 from fastsprout.core import Field, ReadField
 from fastsprout.data import DataR, sql
-from fastsprout.data.backend.sql.entity import SQL_ENTITY_REGISTRY
-
-engine = create_async_engine("sqlite+aiosqlite://", poolclass=StaticPool)
-backend = sql.SQLSignpost(async_sessionmaker(engine, expire_on_commit=False))
 
 
 class Hero(sql.SQLEntity[UUID]):
@@ -44,10 +39,7 @@ heroes = HeroesService()
 
 
 async def main() -> None:
-    try:
-        async with engine.begin() as connection:
-            await connection.run_sync(SQL_ENTITY_REGISTRY.metadata.create_all)
-
+    async with database():
         async with DataR() as datar:
             for name, power in (
                 ("Batman", 80),
@@ -66,8 +58,6 @@ async def main() -> None:
 
             print("Selected heroes:", [hero.name for hero in page.items])
             print("Matching heroes:", count)
-    finally:
-        await engine.dispose()
 
 
 if __name__ == "__main__":

@@ -7,15 +7,12 @@ import asyncio
 from collections.abc import AsyncIterator
 from uuid import UUID, uuid4
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from common import backend, database
 from sqlmodel import Field as SQLField
 
 from fastsprout.actions import DataS
 from fastsprout.core import Chunk, Depends, Field, ReadField
 from fastsprout.data import DataR, sql
-
-engine = create_async_engine("sqlite+aiosqlite://")
-backend = sql.SQLSignpost(async_sessionmaker(engine, expire_on_commit=False))
 
 
 class Hero(sql.SQLEntity[UUID]):
@@ -54,14 +51,10 @@ async def incoming() -> AsyncIterator[Hero]:
 
 
 async def main() -> None:
-    try:
-        async with engine.begin() as connection:
-            await connection.run_sync(Hero.__table__.create)
+    async with database():
         async with DataR() as datar:
             async for hero in heroes.bulk_create(incoming(), datar=datar):
                 print("Saved:", hero.name)
-    finally:
-        await engine.dispose()
 
 
 if __name__ == "__main__":

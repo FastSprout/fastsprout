@@ -15,7 +15,7 @@ engine = create_async_engine("sqlite+aiosqlite://", poolclass=StaticPool)
 backend = sql.SQLSignpost(async_sessionmaker(engine, expire_on_commit=False))
 
 
-class SecretHero(sql.SQLEntity[UUID]):
+class BaseSecretEntity(sql.SQLEntity[UUID], table=False):
     __signpost__ = backend
 
     id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
@@ -23,20 +23,13 @@ class SecretHero(sql.SQLEntity[UUID]):
     secret: InternalField[str]
 
 
-class SecretLeague(sql.SQLEntity[UUID]):
-    __signpost__ = backend
-
-    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
-    name: Field[str]
-    secret: InternalField[str]
+class SecretHero(BaseSecretEntity): ...
 
 
-class SecretTeam(sql.SQLEntity[UUID]):
-    __signpost__ = backend
+class SecretLeague(BaseSecretEntity): ...
 
-    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
-    name: Field[str]
-    secret: InternalField[str]
+
+class SecretTeam(BaseSecretEntity):
     league: Field[SecretLeague | None] = Relationship()
 
 

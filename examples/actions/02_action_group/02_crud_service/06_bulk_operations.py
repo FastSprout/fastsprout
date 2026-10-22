@@ -8,18 +8,13 @@ from collections.abc import AsyncIterator, Iterable
 from typing import assert_type
 from uuid import UUID, uuid4
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
+from common import backend, database
 from sqlmodel import Field as SQLField
 
 from fastsprout.actions import DataS
 from fastsprout.core import BaseSchema, Field, ReadField
 from fastsprout.core.types import AnyIterable
 from fastsprout.data import DataR, sql
-from fastsprout.data.backend.sql.entity import SQL_ENTITY_REGISTRY
-
-engine = create_async_engine("sqlite+aiosqlite://", poolclass=StaticPool)
-backend = sql.SQLSignpost(async_sessionmaker(engine, expire_on_commit=False))
 
 
 class Hero(sql.SQLEntity[UUID]):
@@ -43,10 +38,7 @@ async def async_items[T](items: Iterable[T]) -> AsyncIterator[T]:
 
 
 async def main() -> None:
-    try:
-        async with engine.begin() as connection:
-            await connection.run_sync(SQL_ENTITY_REGISTRY.metadata.create_all)
-
+    async with database():
         async with DataR() as datar:
             payloads: AnyIterable[Hero] = (
                 heroes.create_schema(name=name) for name in ("Batman", "Robin")
@@ -88,8 +80,6 @@ async def main() -> None:
             )
             print("Deleted:", deleted)
             print("Remaining:", await heroes.count(datar=datar))
-    finally:
-        await engine.dispose()
 
 
 if __name__ == "__main__":

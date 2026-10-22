@@ -5,18 +5,14 @@ The query explicitly loads relationships so they remain available after reading.
 import asyncio
 from uuid import UUID, uuid4
 
+from common import backend, database
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
 from sqlmodel import Field as SQLField
 
 from fastsprout.actions import DataS
 from fastsprout.core import Field, ReadField
 from fastsprout.data import DataR, Relationship, sql
-from fastsprout.data.backend.sql.entity import SQL_ENTITY_REGISTRY
-
-engine = create_async_engine("sqlite+aiosqlite://")
-backend = sql.SQLSignpost(async_sessionmaker(engine, expire_on_commit=False))
 
 
 class Team(sql.SQLEntity[UUID]):
@@ -38,9 +34,7 @@ heroes = DataS(Hero)
 
 
 async def main() -> None:
-    try:
-        async with engine.begin() as connection:
-            await connection.run_sync(SQL_ENTITY_REGISTRY.metadata.create_all)
+    async with database():
         async with DataR() as datar:
             created = await heroes.create(
                 Hero(name="Batman", team=Team(name="Justice League")),
@@ -56,8 +50,6 @@ async def main() -> None:
             found.team.name = "Justice League International"
             updated = await heroes.update(found, datar=datar)
             print(updated.name, "belongs to", updated.team.name)
-    finally:
-        await engine.dispose()
 
 
 if __name__ == "__main__":

@@ -2,12 +2,10 @@ from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import inspect as sa_inspect
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from fastsprout.actions import DataS
-from fastsprout.core import ReadDTO, dataclass
-from fastsprout.data import DataR, sql
+from fastsprout.core import ReadDTO
 from fastsprout.testing.core import then, when
 
 from ...common import loaded_query
@@ -26,13 +24,6 @@ type ReadCycle = tuple[
 ]
 
 
-@dataclass(frozen=True)
-class SecretSnapshot[E]:
-    entity: type[E]
-    name: str
-    secret: str
-
-
 @when("a private entity is created, read, and updated through a read DTO")
 async def read_cycle(prepared_tables: AsyncEngine) -> ReadCycle:
     heroes = DataS(SecretHero, read=SecretHeroRead)
@@ -41,119 +32,89 @@ async def read_cycle(prepared_tables: AsyncEngine) -> ReadCycle:
     updated = await heroes.update(
         SecretHero(id=created.id, name="Robin", secret="replacement")
     )
-    async with DataR() as datar:
-        persisted = await datar.ability(SecretHero).find_first(
-            sql.SQLQuery(
-                entity=SecretHero,
-                statement=select(SecretHero).where(
-                    SecretHero.__table__.c.id == created.id
-                ),
-            )
-        )
+    persisted = await DataS(SecretHero).get(created.id)
     return created, found, updated, persisted
 
 
 @then("explicit read dto hides internal fields")
 def test_explicit_read_dto_hides_internal_fields(read_cycle: ReadCycle) -> None:
     created, found, updated, persisted = read_cycle
-    assert isinstance(created, ReadDTO)
-    with pytest.raises(AttributeError, match="not accessible"):
-        created.__getattribute__("secret")
     assert found is not None
-    assert isinstance(found, ReadDTO)
+    for public in (created, found, updated):
+        assert isinstance(public, ReadDTO)
+        with pytest.raises(AttributeError, match="not accessible"):
+            public.__getattribute__("secret")
     assert sa_inspect(type(found), raiseerr=False) is None
     assert found.name == "Batman"
-    with pytest.raises(AttributeError, match="not accessible"):
-        found.__getattribute__("secret")
     assert "secret" not in vars(found)
-    assert isinstance(updated, ReadDTO)
     assert updated.name == "Robin"
-    with pytest.raises(AttributeError, match="not accessible"):
-        updated.__getattribute__("secret")
     assert persisted is not None
     assert persisted.name == "Robin"
     assert persisted.secret == "private"
 
 
-@when("a related entity is created, read, and updated through its parent")
+@when("a related entity is read and updated at one or two levels")
 async def related_cycle(
-    prepared_tables: AsyncEngine,
-) -> tuple[SecretSnapshot[SecretTeam], TeamHero | None]:
+    prepared_tables: AsyncEngine, deep: bool
+) -> tuple[SecretTeam | SecretLeague, TeamHero | None]:
+    team = SecretTeam(name="Justice League", secret="private")
+    if deep:
+        team.secret = "team secret"
+        team.league = SecretLeague(name="World", secret="league secret")
     heroes = DataS(TeamHero)
-    created = await heroes.create(
-        TeamHero(
-            name="Batman",
-            team=SecretTeam(name="Justice League", secret="private"),
-        )
-    )
+    created = await heroes.create(TeamHero(name="Batman", team=team))
     found = await heroes.get(loaded_query(TeamHero, created.id))
     assert found is not None
-    before = SecretSnapshot(
-        type(found.team), found.team.name, found.team.secret
-    )
-    await heroes.update(
-        found.model_copy(
-            update={
-                "team": found.team.model_copy(
-                    update={"name": "Justice League International"}
-                )
-            }
+    related = found.team.league if deep else found.team
+    assert related is not None
+    before = related.model_copy()
+    if deep:
+        related.name = "International"
+        await heroes.update(found)
+    else:
+        await heroes.update(
+            found.model_copy(
+                update={
+                    "team": found.team.model_copy(
+                        update={"name": "Justice League International"}
+                    )
+                }
+            )
         )
-    )
-    loaded = await heroes.get(loaded_query(TeamHero, created.id))
-    return before, loaded
-
-
-@then("nested entities are not converted to dtos")
-def test_nested_entities_are_not_converted_to_dtos(
-    related_cycle: tuple[SecretSnapshot[SecretTeam], TeamHero | None],
-) -> None:
-    before, loaded = related_cycle
-    assert not TeamHero.__table__.c.team_id.nullable
-    assert before.entity is SecretTeam
-    assert sa_inspect(before.entity, raiseerr=False) is not None
-    assert before.name == "Justice League"
-    assert before.secret == "private"
-    assert loaded is not None
-    assert loaded.team.name == "Justice League International"
-
-
-@when("a deeply related league is read and then updated through its hero")
-async def league_cycle(
-    prepared_tables: AsyncEngine,
-) -> tuple[SecretSnapshot[SecretLeague], TeamHero | None]:
-    heroes = DataS(TeamHero)
-    created = await heroes.create(
-        TeamHero(
-            name="Batman",
-            team=SecretTeam(
-                name="Justice League",
-                secret="team secret",
-                league=SecretLeague(name="World", secret="league secret"),
-            ),
-        )
-    )
-    found = await heroes.get(loaded_query(TeamHero, created.id))
-    assert found is not None
-    league = found.team.league
-    assert league is not None
-    before = SecretSnapshot(type(league), league.name, league.secret)
-    league.name = "International"
-    await heroes.update(found)
     return before, await heroes.get(loaded_query(TeamHero, created.id))
 
 
-@then("deep graph read and update")
-def test_deep_graph_read_and_update(
-    league_cycle: tuple[SecretSnapshot[SecretLeague], TeamHero | None],
+@pytest.mark.parametrize(
+    "deep, entity, name, secret, updated",
+    [
+        (
+            False,
+            SecretTeam,
+            "Justice League",
+            "private",
+            "Justice League International",
+        ),
+        (True, SecretLeague, "World", "league secret", "International"),
+    ],
+)
+@then("related entities retain their ORM type, private fields, and changes")
+def test_related_entities(
+    related_cycle: tuple[SecretTeam | SecretLeague, TeamHero | None],
+    deep: bool,
+    entity: type[SecretTeam | SecretLeague],
+    name: str,
+    secret: str,
+    updated: str,
 ) -> None:
-    before, loaded = league_cycle
-    assert before.name == "World"
-    assert before.entity is SecretLeague
-    assert before.secret == "league secret"
+    before, loaded = related_cycle
+    assert not TeamHero.__table__.c.team_id.nullable
+    assert type(before) is entity
+    assert sa_inspect(type(before), raiseerr=False) is not None
+    assert (before.name, before.secret) == (name, secret)
     assert loaded is not None
-    assert loaded.team.league is not None
-    assert loaded.team.league.name == "International"
+    related = loaded.team.league if deep else loaded.team
+    assert related is not None
+    assert related.name == updated
 
 
 @when("an optional relation is replaced and subsequently cleared")

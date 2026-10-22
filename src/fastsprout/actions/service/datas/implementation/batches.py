@@ -29,16 +29,6 @@ class BatchOwnable(DependencyOwnable, Protocol):
     chunk_size: Annotated[int, Ge(1)]
 
 
-class Batch[T]:
-    """Allow dependencies to inspect a bounded batch before it is written."""
-
-    def __init__(self, values: Sequence[T]) -> None:
-        self.values = values
-
-    def __aiter__(self) -> AsyncIterator[T]:
-        return resolve_any_iterable(self.values)
-
-
 def batches[Owner: BatchOwnable, Input, Result, **P](
     function: Callable[
         Concatenate[Owner, AnyIterable[Input], P], Awaitable[Result]
@@ -66,7 +56,7 @@ def batches[Owner: BatchOwnable, Input, Result, **P](
                 async for chunk in chunks:
                     yield await run(
                         owner,
-                        Chunk(Batch(chunk)),
+                        Chunk(chunk),
                         *args,
                         **kwargs,
                     )

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
     [
         pytest.param(example, id=example.relative_to(ROOT).as_posix())
         for example in sorted((ROOT / "examples").rglob("*.py"))
-        if example.name != "__init__.py"
+        if example.stem.partition("_")[0].isdigit()
         and example.read_text(encoding="utf-8").strip()
     ],
 )

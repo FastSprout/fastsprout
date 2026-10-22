@@ -3,15 +3,15 @@ from collections.abc import AsyncIterator
 import pytest
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
-    async_sessionmaker,
     create_async_engine,
 )
 from sqlalchemy.pool import StaticPool
 
 from fastsprout.actions import DataS
 from fastsprout.core import inject_depends
-from fastsprout.data import DataR, provide_datar, sql
+from fastsprout.data import DataR, provide_datar
 from fastsprout.testing.core import given, when
+from fastsprout.testing.data import TestSQLite
 
 from .common import League, Record, Team, TeamRecord
 
@@ -33,13 +33,9 @@ async def sql_engine() -> AsyncIterator[AsyncEngine]:
 
 
 @given("an empty SQL-backed data service")
-async def records(sql_engine: AsyncEngine) -> DataS[Record]:
-    Record.__signpost__ = sql.SQLSignpost(
-        async_sessionmaker(sql_engine, expire_on_commit=False)
-    )
-    async with sql_engine.begin() as connection:
-        await connection.run_sync(Record.__table__.create)
-    return DataS(Record)
+async def records(sql_engine: AsyncEngine) -> AsyncIterator[DataS[Record]]:
+    async with TestSQLite(Record, engine=sql_engine):
+        yield DataS(Record)
 
 
 @given("a shared DataR transaction for the data service")
@@ -59,12 +55,8 @@ async def scored_records(
 
 
 @given("a SQL-backed data service with related entities")
-async def team_records(sql_engine: AsyncEngine) -> DataS[TeamRecord]:
-    backend = sql.SQLSignpost(
-        async_sessionmaker(sql_engine, expire_on_commit=False)
-    )
-    async with sql_engine.begin() as connection:
-        for entity in (League, Team, TeamRecord):
-            entity.__signpost__ = backend
-            await connection.run_sync(entity.__table__.create)
-    return DataS(TeamRecord)
+async def team_records(
+    sql_engine: AsyncEngine,
+) -> AsyncIterator[DataS[TeamRecord]]:
+    async with TestSQLite(League, Team, TeamRecord, engine=sql_engine):
+        yield DataS(TeamRecord)

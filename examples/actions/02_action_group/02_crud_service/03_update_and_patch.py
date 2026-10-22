@@ -5,17 +5,12 @@ PATCH preserves omitted fields; an explicit None clears a nullable field.
 import asyncio
 from uuid import UUID, uuid4
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
+from common import backend, database
 from sqlmodel import Field as SQLField
 
 from fastsprout.actions import DataS
-from fastsprout.core import BaseSchema, Field, ReadField, inject_depends
-from fastsprout.data import DataR, provide_datar, sql
-from fastsprout.data.backend.sql.entity import SQL_ENTITY_REGISTRY
-
-engine = create_async_engine("sqlite+aiosqlite://", poolclass=StaticPool)
-backend = sql.SQLSignpost(async_sessionmaker(engine, expire_on_commit=False))
+from fastsprout.core import BaseSchema, Field, ReadField
+from fastsprout.data import sql
 
 
 class Hero(sql.SQLEntity[UUID]):
@@ -38,11 +33,7 @@ heroes = DataS(Hero, patch=HeroPatch)
 
 
 async def main() -> None:
-    inject_depends.dependency_providers[DataR] = provide_datar
-    try:
-        async with engine.begin() as connection:
-            await connection.run_sync(SQL_ENTITY_REGISTRY.metadata.create_all)
-
+    async with database():
         created = await heroes.create(
             heroes.create_schema(name="Batman", power=100, note="On patrol")
         )
@@ -60,8 +51,6 @@ async def main() -> None:
             created.id, heroes.update_schema(name="Robin")
         )
         print("UPDATE:", updated.name, updated.power, updated.note)
-    finally:
-        await engine.dispose()
 
 
 if __name__ == "__main__":

@@ -6,16 +6,12 @@ different signposts use the existing JoinedStream in the same DataR context.
 import asyncio
 from uuid import UUID, uuid4
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from common import backend, database
 from sqlmodel import Field as SQLField
 
 from fastsprout.actions import DataS
 from fastsprout.core import Field, InternalField, ReadField
 from fastsprout.data import DataR, sql
-from fastsprout.data.backend.sql.entity import SQL_ENTITY_REGISTRY
-
-engine = create_async_engine("sqlite+aiosqlite://")
-backend = sql.SQLSignpost(async_sessionmaker(engine, expire_on_commit=False))
 
 
 class Team(sql.SQLEntity[UUID]):
@@ -39,9 +35,7 @@ teams = DataS(Team)
 
 
 async def main() -> None:
-    try:
-        async with engine.begin() as connection:
-            await connection.run_sync(SQL_ENTITY_REGISTRY.metadata.create_all)
+    async with database():
         async with DataR() as datar:
             team = await teams.create(Team(name="Justice League"), datar=datar)
             await heroes.create(
@@ -54,8 +48,6 @@ async def main() -> None:
                 datar=datar,
             ):
                 print(hero.name, "belongs to", team.name)
-    finally:
-        await engine.dispose()
 
 
 if __name__ == "__main__":

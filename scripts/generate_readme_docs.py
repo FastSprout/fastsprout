@@ -174,7 +174,7 @@ for layer, layer_description in LAYER_DESCRIPTION.items():
         (
             path
             for path in (EXAMPLES_DIR / layer).rglob("*.py")
-            if path.name != "__init__.py"
+            if path.stem.partition("_")[0].isdigit()
             and path.read_text(encoding="utf-8").strip()
         ),
         key=example_parts,
