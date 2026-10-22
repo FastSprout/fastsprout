@@ -13,7 +13,7 @@ from fastsprout.core import (
     WriteDTO,
     WriteField,
 )
-from fastsprout.testing.core import then, when
+from fastsprout.testing.core import given, then, when
 
 from .base_test_sql_entity import BaseTestSQLEntity, SQLTestField
 from .conftest import (
@@ -146,3 +146,66 @@ class TestSQLImports:
         self, imported: subprocess.CompletedProcess[str]
     ) -> None:
         assert imported.returncode == 0, imported.stdout + imported.stderr
+
+
+class TestSQLDeclarationErrors:
+    @given("an isolated registry for an invalid SQL declaration")
+    def client(self) -> str:
+        return """
+from sqlmodel import Field as SQLField
+from fastsprout.core import Field, ReadField
+from fastsprout.data import Relationship
+from fastsprout.data.backend.sql import SQLEntity, SQLQuery
+
+class Unmapped(SQLEntity[int], table=False):
+    id: ReadField[int] = SQLField(primary_key=True)
+
+class Parent(SQLEntity[int]):
+    id: ReadField[int] = SQLField(primary_key=True)
+"""
+
+    @when("a declaration bypasses static validation")
+    def rejected(
+        self, client: str, declaration: str
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-c", client + declaration],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=15,
+        )
+
+    @pytest.mark.parametrize(
+        "declaration, message",
+        [
+            (
+                """
+class Child(SQLEntity[int]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    parent: Field[Unmapped] = Relationship()
+""",
+                "Relationship Child.parent requires a mapped entity",
+            ),
+            (
+                """
+class Child(SQLEntity[int]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    parent_id: Field[int]
+    parent: Field[Parent] = Relationship()
+""",
+                "Relationship Child.parent already has parent_id",
+            ),
+            (
+                "SQLQuery(Parent).join(Parent, True)",
+                "A SQL join requires a field equality expression",
+            ),
+        ],
+        ids=["unmapped-relation", "foreign-key-collision", "boolean-join"],
+    )
+    @then("runtime guards reject invalid relationships and join expressions")
+    def test_declaration(
+        self, rejected: subprocess.CompletedProcess[str], message: str
+    ) -> None:
+        assert rejected.returncode != 0
+        assert f"TypeError: {message}" in rejected.stderr

@@ -1,6 +1,6 @@
 from collections.abc import Callable
-from dataclasses import dataclass as _stdlib_dataclass
-from dataclasses import field as _stdlib_field
+from dataclasses import dataclass as stdlib_dataclass
+from dataclasses import field as stdlib_field
 from typing import dataclass_transform, overload
 
 from fastsprout.core.fields import Field
@@ -46,12 +46,14 @@ def typed_dataclass[C](
     """
 
     def decorate(source: type[C]) -> type[C]:
-        return _decorate(source, frozen=frozen, kw_only=kw_only)
+        return decorate_dataclass(source, frozen=frozen, kw_only=kw_only)
 
     return decorate if cls is None else decorate(cls)
 
 
-def _decorate[C](cls: type[C], *, frozen: bool, kw_only: bool) -> type[C]:
+def decorate_dataclass[C](
+    cls: type[C], *, frozen: bool, kw_only: bool
+) -> type[C]:
     annotations = read_annotations(dict(vars(cls)))
     descriptors = collect_field_descriptors(annotations)
     unwrap_field_annotations(annotations)
@@ -64,12 +66,12 @@ def _decorate[C](cls: type[C], *, frozen: bool, kw_only: bool) -> type[C]:
             setattr(
                 cls,
                 name,
-                _stdlib_field(default_factory=specifier.default_factory),
+                stdlib_field(default_factory=specifier.default_factory),
             )
         elif specifier.default is not Undefined:
             setattr(cls, name, specifier.default)
         else:
             delattr(cls, name)
-    result = _stdlib_dataclass(cls, frozen=frozen, kw_only=kw_only)
+    result = stdlib_dataclass(cls, frozen=frozen, kw_only=kw_only)
     install_descriptors(result, descriptors)
     return result

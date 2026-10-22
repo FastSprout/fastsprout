@@ -1,6 +1,6 @@
 from typing import cast, dataclass_transform
 
-from pydantic.dataclasses import dataclass as _pyd_dataclass
+from pydantic.dataclasses import dataclass as pyd_dataclass
 
 from fastsprout.core.decorators.typed_fields import typed_fields
 from fastsprout.core.fields import Field
@@ -27,7 +27,7 @@ def typed_pydantic_dataclass[C](cls: type[C]) -> type[C]:
         User(field_int="not int", field_str="x")  # raises ValidationError
     """
 
-    return cast(type[C], _pyd_dataclass(typed_fields(cls)))
+    return cast(type[C], pyd_dataclass(typed_fields(cls)))
 
 
 typed_pyd_dataclass = typed_pydantic_dataclass

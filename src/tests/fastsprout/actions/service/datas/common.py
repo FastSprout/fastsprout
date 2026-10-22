@@ -1,7 +1,7 @@
 from enum import StrEnum
 from functools import partial
 from operator import attrgetter
-from typing import Annotated, ClassVar
+from typing import Annotated
 from uuid import UUID, uuid4
 
 from pydantic import Field as PydanticField
@@ -39,16 +39,18 @@ from fastsprout.data.capabilities.query import (
     Lt,
     Lte,
     Ne,
+    Not,
     Or,
 )
 from fastsprout.data.capabilities.query.predicate import evaluate
-from fastsprout.data.entity import Entitieable, Signpostable
+from fastsprout.data.entity import Entitieable
 from fastsprout.data.streams.protocols import AsyncEntityStreamable
 from fastsprout.data.utils.iterable import achain
 
 FILTER_CASES: tuple[tuple[Filter[int], set[int]], ...] = (
     (Eq(20), {20}),
     (Ne(20), {30, 40}),
+    (Not(Eq(20)), {30, 40}),
     (Gt(20), {30, 40}),
     (Gte(20), {20, 30, 40}),
     (Lt(30), {20}),
@@ -139,9 +141,7 @@ class RecordValidation:
 
 
 @dataclass(kw_only=True)
-class MemoryRecord(Entitieable[UUID]):
-    __signpost__: ClassVar[Signpostable[None]]
-
+class MemoryRecord(Entitieable[UUID, None]):
     id: ReadField[UUID] = ReadField(default_factory=uuid4)
     name: Field[str]
     score: Field[int] = Field(default=10)

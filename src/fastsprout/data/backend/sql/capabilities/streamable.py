@@ -18,4 +18,4 @@ class SQLStreamable[E: SQLEntity[Any]](
     def stream(
         self, query: BaseQuery[E, Select[tuple[E]]], /
     ) -> AsyncEntityStreamable[E]:
-        return SQLEntityStream(query, self._signpost)
+        return SQLEntityStream(query, self.signpost)

@@ -25,6 +25,7 @@ try:
 
     from .relationship import Relationship as Relationship
 except ModuleNotFoundError as error:
+    error: ModuleNotFoundError
     if error.name not in {"sqlalchemy", "sqlmodel"}:
         raise
 else:

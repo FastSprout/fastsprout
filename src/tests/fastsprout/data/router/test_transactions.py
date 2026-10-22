@@ -103,3 +103,17 @@ class TestTransactions:
         self, repeated_reads: tuple[list[Item], list[Item]]
     ) -> None:
         assert repeated_reads == ([], [])
+
+    @when("a closed router exits a second time")
+    async def repeated_exit(self, bus: EventBus) -> list[str]:
+        async with DataR(bus=bus) as data:
+            await data.ability(Item).create(Item(name="once"))
+        await data.__aexit__(None, None, None)
+        return [
+            state.event.entity.name
+            async for state in await bus.get(CreateEvent[Item])
+        ]
+
+    @then("repeated exit neither repeats commit nor republishes its events")
+    def test_repeated_exit(self, repeated_exit: list[str]) -> None:
+        assert repeated_exit == ["once"]

@@ -3,12 +3,13 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from uuid import UUID
 
+import pytest
 from bubus import EventBus as NativeBubusBus
 
 from fastsprout.events import EventBus, EventResult, EventState, sub
 from fastsprout.events.backend.async_queue import AsyncQueueBroker
 from fastsprout.events.backend.implementation import InMemoryBroker
-from fastsprout.testing.core import then, when
+from fastsprout.testing.core import given, then, when
 
 from .base_test_broker import BaseTestBroker, Completion, Message
 
@@ -125,6 +126,49 @@ class TestAsyncQueueBroker(BaseTestBroker):
             yield broker
         finally:
             await broker.stop()
+
+    @given("a consumer paused while its bounded queue is full")
+    def paused_consumer(
+        self, broker: AsyncQueueBroker, monkeypatch: pytest.MonkeyPatch
+    ) -> asyncio.Event:
+        entered = asyncio.Event()
+        release = asyncio.Event()
+
+        async def consume() -> None:
+            entered.set()
+            await release.wait()
+
+        monkeypatch.setattr(broker, "consume", consume)
+        return entered
+
+    @when("a blocked publication is cancelled and the queue is stopped")
+    async def cancelled_publication(
+        self, broker: AsyncQueueBroker, paused_consumer: asyncio.Event
+    ) -> tuple[bool, bool, bool, bool]:
+        queued = EventState(Message(value=1))
+        broker.prepare(queued)
+        broker.queue.put_nowait(queued.event.__event_id__)
+        blocked = EventState(Message(value=2))
+        task = asyncio.create_task(broker.dispatch(blocked))
+        cancelled = False
+        async with asyncio.timeout(5):
+            await paused_consumer.wait()
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                cancelled = True
+            removed = await broker.get(blocked.event) is None
+            await broker.stop()
+            await broker.queue.join()
+            _, pending = await blocked.wait()
+        return cancelled, removed, broker.queue.empty(), not pending
+
+    @then("cancellation retracts the event and shutdown drains queued IDs")
+    def test_cancelled_publication(
+        self, cancelled_publication: tuple[bool, bool, bool, bool]
+    ) -> None:
+        assert cancelled_publication == (True, True, True, True)
 
     @when("a handler publishes and awaits another queued event")
     async def nested_result(

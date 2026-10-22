@@ -14,7 +14,9 @@ class AsyncQueueBroker(InMemoryBroker):
 
     def __init__(self, queue: asyncio.Queue[UUID] | None = None) -> None:
         super().__init__()
-        self.queue = asyncio.Queue[UUID]() if queue is None else queue
+        self.queue: asyncio.Queue[UUID] = (
+            asyncio.Queue[UUID]() if queue is None else queue
+        )
         self.consumer: asyncio.Task[None] | None = None
 
     async def dispatch[E: Eventable](self, event_state: EventState[E]) -> None:

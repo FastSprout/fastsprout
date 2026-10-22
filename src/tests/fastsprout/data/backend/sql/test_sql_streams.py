@@ -1,20 +1,14 @@
 import pytest
-from sqlalchemy import Column, String
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import Field as SQLField
 
-from fastsprout.core import Field, ReadField
-from fastsprout.data.backend.sql import SQLEntity, SQLQuery, SQLSignpost
-from fastsprout.data.backend.sql.streams import SQLEntityStream
+from fastsprout.core.fields.field_ref import FieldRef
+from fastsprout.data.backend.sql import SQLQuery, SQLSignpost
+from fastsprout.data.backend.sql.streams import SQLEntityStream, SQLValueStream
 from fastsprout.data.streams.protocols import AsyncValueStreamable
 from fastsprout.testing.core import given, then, when
 
-from .conftest import Hero
-
-
-class NamedColumnEntity(SQLEntity[int, SQLSignpost]):
-    id: ReadField[int] = SQLField(primary_key=True)
-    display_name: Field[str] = SQLField(sa_column=Column("stored_name", String))
+from .conftest import Hero, NamedColumnEntity
 
 
 class TestMappedFieldGetters:
@@ -57,6 +51,69 @@ class TestMappedFieldGetters:
 
 
 class TestSQLEntityStream:
+    @when(
+        "native field predicates and Python field getters transform the stream"
+    )
+    async def transformed(
+        self, entity_stream: SQLEntityStream[Hero]
+    ) -> tuple[list[int], list[int], Hero | None]:
+        selected = (
+            await entity_stream.filter(Hero.age.gte(8))
+            .distinct()
+            .to_values(lambda hero: hero.age)
+            .to_list()
+        )
+        reference: FieldRef[Hero, int, None] = FieldRef("age", Hero, None)
+        fallback = (
+            await entity_stream.sort(reference, reverse=True)
+            .to_values(reference)
+            .to_list()
+        )
+        empty = await entity_stream.take(0).first()
+        return selected, fallback, empty
+
+    @then(
+        "pushdown and Python getters preserve values and empty-stream semantics"
+    )
+    def test_transformations(
+        self, transformed: tuple[list[int], list[int], Hero | None]
+    ) -> None:
+        selected, fallback, empty = transformed
+        assert selected == [8, 9]
+        assert fallback == list(reversed(range(10)))
+        assert empty is None
+
+    @given("a query requiring Python filtering")
+    def fallback(self, sql_signpost: SQLSignpost) -> SQLEntityStream[Hero]:
+        return SQLEntityStream(
+            SQLQuery(Hero).where(lambda hero: hero.age >= 0), sql_signpost
+        )
+
+    @when("fallback queries are sliced, deduplicated, sorted and projected")
+    async def fallback_values(
+        self, fallback: SQLEntityStream[Hero]
+    ) -> tuple[list[int], list[int], int]:
+        first = (
+            await fallback.take(3).to_values(lambda hero: hero.age).to_list()
+        )
+        last = (
+            await fallback.drop(8)
+            .sort(lambda hero: -hero.age)
+            .to_values(Hero.age)
+            .to_list()
+        )
+        count = await fallback.distinct().count()
+        return first, last, count
+
+    @then("fallback operations preserve query conditions and stream order")
+    def test_fallback_transformations(
+        self, fallback_values: tuple[list[int], list[int], int]
+    ) -> None:
+        first, last, count = fallback_values
+        assert first == [0, 1, 2]
+        assert last == [9, 8]
+        assert count == 10
+
     @when("the entity stream takes three rows")
     async def taken(self, entity_stream: SQLEntityStream[Hero]) -> list[Hero]:
         return await entity_stream.take(3).to_list()
@@ -130,6 +187,39 @@ class TestSQLEntityStream:
 
 
 class TestSQLValueStream:
+    @given("a SQL stream projecting hero ages")
+    def native(self, sql_signpost: SQLSignpost) -> SQLValueStream[int]:
+        return SQLValueStream(select(Hero.age.orm), sql_signpost)
+
+    @when("native and keyed terminals read the age stream")
+    async def terminals(
+        self, native: SQLValueStream[int]
+    ) -> tuple[int | None, ...]:
+        return (
+            await native.first(),
+            await native.take(0).first(),
+            await native.min(),
+            await native.max(),
+            await native.min(lambda value: -value),
+            await native.max(lambda value: -value),
+        )
+
+    @then("SQL aggregates and Python key functions retain their semantics")
+    def test_terminals(self, terminals: tuple[int | None, ...]) -> None:
+        assert terminals == (0, None, 0, 9, 9, 0)
+
+    @when(
+        "the SQL value stream drops, deduplicates and sorts using a Python key"
+    )
+    async def transformed(self, native: SQLValueStream[int]) -> list[int]:
+        return (
+            await native.drop(7).distinct().sort(lambda value: -value).to_list()
+        )
+
+    @then("value transformations preserve SQL pagination before keyed sorting")
+    def test_transformations(self, transformed: list[int]) -> None:
+        assert transformed == [9, 8, 7]
+
     @given("the ages projected from the entity stream")
     def values(
         self, entity_stream: SQLEntityStream[Hero]

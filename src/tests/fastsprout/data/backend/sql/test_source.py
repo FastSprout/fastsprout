@@ -23,6 +23,19 @@ class CRMModel(SQLEntity[int, CRM], table=False):
 
 
 class TestSQLSource:
+    @when("the source type anchor is called as a runtime factory")
+    def source_factory(self) -> TypeError | None:
+        try:
+            CRMModel.__sql_source__()
+        except TypeError as error:
+            return error
+        return None
+
+    @then("type inference anchors cannot construct runtime signposts")
+    def test_source_anchor(self, source_factory: TypeError | None) -> None:
+        assert isinstance(source_factory, TypeError)
+        assert "not runtime factories" in str(source_factory)
+
     @given("a CRM source sharing the prepared SQL session")
     def crm(self, sql_signpost: SQLSignpost) -> CRM:
         return CRM(sql_signpost.factory)

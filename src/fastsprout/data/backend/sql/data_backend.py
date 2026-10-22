@@ -63,12 +63,12 @@ class SQLDataBackend(
         bus: EventBus | UndefinedType | None = Undefined,
     ) -> None:
         super().__init__(signpost, bus=bus)
-        self.__waited_events: list[Eventable] = []
+        self.waited_events: list[Eventable] = []
 
     @asynccontextmanager
     async def bind(self):
         """Yield the shared finalizer for this SQL session."""
-        async with self._signpost.factory() as session:
+        async with self.signpost.factory() as session:
             flow = session.info.get("fastsprout_finalizer")
             if not isinstance(flow, SQLFinalizable):
                 flow = session.info["fastsprout_finalizer"] = SQLFinalizable(
@@ -92,7 +92,7 @@ class SQLDataBackend(
             )
             try:
                 async for item in result.scalars():
-                    self._check_stream_context()
+                    self.check_stream_context()
                     yield item
             finally:
                 await result.close()
@@ -107,7 +107,7 @@ class SQLDataBackend(
             )
             try:
                 async for row in result.tuples():
-                    self._check_stream_context()
+                    self.check_stream_context()
                     yield row
             finally:
                 await result.close()
@@ -143,13 +143,13 @@ class SQLDataBackend(
             try:
                 async with flow.transaction() as transaction:
                     yield transaction
-                if self.__waited_events:
+                if self.waited_events:
                     flow.after_commit.append(
-                        partial(super()._publish_to_bus, *self.__waited_events)
+                        partial(super().publish_to_bus, *self.waited_events)
                     )
             finally:
-                self.__waited_events.clear()
+                self.waited_events.clear()
 
-    async def _publish_to_bus(self, /, *events: Eventable) -> None:
-        self.__waited_events.extend(events)
+    async def publish_to_bus(self, /, *events: Eventable) -> None:
+        self.waited_events.extend(events)
         await asyncio.sleep(0)

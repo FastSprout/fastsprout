@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from io import StringIO
 from typing import assert_type
 from uuid import UUID, uuid4
 
@@ -9,12 +10,25 @@ from models import (
     DataclassEntity, DataclassRead, DataclassWrite,
     FieldsEntity, FieldsRead, FieldsWrite,
     SchemaEntity, SchemaRead, SchemaWrite,
+    TextEntity,
 )
 
 
-def identity[ID: IdentificatorType](entity: Entitieable[ID]) -> ID:
+def identity[ID: IdentificatorType, Resource](entity: Entitieable[ID, Resource]) -> ID:
     assert_type(entity.id, ID)
     return entity.id
+
+
+def resource[ID: IdentificatorType, Resource](entity: type[Entitieable[ID, Resource]]) -> Resource:
+    return entity.signpost().factory()
+
+
+def text_resource(entity: TextEntity) -> None:
+    assert_type(resource(TextEntity), StringIO)
+    assert_type(entity.__signpost__.factory(), StringIO)
+    assert_type(TextEntity.__signpost__.factory(), StringIO)
+    assert_type(TextEntity.signpost().factory(), StringIO)
+    assert_type(identity(entity), UUID)
 
 
 def create[**P, E](factory: Callable[P, E], *args: P.args, **kwargs: P.kwargs) -> E:

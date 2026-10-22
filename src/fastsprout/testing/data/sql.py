@@ -1,19 +1,35 @@
 from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import AsyncExitStack, asynccontextmanager
 from types import TracebackType
-from typing import Self
+from typing import Protocol, Self
 
+from sqlalchemy import Table
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from sqlmodel import SQLModel
 from testcontainers.core.container import DockerContainer
 
-from fastsprout.data.backend.sql import SQLEntity, SQLSignpost
+from fastsprout.data.backend.sql import SQLSignpost
 from fastsprout.data.backend.sql.entity import (
     SQL_ENTITY_REGISTRY,
+    SQLEntityClassable,
+    SQLSource,
     validate_source_type,
 )
 from fastsprout.testing.container import container_context
 
-__all__ = ["TestSQLDatabase", "connect", "container_database"]
+__all__ = [
+    "SQLTestEntityable",
+    "TestSQLDatabase",
+    "connect",
+    "container_database",
+]
+
+
+class SQLTestEntityable(SQLEntityClassable[SQLModel, SQLSource], Protocol):
+    """Class metadata needed to bind a mapped model to a test database."""
+
+    @property
+    def __table__(self) -> Table: ...
 
 
 @asynccontextmanager
@@ -29,7 +45,7 @@ async def container_database[S: SQLSignpost](
 
 def connect[S: SQLSignpost](
     engine: AsyncEngine,
-    entities: Sequence[type[SQLEntity]],
+    entities: Sequence[SQLTestEntityable],
     signpost: type[S],
     *,
     sessions: Callable[[AsyncEngine], async_sessionmaker[AsyncSession]]
@@ -57,17 +73,17 @@ class TestSQLDatabase[S: SQLSignpost]:
         engine: AsyncEngine,
         session: async_sessionmaker[AsyncSession],
         signpost: S,
-        entities: Sequence[type[SQLEntity]],
+        entities: Sequence[SQLTestEntityable],
         *,
         dispose: bool = True,
     ) -> None:
         self.engine = engine
         self.session = session
         self.signpost = signpost
-        self.entities = tuple(entities)
+        self.entities: tuple[SQLTestEntityable, ...] = tuple(entities)
         self.dispose = dispose
-        self.resources = AsyncExitStack()
-        self.active = False
+        self.resources: AsyncExitStack = AsyncExitStack()
+        self.active: bool = False
 
     async def __aenter__(self) -> Self:
         if self.active:
@@ -77,7 +93,7 @@ class TestSQLDatabase[S: SQLSignpost]:
             if self.dispose:
                 self.resources.push_async_callback(self.engine.dispose)
             for entity in self.entities:
-                validate_source_type(entity, self.signpost)
+                validate_source_type(entity.__sql_entity__(), self.signpost)
             async with self.engine.begin() as connection:
                 await connection.run_sync(
                     lambda connection: SQL_ENTITY_REGISTRY.metadata.create_all(
@@ -96,14 +112,15 @@ class TestSQLDatabase[S: SQLSignpost]:
 
     def bind(self) -> None:
         for entity in self.entities:
-            previous = vars(entity).get("__signpost__")
+            model = entity.__sql_entity__()
+            previous = vars(model).get("__signpost__")
             if previous is None:
-                self.resources.callback(delattr, entity, "__signpost__")
+                self.resources.callback(delattr, model, "__signpost__")
             else:
                 self.resources.callback(
-                    setattr, entity, "__signpost__", previous
+                    setattr, model, "__signpost__", previous
                 )
-            entity.__signpost__ = self.signpost
+            model.__signpost__ = self.signpost
 
     async def drop_tables(self) -> None:
         async with self.engine.begin() as connection:

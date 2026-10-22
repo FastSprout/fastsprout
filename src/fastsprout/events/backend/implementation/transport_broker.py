@@ -43,8 +43,8 @@ class TransportBroker(InMemoryBroker, ABC):
         super().__init__()
         self.registered_events: set[type[Event]] = set()
         self.subscriptions: list[Callable[[], Awaitable[None]]] = []
-        self.start_lock = Lock()
-        self.connected = False
+        self.start_lock: Lock = Lock()
+        self.connected: bool = False
 
     def subscribe[E: Event](
         self,

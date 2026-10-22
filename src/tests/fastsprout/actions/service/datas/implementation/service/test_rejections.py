@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from collections.abc import Awaitable, Callable
 from typing import Literal
 
@@ -5,7 +7,7 @@ import pytest
 
 from fastsprout.actions import DataS
 from fastsprout.core import Depends
-from fastsprout.testing.core import then, when
+from fastsprout.testing.core import given, then, when
 
 from ...common import Record, RecordCreate, RecordPatch, RecordUpdate
 
@@ -70,3 +72,39 @@ async def test_rejected_dependency_stops_the_chain_and_write(
     assert found is not None
     assert found.name == "Batman"
     assert await records.count() == 1
+
+
+class TestUntypedUpdate:
+    @given("a caller supplying an identifier without an update payload")
+    def client(self) -> str:
+        return """
+import asyncio
+from fastsprout.actions import DataS
+from fastsprout.data import DataR
+from fastsprout.data.entity import BaseEntity
+
+class Record(BaseEntity[int]):
+    pass
+
+asyncio.run(DataS(Record).update(1, datar=DataR()))
+"""
+
+    @when("the untyped call reaches the service")
+    def rejected(self, client: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-c", client],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=15,
+        )
+
+    @then("update rejects an identifier without a payload before using DataR")
+    def test_incomplete_update(
+        self, rejected: subprocess.CompletedProcess[str]
+    ) -> None:
+        assert rejected.returncode != 0
+        assert (
+            "TypeError: Use update(entity) or update(identifier, payload)"
+            in rejected.stderr
+        )

@@ -4,6 +4,7 @@ from fastsprout.actions import DataS
 from fastsprout.core import Chunk, Depends
 from fastsprout.data import DataR, sql
 from fastsprout.data.utils.iterable import resolve_any_iterable
+from fastsprout.testing.core import given, then, when
 
 from ...common import Record, RecordRead
 
@@ -105,15 +106,30 @@ class TestUpserts:
         async with DataR() as datar:
             assert await records.count(datar=datar) == 0
 
-    async def test_explicit_transaction_rolls_back_upsert(
-        self, records: DataS[Record]
-    ) -> None:
-        # given
-        entity = Record(name="Batman")
-        # when
-        with pytest.raises(ValueError, match="Rejected"):
+    @given("a new record for an explicit upsert transaction")
+    def new_entity(self) -> Record:
+        return Record(name="Batman")
+
+    @when("a transaction fails after an upsert or bulk upsert")
+    async def explicit_rollback(
+        self, records: DataS[Record], new_entity: Record, bulk: bool
+    ) -> ValueError:
+        try:
             async with DataR() as datar:
-                await records.upsert(entity, datar=datar)
+                if bulk:
+                    await records.bulk_upsert(
+                        [new_entity], datar=datar
+                    ).to_list()
+                else:
+                    await records.upsert(new_entity, datar=datar)
                 raise ValueError("Rejected")
-        # then
+        except ValueError as error:
+            return error
+
+    @pytest.mark.parametrize("bulk", [False, True])
+    @then("the explicit transaction rolls back all inserted records")
+    async def test_explicit_transaction_rolls_back_upsert(
+        self, records: DataS[Record], explicit_rollback: ValueError
+    ) -> None:
+        assert str(explicit_rollback) == "Rejected"
         assert await records.find_all(sql.SQLQuery(Record)) == []

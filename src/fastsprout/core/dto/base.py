@@ -178,18 +178,20 @@ def model_default(field: Any) -> Callable[[dict[str, Any]], Any]:
     )
 
 
-def collect_defaults(
-    source: type, allowed: frozenset[str]
-) -> dict[str, Callable]:
+def collect_definition[Value, Owner, Orm](
+    source: type,
+    allowed: frozenset[str],
+    descriptors: dict[str, Field[Value, Owner, Orm]],
+) -> DTODefinition:
     model_fields = getattr(source, "model_fields", None)
     if model_fields is not None:
-        return {
+        defaults = {
             name: model_default(field)
             for name, field in model_fields.items()
             if name in allowed and not field.is_required()
         }
-    if is_dataclass(source):
-        return {
+    elif is_dataclass(source):
+        defaults = {
             field.name: factory_default(field.default_factory)
             if field.default_factory is not MISSING
             else copy_default(field.default)
@@ -200,13 +202,16 @@ def collect_defaults(
                 or field.default_factory is not MISSING
             )
         }
-    return {}
+    else:
+        defaults = {}
+    descriptor_defaults(descriptors, allowed, defaults)
+    return DTODefinition(allowed, allowed - defaults.keys(), defaults)
 
 
-def descriptor_defaults(
-    descriptors: dict[str, Field],
+def descriptor_defaults[Value, Owner, Orm](
+    descriptors: dict[str, Field[Value, Owner, Orm]],
     allowed: frozenset[str],
-    defaults: dict[str, Callable],
+    defaults: dict[str, Callable[[dict[str, Value]], Value]],
 ) -> None:
     for name in allowed - defaults.keys():
         field = descriptors[name]
@@ -283,13 +288,10 @@ def dto[C: DTO](cls: type[C]) -> type[C]:
         for name, field in descriptors.items()
         if field.__fastsprout_ops__ & operations
     )
-    defaults = collect_defaults(source, allowed)
-    descriptor_defaults(descriptors, allowed, defaults)
+    definition = collect_definition(source, allowed, descriptors)
     cls.__fastsprout_source__ = source
     cls.__fastsprout_forbidden__ = frozenset(descriptors.keys() - allowed)
-    cls.__fastsprout_definition__ = DTODefinition(
-        allowed, allowed - defaults.keys(), defaults
-    )
+    cls.__fastsprout_definition__ = definition
     for name, descriptor in relationship_descriptors.items():
         setattr(cls, name, descriptor)
     return cls

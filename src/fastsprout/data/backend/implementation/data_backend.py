@@ -27,22 +27,19 @@ class BaseDataBackend[T, F: Finalizable](Backendable[T, F], ABC):
         *,
         bus: EventBus | UndefinedType | None = Undefined,
     ) -> None:
-        cls = type(self)
-        if getattr(cls, "__abstractmethods__", None):
-            raise TypeError(f"{cls.__name__} is an abstract backend")
-        self._signpost = signpost
-        self.__bus = (
+        self.signpost = signpost
+        self.bus: EventBus | None = (
             IN_MEMORY_EVENT_BUS if isinstance(bus, UndefinedType) else bus
         )
 
     @property
     def with_events(self) -> bool:
-        return bool(self.__bus)
+        return bool(self.bus)
 
-    def _check_stream_context(self) -> None:
-        if isinstance(self._signpost, BoundSignpost):
-            self._signpost.context.check()
+    def check_stream_context(self) -> None:
+        if isinstance(self.signpost, BoundSignpost):
+            self.signpost.context.check()
 
-    async def _publish_to_bus(self, /, *events: Eventable) -> None:
-        if self.__bus is not None:
-            await self.__bus.publish(*events)
+    async def publish_to_bus(self, /, *events: Eventable) -> None:
+        if self.bus is not None:
+            await self.bus.publish(*events)

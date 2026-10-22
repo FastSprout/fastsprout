@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from contextlib import AbstractAsyncContextManager
 from copy import copy
-from typing import Annotated, Any, Generic, Protocol, Self, runtime_checkable
+from typing import Annotated, Generic, Protocol, Self, runtime_checkable
 
 from annotated_types import Ge
 from typing_extensions import TypeVar
@@ -17,7 +17,7 @@ from .predicate import Expression, FieldPredicate
 
 __all__ = ["BaseQuery", "JoinedQueryable"]
 
-E = TypeVar("E", bound=Entitieable[Any])
+E = TypeVar("E", bound=Entitieable)
 StatementT = TypeVar("StatementT")
 # TypeVar defaults preserve two-parameter queries on Python 3.12.
 RowT = TypeVar("RowT", default=None)
@@ -102,7 +102,7 @@ class BaseQuery(ABC, Generic[E, StatementT, RowT]):
 
 
 @runtime_checkable
-class JoinedQueryable[E: Entitieable[Any], ProductT, *Ts](Protocol):
+class JoinedQueryable[E: Entitieable, ProductT, *Ts](Protocol):
     """Bind a multi-entity query to a routed backend context."""
 
     @property

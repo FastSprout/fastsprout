@@ -271,6 +271,7 @@ async def test_unicode_and_nullable_fields(
         (where(Record.note, Eq(None)), 1),
         (where(Record.note, Ne("kept")), 1),
         (where(Record.note, Ne(None)), 1),
+        (Record.note.gt(None), 0),
         (where(Record.name, "STRASSE"), 1),
         (where(Record.name, Eq("Straße")), 1),
     ):

@@ -14,6 +14,7 @@ __all__ = [
     "ContextClass",
     "aresolve_context",
     "current_context",
+    "require_context_scope",
     "resolve_context",
 ]
 
@@ -53,9 +54,14 @@ def context_values() -> dict[type[Schema], Schema]:
     return {}
 
 
-def current_context() -> dict[type[Schema], Schema]:
-    if current_dependency_cache() is None:
+def require_context_scope[Cache](cache: Cache | None) -> Cache:
+    if cache is None:
         raise RuntimeError("Context() requires an action invocation")
+    return cache
+
+
+def current_context() -> dict[type[Schema], Schema]:
+    require_context_scope(current_dependency_cache())
     return inject_depends.resolve(DependsClass(context_values), None)
 
 
@@ -88,9 +94,7 @@ async def aresolve_context[T: Schema](
     values = current_context()
     if annotation in values:
         return context_value(annotation, values[annotation])
-    cache = current_dependency_cache()
-    if cache is None:
-        raise RuntimeError("Context() requires an action invocation")
+    cache = require_context_scope(current_dependency_cache())
     if annotation in resolving_providers.get():
         raise RuntimeError(f"Circular context dependency: {annotation}")
     lock: asyncio.Lock = cache.setdefault(

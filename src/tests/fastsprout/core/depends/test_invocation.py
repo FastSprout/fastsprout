@@ -3,9 +3,12 @@ from weakref import ReferenceType, ref
 
 import pytest
 
-from fastsprout.core import Depends, inject_depends
+from fastsprout.core import Chunk, Depends, inject_depends
+from fastsprout.core.depends import DependsClass
 from fastsprout.core.depends.invocation import with_dependencies
 from fastsprout.core.depends.scope import current_dependency_cache
+from fastsprout.core.types.iterable import resolve_any_iterable
+from fastsprout.testing.core import given, then, when
 
 
 class TestInvocationDependencies:
@@ -74,3 +77,39 @@ class TestInvocationDependencies:
         assert all(value() is None for value in self.values)
         assert len(cache) == shared_size
         assert self.calls.count("source") == self.calls.count("nested") == 1
+
+
+class TestChunkReplacement:
+    @given("a dependency returning a replacement chunk")
+    def replacement(self) -> DependsClass:
+        def replace() -> Chunk[int]:
+            return Chunk(resolve_any_iterable([7]))
+
+        return Depends(replace)
+
+    @when("an operation without exactly one chunk receives a replacement")
+    async def rejected(
+        self, replacement: DependsClass, two_chunks: bool
+    ) -> TypeError | None:
+        async def execute(
+            left: Chunk[int] | None, right: Chunk[int] | None
+        ) -> None:
+            raise AssertionError("Invalid chunk replacement ran the operation")
+
+        guarded = with_dependencies(execute, [replacement])
+        try:
+            await guarded(
+                Chunk(resolve_any_iterable([1])) if two_chunks else None,
+                Chunk(resolve_any_iterable([2])) if two_chunks else None,
+            )
+        except TypeError as error:
+            return error
+        return None
+
+    @pytest.mark.parametrize("two_chunks", [False, True])
+    @then("ambiguous or missing chunk arguments reject the dependency result")
+    def test_replacement_target(self, rejected: TypeError | None) -> None:
+        assert isinstance(rejected, TypeError)
+        assert str(rejected) == (
+            "A Chunk result requires exactly one Chunk argument"
+        )

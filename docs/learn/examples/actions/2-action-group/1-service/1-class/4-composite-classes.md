@@ -24,21 +24,25 @@ class Document(BaseSchema):
     content: Field[str]
 
 
+class RenderedDocument(BaseSchema):
+    content: Field[bytes]
+
+
 class SignedDocument(BaseSchema):
     content: Field[bytes]
     signature: Field[str]
 
 
 @action
-async def render_document(document: Document) -> bytes:
-    return document.content.encode()
+async def render_document(document: Document) -> RenderedDocument:
+    return RenderedDocument(content=document.content.encode())
 
 
-class SignDocument(Action[bytes, SignedDocument]):
-    async def __call__(self, content: bytes) -> SignedDocument:
+class SignDocument(Action[RenderedDocument, SignedDocument]):
+    async def __call__(self, document: RenderedDocument) -> SignedDocument:
         return SignedDocument(
-            content=content,
-            signature=f"signed:{len(content)}",
+            content=document.content,
+            signature=f"signed:{len(document.content)}",
         )
 
 
@@ -65,7 +69,7 @@ async def main() -> None:
     document = Document(content="FastSprout")
 
     content = await documents.render(document)
-    assert_type(content, bytes)
+    assert_type(content, RenderedDocument)
 
     signed = await documents.sign(content)
     assert_type(signed, SignedDocument)

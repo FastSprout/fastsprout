@@ -1,9 +1,11 @@
 from asyncio import CancelledError, Event, create_task, gather
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 import pytest
 
 from fastsprout.core import BaseSchema, Field
+from fastsprout.core.fields.conditions import And, Eq, Filter, Nand, Or, Xor
+from fastsprout.core.fields.field_predicate import FieldPredicate, matches
 from fastsprout.core.fields.field_ref import FieldComparison, FieldRef
 from fastsprout.testing.core import given, then, when
 
@@ -126,3 +128,62 @@ class TestFieldPredicate:
         self, within_range: bool, expected: bool
     ) -> None:
         assert within_range is expected
+
+    @when("the record is compared to an exclusive bound")
+    async def compared(
+        self,
+        record: Record,
+        comparison: Callable[[int], FieldPredicate[Record]],
+    ) -> bool:
+        return await comparison(5)(record)
+
+    @pytest.mark.parametrize(
+        "comparison, value, expected",
+        [
+            (Record.value.lt, 4, True),
+            (Record.value.lt, 5, False),
+            (Record.value.lt, 6, False),
+            (Record.value.gt, 4, False),
+            (Record.value.gt, 5, False),
+            (Record.value.gt, 6, True),
+        ],
+    )
+    @then("strict comparisons exclude their boundary")
+    def test_strict_comparison(self, compared: bool, expected: bool) -> None:
+        assert compared is expected
+
+    @when("the source schema's visibility is read")
+    def source_visibility(self, record: Record) -> str:
+        return record.fastsprout_visibility
+
+    @pytest.mark.parametrize("value", [1])
+    @then("source schemas retain unrestricted entity visibility")
+    def test_source_visibility(self, source_visibility: str) -> None:
+        assert source_visibility == "entity"
+
+    @when("the value is evaluated against composed conditions")
+    async def composed_match(
+        self, record: Record, condition: Filter[int]
+    ) -> bool:
+        return await matches(record.value, condition)
+
+    @then("boolean groups preserve their identities and exclusive-or semantics")
+    @pytest.mark.parametrize(
+        "value, condition, expected",
+        [
+            (1, And(), True),
+            (1, Or(), False),
+            (1, Xor(), False),
+            (1, Xor(Eq(1), Eq(2)), True),
+            (1, Xor(Eq(1), Eq(1)), False),
+            (1, Xor(Eq(2), Eq(3)), False),
+            (1, Nand(Eq(1), Eq(2)), True),
+            (1, Nand(Eq(1), Eq(1)), False),
+            (1, 1, True),
+            (1, 2, False),
+        ],
+    )
+    def test_composed_conditions(
+        self, composed_match: bool, expected: bool
+    ) -> None:
+        assert composed_match is expected

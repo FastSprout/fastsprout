@@ -1,6 +1,7 @@
 from typing import assert_type
 
 from sqlalchemy.orm import Mapped
+from sqlalchemy.sql.elements import BinaryExpression
 from fastsprout.core import (
     BaseSchema, Field, ReadField, WriteField, InternalField,
     ExtraReadField, ExtraWriteField,
@@ -55,6 +56,8 @@ def forbidden(read: Read, write: Write, both: Both) -> None:
 
 class SQLSource(SQLEntity[int]):
     id: ReadField[int]
+    secret: InternalField[str | None]
+    password: WriteField[str]
     details: ExtraReadField[str]
     override: ExtraWriteField[int]
 
@@ -63,9 +66,17 @@ class SQLWrite(ExtraWriteDTO, SQLSource): ...
 class SQLBoth(ExtraReadWriteDTO, SQLSource): ...
 
 assert_type(SQLSource.details, FieldRef[SQLSource, str, Mapped[str]])
+assert_type(SQLSource.secret, FieldRef[SQLSource, str | None, Mapped[str | None]])
+assert_type(SQLSource.password, FieldRef[SQLSource, str, Mapped[str]])
+assert_type(SQLSource.secret.orm.is_(None), BinaryExpression[bool])
+assert_type(SQLSource.password.orm.like("secret%"), BinaryExpression[bool])
+assert_type(SQLWrite.password, FieldRef[SQLWrite, str, Mapped[str]])
 assert_type(SQLRead.details, FieldRef[SQLRead, str, Mapped[str]])
 assert_type(SQLWrite.override, FieldRef[SQLWrite, int, Mapped[int]])
 assert_type(SQLBoth.details, FieldRef[SQLBoth, str, Mapped[str]])
 assert_type(SQLBoth.override, FieldRef[SQLBoth, int, Mapped[int]])
 print(SQLRead.override)  # error: reportAttributeAccessIssue; mypy: type-var
 print(SQLWrite.details)  # error: reportAttributeAccessIssue; mypy: type-var
+print(SQLRead.password)  # error: reportAttributeAccessIssue; mypy: type-var
+print(SQLRead.secret)  # error: reportAttributeAccessIssue; mypy: type-var
+print(SQLWrite.secret)  # error: reportAttributeAccessIssue; mypy: type-var

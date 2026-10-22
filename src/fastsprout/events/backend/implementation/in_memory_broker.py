@@ -38,7 +38,7 @@ class InMemoryBroker(Brokerable):
 
     def __init__(self, bus: "BubusEventBus | None" = None) -> None:
         self.bus = bus
-        self.registered = False
+        self.registered: bool = False
         self.handlers: list[
             tuple[type[Event], Callable[[Event], Awaitable[object]]]
         ] = []

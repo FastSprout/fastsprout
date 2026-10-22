@@ -31,7 +31,7 @@ class LazyAwait[R](Awaitable[R]):
     def __init__(self, factory: Callable[[], Awaitable[R] | R]) -> None: ...
 
     def __init__(self, factory: Callable[[], Awaitable[R] | R]) -> None:
-        self.factory = factory
+        self.factory: Callable[[], Awaitable[R] | R] = factory
         self.result: tuple[R] | None = None
 
     async def resolve(self) -> R:

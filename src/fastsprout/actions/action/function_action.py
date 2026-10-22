@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Sequence
-from inspect import signature
+from inspect import Signature, signature
 from types import MethodType
 from typing import Concatenate
 from weakref import WeakValueDictionary
@@ -27,10 +27,14 @@ class FunctionAction[**P, R]:
         dependencies: Sequence[DependsClass] = (),
         source: Callable[P, Awaitable[R]] | None = None,
     ) -> None:
-        self.dependencies = dependencies
-        self.target = function
-        self.function = with_dependencies(function, dependencies)
-        self.__wrapped__ = function if source is None else source
+        self.dependencies: Sequence[DependsClass] = dependencies
+        self.target: Callable[P, Awaitable[R]] = function
+        self.function: Callable[P, Awaitable[R]] = with_dependencies(
+            function, dependencies
+        )
+        self.__wrapped__: Callable[P, Awaitable[R]] = (
+            function if source is None else source
+        )
 
     async def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
         return await self.function(*args, **kwargs)
@@ -59,12 +63,14 @@ class MethodProvider[Owner, **P, R]:
         function: Callable[Concatenate[Owner, P], Awaitable[R]],
         owner: type[Owner],
     ) -> None:
-        self.function = function
-        self.owner = owner
-        self.__name__ = function.__name__
-        self.__wrapped__ = function
+        self.function: Callable[Concatenate[Owner, P], Awaitable[R]] = function
+        self.owner: type[Owner] = owner
+        self.__name__: str = function.__name__
+        self.__wrapped__: Callable[Concatenate[Owner, P], Awaitable[R]] = (
+            function
+        )
         parameters = signature(function)
-        self.__signature__ = parameters.replace(
+        self.__signature__: Signature = parameters.replace(
             parameters=tuple(parameters.parameters.values())[1:]
         )
 

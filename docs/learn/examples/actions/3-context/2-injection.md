@@ -15,10 +15,10 @@ import asyncio
 from typing import assert_type
 
 from fastsprout.actions import action
-from fastsprout.core import Context
+from fastsprout.core import Context, Schema
 
 
-class RequestID(str): ...
+class RequestID(str, Schema): ...
 
 
 def get_request_id() -> RequestID:

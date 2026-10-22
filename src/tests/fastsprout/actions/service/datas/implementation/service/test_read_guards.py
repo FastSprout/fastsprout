@@ -1,3 +1,5 @@
+from contextlib import aclosing
+
 import pytest
 
 from fastsprout.actions import DataS
@@ -10,6 +12,33 @@ from ...common import Record, Team
 
 
 class TestReadGuards:
+    @when("a join selects an internal field from either side")
+    async def rejected_join(
+        self, records: DataS[Record], left: bool
+    ) -> AttributeError | None:
+        fields = (
+            (Record.system_key, Record.name)
+            if left
+            else (Record.name, Record.system_key)
+        )
+        try:
+            async with aclosing(
+                records.join(
+                    sql.SQLQuery(Record), sql.SQLQuery(Record), on=fields
+                )
+            ) as rows:
+                await anext(rows)
+        except AttributeError as error:
+            return error
+        return None
+
+    @pytest.mark.parametrize("left", [False, True])
+    @then("joins cannot expose an internal field through their keys")
+    def test_join_keys(self, rejected_join: AttributeError | None) -> None:
+        assert isinstance(rejected_join, AttributeError)
+        assert "Join field is not a public field" in str(rejected_join)
+        assert dependency_resources.get() is None
+
     @when("a stream is requested with a foreign or internal field")
     async def rejected_stream(
         self,

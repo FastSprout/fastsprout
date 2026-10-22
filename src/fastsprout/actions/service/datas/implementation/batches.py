@@ -18,6 +18,7 @@ from fastsprout.data.entity import Entitieable
 from fastsprout.data.streams.implementation.base_common_stream import (
     BaseCommonStream,
 )
+from fastsprout.data.streams.protocols import AsyncCommonStreamable
 from fastsprout.data.types import Valuable
 from fastsprout.data.utils.iterable import chunked, resolve_any_iterable
 
@@ -85,7 +86,7 @@ def batch_stream[
         Concatenate[Owner, AnyIterable[Input], P], Awaitable[Sequence[Result]]
     ],
 ) -> Callable[
-    Concatenate[Owner, AnyIterable[Input], P], BaseCommonStream[Result]
+    Concatenate[Owner, AnyIterable[Input], P], AsyncCommonStreamable[Result]
 ]:
     run = batches(function)
 

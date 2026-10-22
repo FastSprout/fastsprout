@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Any, dataclass_transform
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, Protocol, Self, dataclass_transform
 
 from pydantic import Field as PydField
 from pydantic._internal._model_construction import ModelMetaclass
@@ -9,6 +10,7 @@ from .field import Field, check_field_visibility, model_building_context_var
 from .visibility import DTOVisibility
 
 __all__ = [
+    "FieldDescriptorable",
     "TypedModelMeta",
     "collect_field_descriptors",
     "collect_field_names",
@@ -18,6 +20,15 @@ __all__ = [
     "read_annotations",
     "unwrap_field_annotations",
 ]
+
+
+class FieldDescriptorable(Protocol):
+    """Field construction and binding, independent of the field's value type."""
+
+    @classmethod
+    def descriptor(cls, name: str) -> Self: ...
+
+    def __set_name__(self, owner: type, name: str) -> None: ...
 
 
 def read_annotations(namespace: dict[str, Any]) -> dict[str, Any]:
@@ -39,7 +50,7 @@ def read_annotations(namespace: dict[str, Any]) -> dict[str, Any]:
     return anns if anns is not None else {}
 
 
-def resolve_origin(ann: Any) -> type | None:
+def resolve_origin(ann: Any) -> type[FieldDescriptorable] | None:
     """Resolve annotation to the underlying Field subclass (or None)."""
     origin = getattr(ann, "__origin__", None)
     if origin is None:
@@ -68,22 +79,14 @@ def collect_field_names(annotations: dict[str, Any]) -> list[str]:
 
 def collect_field_descriptors(
     annotations: dict[str, Any],
-) -> dict[str, type[Field]]:
+) -> dict[str, type[FieldDescriptorable]]:
     """Map field name -> exact Field subclass extracted from annotation."""
-    out: dict[str, type[Field]] = {}
+    out: dict[str, type[FieldDescriptorable]] = {}
     for name, ann in annotations.items():
         cls = resolve_origin(ann)
         if cls is not None:
             out[name] = cls
     return out
-
-
-def unwrap_annotation(annotation: Any) -> Any:
-    """Field[T, ...] -> T; non-Field -> unchanged."""
-    if not is_field_annotation(annotation):
-        return annotation
-    args = getattr(annotation, "__args__", ())
-    return args[0] if args else annotation
 
 
 def convert_field_specifiers(
@@ -122,7 +125,8 @@ def unwrap_field_annotations(
     for name, ann in annotations.items():
         if is_field_annotation(ann):
             field_names.append(name)
-            rewritten[name] = unwrap_annotation(ann)
+            args = getattr(ann, "__args__", ())
+            rewritten[name] = args[0] if args else ann
         else:
             rewritten[name] = ann
     annotations.clear()
@@ -134,7 +138,7 @@ def unwrap_field_annotations(
 
 def install_descriptors(
     cls: type,
-    field_descriptors: dict[str, type[Field]] | list[str],
+    field_descriptors: Mapping[str, type[FieldDescriptorable]] | list[str],
 ) -> None:
     """Install Field descriptors of the EXACT declared subclass.
 
@@ -150,7 +154,7 @@ def install_descriptors(
         existing = cls.__dict__.get(name)
         if isinstance(existing, brick_cls):
             continue
-        descriptor: Field[Any] = brick_cls.descriptor(name)
+        descriptor = brick_cls.descriptor(name)
         descriptor.__set_name__(cls, name)
         setattr(cls, name, descriptor)
 

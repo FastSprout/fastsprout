@@ -5,10 +5,10 @@ import asyncio
 from typing import assert_type
 
 from fastsprout.actions import action
-from fastsprout.core import Context, Depends, dataclass
+from fastsprout.core import Context, Depends, Schema, dataclass
 
 
-class TenantID(str): ...
+class TenantID(str, Schema): ...
 
 
 @dataclass(frozen=True)

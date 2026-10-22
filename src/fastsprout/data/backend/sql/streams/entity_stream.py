@@ -88,7 +88,7 @@ class SQLEntityStream[E: SQLEntity[Any]](
         self.statement = stmt
 
     def clone(self, stmt: Select[tuple[E]]) -> "SQLEntityStream[E]":
-        return SQLEntityStream(stmt, self._signpost)
+        return SQLEntityStream(stmt, self.signpost)
 
     def __aiter__(self) -> AsyncIterator[E]:
         if self.query is None:
@@ -111,7 +111,7 @@ class SQLEntityStream[E: SQLEntity[Any]](
     ) -> JoinedStream[E, F]:
         if (
             not isinstance(other, SQLEntityStream)
-            or self._signpost is not other._signpost
+            or self.signpost is not other.signpost
             or self.query is not None
             or other.query is not None
         ):
@@ -195,11 +195,13 @@ class SQLEntityStream[E: SQLEntity[Any]](
 
     @lazy_await
     async def first(self) -> E | None:
-        if self.query is not None:
+        if self.query is not None or not self.statement.compare(
+            self.statement.limit(None)
+        ):
             return await super().first()
-        async for item in self.clone(self.statement.limit(1)):
-            return item
-        return None
+        return await SimpleAsyncEntityStream(
+            self.clone(self.statement.limit(1))
+        ).first()
 
     def to_values[K: HashableAndValuable](  # pyright: ignore[reportIncompatibleMethodOverride]
         self, mapper: MapperCallable[E, K]
@@ -208,4 +210,4 @@ class SQLEntityStream[E: SQLEntity[Any]](
         column = None if self.query is not None else get_column(mapper, sub)
         if column is None:
             return SimpleAsyncEntityStream(self).to_values(mapper)
-        return SQLValueStream(select(column).select_from(sub), self._signpost)
+        return SQLValueStream(select(column).select_from(sub), self.signpost)

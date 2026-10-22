@@ -41,8 +41,11 @@ class Eventable(Protocol):
 
 
 class Event(BaseSchema):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    _event_id: UUID = PrivateAttr(default_factory=uuid4)
+    model_config: ClassVar[ConfigDict] = ConfigDict(
+        arbitrary_types_allowed=True
+    )
+    # Pydantic requires private attribute names to start with an underscore.
+    _event_id: UUID = PrivateAttr(default_factory=uuid4)  # pylint: disable=private-name
 
     @property
     def __event_id__(self) -> UUID:
@@ -67,31 +70,31 @@ ETs = TypeVarTuple("ETs", default=Unpack[tuple[Eventable, ...]])
 
 class EventStatesGroup[*ETs]:
     def __init__(self, *event_states: "EventState[Eventable]") -> None:
-        self.__event_states = event_states
+        self.event_states = event_states
 
-    def __iter__(self):
-        return iter(self.__event_states)
+    def __iter__(self) -> Iterator["EventState[Eventable]"]:
+        return iter(self.event_states)
 
     def __repr__(self) -> str:
-        states = ", ".join(repr(state) for state in self.__event_states)
+        states = ", ".join(repr(state) for state in self.event_states)
         return f"{type(self).__name__}({states})"
 
 
 class EventState[E: Eventable]:
     def __init__(self, /, event: E) -> None:
-        self.__event = event
+        self.event_value = event
         self.event_result: EventResult[E] = EventResult(self)
 
     @property
     def event(self) -> E:
-        return self.__event
+        return self.event_value
 
     @property
     def result(self) -> "EventResult[E]":
         return self.event_result
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(event={self.__event!r})"
+        return f"{type(self).__name__}(event={self.event_value!r})"
 
     @overload
     async def wait[R: Schema](

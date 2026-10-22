@@ -79,7 +79,9 @@ class SubDecoratorable(Protocol):
     ) -> Actionable[E, R]: ...
 
 
-async def emit_result(bus: EventBus, result: Any) -> None:
+async def emit_result(
+    bus: EventBus, result: Schema | Sequence[Schema] | None
+) -> None:
     if isinstance(result, Event):
         await bus.publish(result)
     elif isinstance(result, Sequence):

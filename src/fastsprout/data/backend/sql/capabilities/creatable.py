@@ -1,5 +1,6 @@
 from collections.abc import (
     AsyncIterator,
+    Sequence,
 )
 from typing import Any
 
@@ -18,7 +19,7 @@ class SQLCreatable[E: SQLEntity[Any]](Creatable[E], SQLDataBackend):
     async def create(self, entity: E, /) -> E:
         return (await self.bulk_create([entity]))[0]
 
-    async def bulk_create(self, entities: AnyIterable[E], /):
+    async def bulk_create(self, entities: AnyIterable[E], /) -> Sequence[E]:
         return await collect(self.iter_bulk_create)(entities)
 
     async def iter_bulk_create(  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -34,7 +35,7 @@ class SQLCreatable[E: SQLEntity[Any]](Creatable[E], SQLDataBackend):
                 async for item in SimpleAsyncEntityStream(chunk):
                     yield item
                 if self.with_events:
-                    await self._publish_to_bus(
+                    await self.publish_to_bus(
                         *(
                             CreateEvent[type(x)](entity=x)  # type: ignore[misc,operator]
                             for x in chunk

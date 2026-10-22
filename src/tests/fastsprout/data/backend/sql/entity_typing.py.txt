@@ -1,7 +1,9 @@
 from collections.abc import AsyncIterator, Sequence
+from contextlib import AbstractAsyncContextManager
 from typing import assert_type
 from uuid import UUID, uuid4
 from sqlalchemy.orm import Mapped
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Field as SQLField
 from fastsprout.core import Field, ReadDTO, ReadField, WriteDTO
 from fastsprout.data.backend.sql import SQLEntity, SQLQuery
@@ -16,13 +18,15 @@ class SQLUser(SQLEntity[int]):
 
 SQLUser(id=1, name="a")
 assert_type(SQLUser(id=1, name="a").id, int)
+assert_type(SQLUser.signpost().factory(), AbstractAsyncContextManager[AsyncSession])
+assert_type(SQLUser.__signpost__.factory(), AbstractAsyncContextManager[AsyncSession])
 SQLUser(id=None, name="a")  # error: reportArgumentType; mypy: arg-type
 SQLUser(1, "a")  # error: reportCallIssue; mypy: call-arg
 
 class InvalidSQLIdentity(SQLEntity[int | None]): ...  # error: reportInvalidTypeArguments; mypy: type-var
 class InvalidIdentity(BaseEntity[int | None]): ...  # error: reportInvalidTypeArguments; mypy: type-var
 
-def invalid_protocol(entity: Entitieable[int | None]) -> None: ...  # error: reportInvalidTypeArguments; mypy: type-var
+def invalid_protocol(entity: Entitieable[int | None, None]) -> None: ...  # error: reportInvalidTypeArguments; mypy: type-var
 
 def entities[T](source: type[T] | list[T]) -> list[T]:
     return []

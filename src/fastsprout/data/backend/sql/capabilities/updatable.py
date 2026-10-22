@@ -66,9 +66,6 @@ class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLDataBackend):
                     for item in chunk
                 ]
 
-                if not mappings:
-                    continue
-
                 values_cols = [
                     column(col.key, col.columns[0].type)
                     for col in mapper.column_attrs
@@ -115,7 +112,7 @@ class SQLUpdatable[E: SQLEntity[Any]](Updatable[E], SQLDataBackend):
 
     async def publish_update(self, entity: E) -> None:
         if self.with_events:
-            await self._publish_to_bus(
+            await self.publish_to_bus(
                 UpdateEvent[type(entity)](entity=entity)  # type: ignore[misc,operator]  # Mypy cannot express the runtime entity type in this subscription.
             )
 
@@ -140,7 +137,7 @@ class SQLUpdatableByQuery[E: SQLEntity[Any]](
             else (
                 select(pk).where(pk.in_([item.id for item in batch]))
                 async for batch in SQLEntityStream(
-                    query, self._signpost
+                    query, self.signpost
                 ).chunked()
             )
         )
@@ -168,7 +165,7 @@ class SQLUpdatableByQuery[E: SQLEntity[Any]](
                 )
                 async for chunk in result.scalars().partitions():
                     if self.with_events:
-                        await self._publish_to_bus(
+                        await self.publish_to_bus(
                             *(
                                 UpdateEvent[type(item)](entity=item)  # type: ignore[misc,operator]  # Mypy cannot express the runtime entity type in this subscription.
                                 for item in chunk

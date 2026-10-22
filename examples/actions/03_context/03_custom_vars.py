@@ -6,13 +6,13 @@ from typing import assert_type
 from uuid import UUID
 
 from fastsprout.actions import action
-from fastsprout.core import Context
+from fastsprout.core import Context, Schema
 
 
-class RequestID(str): ...
+class RequestID(str, Schema): ...
 
 
-class TenantID(UUID): ...
+class TenantID(UUID, Schema): ...
 
 
 def get_request_id() -> RequestID:

@@ -3,8 +3,8 @@ from pydantic import ValidationError
 
 from fastsprout.actions import DataS, Page
 from fastsprout.data import DataR, sql
-from fastsprout.data.capabilities.query import Eq, Gte, where
-from fastsprout.testing.core import then, when
+from fastsprout.data.capabilities.query import Eq, Gte, Not, where
+from fastsprout.testing.core import given, then, when
 
 from ..common import (
     LimitedPage,
@@ -124,6 +124,59 @@ def test_custom_schemas_preserve_read_type_for_every_result(
 
 
 class SelectedRecords(DataS[Record]): ...
+
+
+class TestQueryExistence:
+    @when("existence is checked with a query selecting a persisted score")
+    async def found(
+        self,
+        scored_records: DataS[Record],
+        active_datar: DataR,
+        score: int,
+        negated: bool,
+    ) -> bool:
+        condition = (
+            Not(Record.score.gte(score)) if negated else Record.score.eq(score)
+        )
+        return await scored_records.exists(
+            sql.SQLQuery(Record).where(condition),
+            datar=active_datar,
+        )
+
+    @pytest.mark.parametrize(
+        "score, negated, expected",
+        [
+            (20, False, True),
+            (100, False, False),
+            (0, True, False),
+            (100, True, True),
+        ],
+    )
+    @then("query existence distinguishes matching and missing rows")
+    def test_exists(self, found: bool, expected: bool) -> None:
+        assert found is expected
+
+
+class TestConfiguredPage:
+    @given("a service using a custom page schema")
+    def service(self, records: DataS[Record]) -> DataS[Record]:
+        return DataS(Record, page=LimitedPage[Record])
+
+    @when("the service lists its records")
+    async def page(
+        self, service: DataS[Record]
+    ) -> tuple[bool, int | None, list[Record]]:
+        result = await service.list()
+        return isinstance(result, LimitedPage), result.limit, result.items
+
+    @then("the result uses the configured page type and limit")
+    def test_custom_page(
+        self, page: tuple[bool, int | None, list[Record]]
+    ) -> None:
+        configured, limit, items = page
+        assert configured
+        assert limit == 1
+        assert items == []
 
 
 @when("matching and non-matching records are created")

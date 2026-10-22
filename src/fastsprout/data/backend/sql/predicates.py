@@ -3,6 +3,7 @@ from enum import Enum
 
 from sqlalchemy import and_, false, func, not_, or_, true
 from sqlalchemy.sql import ColumnElement
+from sqlmodel import SQLModel
 
 from fastsprout.core.types import FilterValue
 from fastsprout.data.capabilities.query import (
@@ -27,7 +28,7 @@ from fastsprout.data.capabilities.query.predicate import (
 from fastsprout.data.types import PredicateCallable
 from fastsprout.data.utils.callable import resolve_any_callable
 
-from .entity import SQLEntity, validate_source
+from .entity import SQLEntity, SQLEntityClassable, SQLSource, validate_source
 
 __all__ = ["compile_predicate", "native_conditions", "row_filter"]
 
@@ -183,7 +184,7 @@ def compile_field[E](
 
 def row_filter[P: FieldPredicate, E: SQLEntity, *Ts](
     expression: Filter[P | PredicateCallable[E]],
-    sources: tuple[type[SQLEntity], ...],
+    sources: tuple[SQLEntityClassable[SQLModel, SQLSource], ...],
 ) -> Callable[[tuple[E, *Ts]], Awaitable[bool]]:
     async def matching(row: tuple[E, *Ts]) -> bool:
         async def check(condition: P | PredicateCallable[E]) -> bool:

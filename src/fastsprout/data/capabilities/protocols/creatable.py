@@ -2,7 +2,7 @@ from collections.abc import (
     AsyncIterator,
     Sequence,
 )
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from fastsprout.core.types import AnyIterable
 from fastsprout.data.entity import Entitieable
@@ -11,7 +11,7 @@ __all__ = ["Creatable"]
 
 
 @runtime_checkable
-class Creatable[E: Entitieable[Any]](Protocol):
+class Creatable[E: Entitieable](Protocol):
     async def create(self, entity: E, /) -> E: ...
     async def bulk_create(self, entities: AnyIterable[E], /) -> Sequence[E]: ...
     def iter_bulk_create(

@@ -8,16 +8,16 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from fastsprout.data.backend.sql import SQLEntity, SQLSignpost
+from fastsprout.data.backend.sql import SQLSignpost
 
-from .sql import TestSQLDatabase, connect
+from .sql import SQLTestEntityable, TestSQLDatabase, connect
 
 __all__ = ["TestSQLite"]
 
 
 @overload
 def sqlite(
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: None = None,
     engine: AsyncEngine | None = None,
     sessions: Callable[[AsyncEngine], async_sessionmaker[AsyncSession]]
@@ -29,7 +29,7 @@ def sqlite(
 
 @overload
 def sqlite[S: SQLSignpost](
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: type[S],
     engine: AsyncEngine | None = None,
     sessions: Callable[[AsyncEngine], async_sessionmaker[AsyncSession]]
@@ -40,7 +40,7 @@ def sqlite[S: SQLSignpost](
 
 
 def sqlite[S: SQLSignpost](
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: type[S] | None = None,
     engine: AsyncEngine | None = None,
     sessions: Callable[[AsyncEngine], async_sessionmaker[AsyncSession]]

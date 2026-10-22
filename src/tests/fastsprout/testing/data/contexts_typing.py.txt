@@ -1,8 +1,20 @@
 from typing import assert_type
+from uuid import UUID
+from sqlmodel import Field as SQLField
+from fastsprout.core import ReadField
+from fastsprout.data.backend.sql import SQLEntity
 from fastsprout.data.backend.sql import SQLSignpost
 from fastsprout.testing.data import TestSQLite, TestPostgreSQL, TestSQLDatabase, TestMySQL, TestMariaDB, TestOracle
 
 class CRM(SQLSignpost): ...
+
+class IntegerRecord(SQLEntity[int]):
+    id: ReadField[int] = SQLField(primary_key=True)
+
+class UUIDRecord(SQLEntity[UUID]):
+    id: ReadField[UUID] = SQLField(primary_key=True)
+
+assert_type(TestSQLite(IntegerRecord, UUIDRecord), TestSQLDatabase[SQLSignpost])
 
 assert_type(TestSQLite(), TestSQLDatabase[SQLSignpost])
 assert_type(TestSQLite(signpost=CRM), TestSQLDatabase[CRM])

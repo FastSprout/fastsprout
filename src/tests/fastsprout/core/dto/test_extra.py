@@ -34,24 +34,28 @@ class Source(BaseSchema):
 
 
 @pytest.mark.parametrize(
-    ("mode", "allowed"),
+    ("mode", "allowed", "visibility"),
     [
-        (ReadDTO, {"name", "read"}),
-        (WriteDTO, {"name", "write"}),
-        (ReadWriteDTO, {"name", "read", "write"}),
-        (ExtraReadDTO, {"name", "read", "extra_read"}),
-        (ExtraWriteDTO, {"name", "write", "extra_write"}),
+        (ReadDTO, {"name", "read"}, "read"),
+        (WriteDTO, {"name", "write"}, "write"),
+        (ReadWriteDTO, {"name", "read", "write"}, "read_write"),
+        (ExtraReadDTO, {"name", "read", "extra_read"}, "extra_read"),
+        (ExtraWriteDTO, {"name", "write", "extra_write"}, "extra_write"),
         (
             ExtraReadWriteDTO,
             {"name", "read", "write", "extra_read", "extra_write"},
+            "extra_read_write",
         ),
     ],
 )
-def test_visibility(mode: type[DTO], allowed: set[str]) -> None:
+def test_visibility(
+    mode: type[DTO], allowed: set[str], visibility: str
+) -> None:
     model = derive_dto(Source, mode)
     instance = model()
     assert derive_dto(Source, mode) is model
     assert set(vars(instance)) == allowed
+    assert instance.fastsprout_visibility == visibility
     for name in allowed:
         assert getattr(instance, name) == name
         assert getattr(model, name).name == name

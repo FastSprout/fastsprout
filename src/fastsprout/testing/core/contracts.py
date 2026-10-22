@@ -17,7 +17,7 @@ from typing import TypeAliasType, get_args, get_origin, get_type_hints
 from weakref import WeakKeyDictionary
 
 from typeguard import CollectionCheckStrategy, ForwardRefPolicy, check_type
-from typing_extensions import TypeForm
+from typing_extensions import NoDefault, TypeForm
 
 from fastsprout.core import dataclass
 from fastsprout.core.types.protocols.ables import Hashable
@@ -31,6 +31,7 @@ __all__ = [
     "checked_async",
     "checked_signature",
     "require_type",
+    "require_type_defaults",
     "resolve_alias",
 ]
 
@@ -52,10 +53,20 @@ def resolve_alias[T](annotation: TypeForm[T]) -> TypeForm[T]:
     return annotation
 
 
+def require_type_defaults[T](annotation: TypeForm[T]) -> None:
+    parameters = getattr(annotation, "__parameters__", ())
+    if isinstance(annotation, type) and isinstance(parameters, tuple):
+        for parameter in parameters:
+            default = getattr(parameter, "__default__", Signature.empty)
+            if default not in (NoDefault, Signature.empty):
+                require_type(default)
+
+
 def require_type[T](annotation: TypeForm[T]) -> None:
     annotation = resolve_alias(annotation)
     if annotation in (Signature.empty, typing.Any, object):
         raise TypeError("A concrete type annotation is required")
+    require_type_defaults(annotation)
     if annotation in (
         list,
         dict,

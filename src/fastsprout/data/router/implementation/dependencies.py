@@ -14,7 +14,6 @@ from contextvars import ContextVar
 from functools import wraps
 from typing import Protocol
 
-from fastsprout.core import IdentificatorType
 from fastsprout.core.depends import DependsClass, inject_depends
 from fastsprout.data.backend.implementation.bound_signpost import BoundSignpost
 from fastsprout.data.backend.protocols import DataAbilitable, Finalizable
@@ -119,7 +118,7 @@ class AbilityDependencies:
 
 
 def guard_ability[
-    E: Entitieable[IdentificatorType],
+    E: Entitieable,
     StatementT,
     ProductT,
     F: Finalizable,

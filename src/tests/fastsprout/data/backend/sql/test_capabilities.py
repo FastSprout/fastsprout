@@ -67,9 +67,14 @@ class TestSQLAbilitable:
     @pytest.mark.parametrize("python_predicate", [False, True])
     @then("native and fallback predicates retain the same logical semantics")
     def test_query_logical_operations(
-        self, logical_ids: list[int], expected: list[int]
+        self,
+        logical_ids: list[int],
+        expected: list[int],
+        logical_query: SQLQuery[Hero],
+        python_predicate: bool,
     ) -> None:
         assert logical_ids == expected
+        assert logical_query.native_conditions is not python_predicate
 
     @given("a membership predicate backed by a list or one-shot iterator")
     def membership(self, source_kind: str) -> FieldPredicate[Hero]:
@@ -257,22 +262,25 @@ class TestSQLAbilitable:
         capability: type[SQLUpdatableByQuery[Hero]],
         sql_signpost: SQLSignpost,
         selected_query: SQLQuery[Hero],
+        assign: bool,
     ) -> int:
         ability: UpdatableByQueryable[Hero, SQLQuery[Hero]] = capability(
             sql_signpost
         )
-        return await ability.update_by_query(
-            selected_query, Hero.name.set("updated")
-        )
+        assignments = (Hero.name.set("updated"),) if assign else ()
+        return await ability.update_by_query(selected_query, *assignments)
 
+    @pytest.mark.parametrize("assign", [False, True])
     @pytest.mark.parametrize("capability", [SQLAbilitable, SQLUpdatableByQuery])
     @then("query updates preserve every non-selected row")
     async def test_update_by_query(
-        self, updated_by_query: int, sql_session: AsyncSession
+        self, updated_by_query: int, sql_session: AsyncSession, assign: bool
     ) -> None:
-        assert updated_by_query == 2
+        assert updated_by_query == (2 if assign else 0)
         sql_session.expire_all()
         for key in range(10):
             hero = await sql_session.get(Hero, key)
             assert hero is not None
-            assert hero.name == ("updated" if key in (6, 7) else f"h{key}")
+            assert hero.name == (
+                "updated" if assign and key in (6, 7) else f"h{key}"
+            )

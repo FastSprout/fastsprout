@@ -2,6 +2,7 @@ from fastsprout.core.types import AnyCallable, ables
 
 __all__ = [
     "ConsumerCallable",
+    "GetterCallable",
     "MapperCallable",
     "PredicateCallable",
     "ReducerCallable",

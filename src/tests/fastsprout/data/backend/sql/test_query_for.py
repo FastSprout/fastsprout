@@ -3,16 +3,54 @@ from collections.abc import AsyncIterator
 import pytest
 
 from fastsprout.core import Undefined
+from fastsprout.core.fields.field_ref import FieldRef
 from fastsprout.data import DataR
 from fastsprout.data.backend.sql import SQLQuery, SQLSignpost
 from fastsprout.data.backend.sql.capabilities import SQLAbilitable
 from fastsprout.data.streams.protocols import AsyncEntityStreamable
 from fastsprout.testing.core import given, then, when
 
-from .conftest import Hero
+from .conftest import CustomSQLBase, CustomSQLRecord, Hero
 
 
 class TestQueryFor:
+    @given("a query whose static entity type is wider than its concrete source")
+    def specialized_query(self) -> SQLQuery[CustomSQLBase]:
+        return SQLQuery(CustomSQLRecord)
+
+    @when("a parent field or cursor is used with the concrete child source")
+    def mismatched_owner(
+        self, specialized_query: SQLQuery[CustomSQLBase], operation: str
+    ) -> TypeError | None:
+        try:
+            if operation == "sort":
+                field = FieldRef[CustomSQLBase, str, None](
+                    "code", CustomSQLBase, None
+                )
+                specialized_query.order_by(field)
+            elif operation == "filter":
+                specialized_query.where(CustomSQLBase.code.eq("a")).build()
+            else:
+                specialized_query.after(CustomSQLBase(code="a", inherited="b"))
+        except TypeError as error:
+            return error
+        return None
+
+    @pytest.mark.parametrize(
+        "operation, message",
+        [
+            ("sort", "Sort field must belong to the query entity"),
+            ("cursor", "Cursor must belong to the query entity"),
+            ("filter", "Filter field must belong to the stream entity"),
+        ],
+    )
+    @then("the runtime owner guard rejects the mismatched parent")
+    def test_owner_guard(
+        self, mismatched_owner: TypeError | None, message: str
+    ) -> None:
+        assert isinstance(mismatched_owner, TypeError)
+        assert str(mismatched_owner) == message
+
     @given("an ability bound to Hero")
     def bound_ability(self, sql_signpost: SQLSignpost) -> SQLAbilitable[Hero]:
         return SQLAbilitable(sql_signpost, entity=Hero)

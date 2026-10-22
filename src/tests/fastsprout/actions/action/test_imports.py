@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[5]
-EXAMPLES = sorted((ROOT / "examples/actions/01_action").rglob("*.py"))
+EXAMPLES = sorted(
+    example
+    for example in (ROOT / "examples/actions/01_action").rglob("*.py")
+    if example.name != "__init__.py"
+)
 
 WITHOUT_SQL = """
 import runpy

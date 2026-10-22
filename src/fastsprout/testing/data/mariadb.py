@@ -10,17 +10,17 @@ from sqlalchemy.ext.asyncio import (
 )
 from testcontainers.community.mysql import MySqlContainer
 
-from fastsprout.data.backend.sql import SQLEntity, SQLSignpost
+from fastsprout.data.backend.sql import SQLSignpost
 
 from .mysql import TestMySQL
-from .sql import TestSQLDatabase
+from .sql import SQLTestEntityable, TestSQLDatabase
 
 __all__ = ["TestMariaDB"]
 
 
 @overload
 def mariadb(
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: None = None,
     container: MySqlContainer | None = None,
     engine: Callable[[str], AsyncEngine] = create_async_engine,
@@ -32,7 +32,7 @@ def mariadb(
 
 @overload
 def mariadb[S: SQLSignpost](
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: type[S],
     container: MySqlContainer | None = None,
     engine: Callable[[str], AsyncEngine] = create_async_engine,
@@ -43,7 +43,7 @@ def mariadb[S: SQLSignpost](
 
 
 def mariadb[S: SQLSignpost](
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: type[S] | None = None,
     container: MySqlContainer | None = None,
     engine: Callable[[str], AsyncEngine] = create_async_engine,

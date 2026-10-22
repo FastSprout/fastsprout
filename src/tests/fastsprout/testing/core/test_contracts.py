@@ -99,6 +99,9 @@ class TestContracts:
             "@given('broad type')\ndef value() -> object: return 1",
             "@given('nested broad type')\ndef value() -> list[object]: return []",
             "from typing import Any\n@given('any type')\ndef value() -> Any: return 1",
+            "from typing import Any\n@given('nested any type')\ndef value() -> list[Any]: return [1]",
+            "from typing import Any, Generic, TypeVar\nT = TypeVar('T')\nclass Box(Generic[T]): pass\n@given('generic any without a default')\ndef value() -> Box[Any]: return Box()",
+            "from typing import Any, Generic\nfrom typing_extensions import TypeVar\nT = TypeVar('T', default=Any)\nclass Box(Generic[T]): pass\n@given('generic any default')\ndef value() -> Box: return Box()",
             "from typing import Dict\n@given('bare typing collection')\ndef value() -> Dict: return {}",
         ],
     )

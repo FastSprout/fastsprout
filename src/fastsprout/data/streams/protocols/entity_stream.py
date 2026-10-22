@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from collections.abc import Hashable
 from typing import Any, Protocol, runtime_checkable
 
@@ -49,14 +50,14 @@ class AsyncEntityStreamable[E: Entitieable](AsyncCommonStreamable[E], Protocol):
     def filter(
         self, predicate: PredicateCallable[E]
     ) -> "AsyncEntityStreamable[E]": ...
-    def only_of[R: Entitieable[Any]](
+    @abstractmethod
+    def only_of[R: Entitieable](
         self, entity: type[R]
     ) -> "AsyncEntityStreamable[R]":
         """Narrow to one entity type — pull subtypes out of a mixed
         stream. One pass per consumption: to take several views without
         re-reading the source, materialize first (`to_list`), then
         split the list."""
-        ...
 
     def distinct(self) -> "AsyncEntityStreamable[E]": ...
     def peek(

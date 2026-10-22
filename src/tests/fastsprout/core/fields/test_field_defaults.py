@@ -1,4 +1,4 @@
-from dataclasses import FrozenInstanceError
+from dataclasses import MISSING, FrozenInstanceError
 from uuid import UUID, uuid4
 
 import pytest
@@ -12,10 +12,31 @@ from fastsprout.core import (
     typed_dataclass,
     typed_fields,
 )
+from fastsprout.testing.core import given, then, when
+
+
+@dataclass
+class RequiredField:
+    value: Field[int] = Field()
+
+
+class TestRequiredSpecifier:
+    @given("a dataclass field specifier without a default")
+    def schema(self) -> type[RequiredField]:
+        return RequiredField
+
+    @when("the required value is passed to the generated constructor")
+    def created(self, schema: type[RequiredField]) -> RequiredField:
+        return schema(value=42)
+
+    @then("the specifier becomes a required constructor argument")
+    def test_required_specifier(self, created: RequiredField) -> None:
+        assert created.value == 42
+        assert created.__dataclass_fields__["value"].default is MISSING
 
 
 class Hero(BaseSchema):
-    name: Field[str]
+    name: Field[str] = Field()
     age: Field[int] = Field(default=0)
     uid: Field[UUID] = Field(default_factory=uuid4)
 

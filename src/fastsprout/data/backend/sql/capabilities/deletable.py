@@ -34,7 +34,7 @@ class SQLDeletable[E: SQLEntity[Any]](
                 result = await session.execute(stmt)
                 deleted += cast(CursorResult[Any], result).rowcount
                 if self.with_events:
-                    await self._publish_to_bus(
+                    await self.publish_to_bus(
                         *(
                             DeleteEvent[type(x.id)](id=x.id)  # type: ignore[misc,operator]
                             for x in chunk
@@ -46,14 +46,12 @@ class SQLDeletable[E: SQLEntity[Any]](
         self, query: BaseQuery[E, Select[tuple[E]]], /
     ) -> int:
         if not native_conditions(query):
-            return await self.bulk_delete(
-                SQLEntityStream(query, self._signpost)
-            )
+            return await self.bulk_delete(SQLEntityStream(query, self.signpost))
         entity = query.entity
         built_q_id = query.build().with_only_columns(entity.__table__.c.id)
         async with self.transaction() as session:
             if self.with_events:
-                await self._publish_to_bus(
+                await self.publish_to_bus(
                     *(
                         DeleteEvent[type(x[0])](id=x[0])  # type: ignore[misc,operator]  # Event specialization uses the runtime primary-key type.
                         for x in await session.execute(built_q_id)

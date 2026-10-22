@@ -19,6 +19,7 @@ from fastsprout.core import (
     dto,
 )
 from fastsprout.core.dto.conversion import project_read
+from fastsprout.testing.core import then, when
 
 
 class User(BaseSchema):
@@ -50,11 +51,12 @@ class GrandchildRead(ChildRead): ...
 @pytest.fixture(
     params=[UserRead, ChildRead, GrandchildRead, derive_read_dto(User)]
 )
-def read(request: pytest.FixtureRequest) -> UserRead:
+def read(request: pytest.FixtureRequest) -> ReadDTO:
     return request.param(email="a@b.c", created_at=datetime(2026, 9, 17))
 
 
-def test_read_preserves_values_defaults_and_source(read: UserRead) -> None:
+def test_read_preserves_values_defaults_and_source(read: ReadDTO) -> None:
+    assert isinstance(read, User)
     assert read.email == "a@b.c"
     assert read.created_at == datetime(2026, 9, 17)
     assert isinstance(read.id, UUID)
@@ -86,7 +88,7 @@ def test_read_preserves_values_defaults_and_source(read: UserRead) -> None:
 
 
 @pytest.mark.parametrize("name", ["password", "password_hash"])
-def test_read_guards_all_normal_access(read: UserRead, name: str) -> None:
+def test_read_guards_all_normal_access(read: ReadDTO, name: str) -> None:
     read_type = type(read)
     for obj in (read, read_type):
         with pytest.raises(
@@ -143,7 +145,7 @@ def test_source_retains_internal_fields_and_validation() -> None:
     assert user.model_dump()["password_hash"] == "hash"
 
 
-def test_constructor_checks_names_and_required_fields(read: UserRead) -> None:
+def test_constructor_checks_names_and_required_fields(read: ReadDTO) -> None:
     read_type = type(read)
     with pytest.raises(
         TypeError, match="Missing DTO fields: created_at, email"
@@ -237,15 +239,42 @@ def test_malformed_declarations_fail_when_created() -> None:
 )
 def test_inherited_validation_cannot_return_an_unrestricted_source(
     method: str,
-    read: UserRead,
+    read: ReadDTO,
 ) -> None:
     with pytest.raises(TypeError, match="DTOs use their constructor"):
         getattr(type(read), method)({"password_hash": "secret"})
 
 
-def test_repr_and_runtime_guard_after_widening(read: UserRead) -> None:
+def test_repr_and_runtime_guard_after_widening(read: ReadDTO) -> None:
     assert "email='a@b.c'" in repr(read)
     assert "password" not in repr(read)
     widened: Any = read
     with pytest.raises(AttributeError, match="not accessible"):
         _ = widened.password
+
+
+@when("an allowed field is deleted, accessed again and deleted twice")
+def missing_fields(read: ReadDTO, name: str) -> list[AttributeError]:
+    delattr(read, name)
+    errors: list[AttributeError] = []
+    for operation in (
+        lambda: getattr(read, name),
+        lambda: delattr(read, name),
+        lambda: setattr(read, "unknown", "value"),
+    ):
+        try:
+            operation()
+        except AttributeError as error:
+            errors.append(error)
+    return errors
+
+
+@then("DTOs distinguish unset fields from unknown fields")
+@pytest.mark.parametrize("name", ["email", "created_at"])
+def test_missing_fields(
+    missing_fields: list[AttributeError], name: str
+) -> None:
+    assert len(missing_fields) == 3
+    assert "has not been set" in str(missing_fields[0])
+    assert str(missing_fields[1]) == name
+    assert "Unknown DTO field" in str(missing_fields[2])

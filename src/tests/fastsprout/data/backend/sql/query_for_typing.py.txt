@@ -1,4 +1,6 @@
 from typing import assert_type
+from contextlib import AbstractAsyncContextManager
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
 from fastsprout.core import Field
@@ -46,5 +48,5 @@ def routed(datar: DataR) -> None:
     ability.query_for(Team)  # error: reportArgumentType; mypy: arg-type
 
 
-def generic_identity[E: Entitieable[int]](source: type[E], key: int) -> None:
+def generic_identity[E: Entitieable[int, AbstractAsyncContextManager[AsyncSession]]](source: type[E], key: int) -> None:
     assert_type(source.id.eq(key), FieldPredicate[E])

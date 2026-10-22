@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from contextlib import AbstractAsyncContextManager
 from typing import Protocol, runtime_checkable
 
@@ -16,13 +17,13 @@ class Backendable[T, F: Finalizable](Protocol):
         self, /, signpost: Signpostable[T], *, bus: EventBus | None = None
     ) -> None: ...
 
+    @abstractmethod
     def bind(self) -> AbstractAsyncContextManager[F]:
         """Open this backend for the current context; exit releases it."""
-        ...
 
     def transaction(self) -> AbstractAsyncContextManager[T]: ...
 
     @property
     def with_events(self) -> bool: ...
 
-    async def _publish_to_bus(self, /, *events: Eventable) -> None: ...
+    async def publish_to_bus(self, /, *events: Eventable) -> None: ...

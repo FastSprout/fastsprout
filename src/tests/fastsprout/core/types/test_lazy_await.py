@@ -24,12 +24,10 @@ async def test_lazy_await_magic_attrs_sync():
     async def func():
         await asyncio.sleep(0)
 
-    func._sync_call = lambda: None  # pyright: ignore[reportFunctionMemberAccess]
-
     # when
     lazy_await = LazyAwait(func)
     # then
-    lazy_await._sync_call()
+    lazy_await.sync_call()
 
 
 async def test_lazy_await_magic_attrs_async():
@@ -38,13 +36,11 @@ async def test_lazy_await_magic_attrs_async():
     async def func():
         await asyncio.sleep(0)
 
-    func._async_call_sleep = asyncio.sleep  # pyright: ignore[reportFunctionMemberAccess]
-
     # when
     lazy_await = LazyAwait(func)
     # then
     with pytest.raises(AttributeError):
-        await lazy_await._async_call_sleep(0)
+        await lazy_await.async_call_sleep(0)
 
 
 async def test_lazy_await_repr():

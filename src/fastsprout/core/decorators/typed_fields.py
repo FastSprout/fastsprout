@@ -11,7 +11,7 @@ from fastsprout.core.fields.metaclass import (
 __all__ = ["typed_fields"]
 
 
-def _apply_field_descriptors[C](cls: type[C]) -> type[C]:
+def apply_field_descriptors[C](cls: type[C]) -> type[C]:
     """Unwrap Field[T] annotations and install Field descriptors.
 
     Each descriptor preserves the EXACT declared Field subclass
@@ -45,4 +45,4 @@ def typed_fields[C](cls: type[C]) -> type[C]:
                 self.field_int = field_int
                 self.field_str = field_str
     """
-    return _apply_field_descriptors(cls)
+    return apply_field_descriptors(cls)

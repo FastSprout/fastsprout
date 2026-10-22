@@ -239,7 +239,7 @@ async def exists[E: Entitieable, R: Valuable | Entitieable, Statement](
 
 def public_condition[E: Entitieable](
     source: type[E],
-    read: type[DTO | Entitieable],
+    read: type[DTO | E],
     condition: Expression[E],
 ) -> Expression[E]:
     if isinstance(condition, Not):
@@ -256,7 +256,7 @@ def public_condition[E: Entitieable](
 
 def public_leaf[E: Entitieable](
     source: type[E],
-    read: type[DTO | Entitieable],
+    read: type[DTO | E],
     condition: Expression[E],
 ) -> Expression[E]:
     if isinstance(condition, FieldPredicate):
@@ -278,7 +278,7 @@ def public_leaf[E: Entitieable](
 
 def public_field[E: Entitieable](
     source: type[E],
-    read: type[DTO | Entitieable],
+    read: type[DTO | E],
     condition: FieldPredicate[E],
 ) -> FieldPredicate[E]:
     if condition.source is not source:

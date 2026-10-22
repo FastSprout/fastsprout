@@ -104,8 +104,8 @@ def forbidden(read: UserRead, create: UserCreate, update: UserUpdate) -> None:
     read.password = "secret"  # error: reportAttributeAccessIssue; mypy: arg-type
     _ = read.password_hash  # error: reportAttributeAccessIssue; mypy: call-overload
     read.password_hash = "hash"  # error: reportAttributeAccessIssue; mypy: arg-type
-    _ = UserRead.password  # error: reportAttributeAccessIssue; mypy: arg-type
-    _ = UserRead.password_hash  # error: reportAttributeAccessIssue; mypy: arg-type
+    password_field = UserRead.password  # error: reportAttributeAccessIssue; mypy: type-var
+    internal_field = UserRead.password_hash  # error: reportAttributeAccessIssue; mypy: type-var
     _ = create.created_at  # error: reportAttributeAccessIssue; mypy: call-overload
     create.created_at = datetime.now()  # error: reportAttributeAccessIssue; mypy: arg-type
     _ = create.password_hash  # error: reportAttributeAccessIssue; mypy: call-overload
@@ -117,10 +117,10 @@ def forbidden(read: UserRead, create: UserCreate, update: UserUpdate) -> None:
     User(email="a")  # error: reportCallIssue; mypy: call-arg, call-arg, call-arg
     CoreUser(name="a")  # error: reportCallIssue; mypy: call-arg
     Schema(value="wrong")  # error: reportArgumentType; mypy: arg-type
-    _ = S.password  # error: reportAttributeAccessIssue; mypy: arg-type
+    child_password_field = S.password  # error: reportAttributeAccessIssue; mypy: type-var
     _ = child.password  # error: reportAttributeAccessIssue; mypy: call-overload
     child.password = "secret"  # error: reportAttributeAccessIssue; mypy: arg-type
-    _ = GrandchildRead.password_hash  # error: reportAttributeAccessIssue; mypy: arg-type
+    grandchild_internal_field = GrandchildRead.password_hash  # error: reportAttributeAccessIssue; mypy: type-var
     _ = grandchild.password_hash  # error: reportAttributeAccessIssue; mypy: call-overload
     grandchild.password_hash = "hash"  # error: reportAttributeAccessIssue; mypy: arg-type
     child.email = 123  # error: reportAttributeAccessIssue; mypy: assignment

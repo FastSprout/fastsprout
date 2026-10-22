@@ -14,8 +14,8 @@ class Signpost[T](Signpostable[T]):
     def __init__(
         self, factory: Callable[[], T], *, priority: Annotated[int, Ge(0)] = 0
     ) -> None:
-        self._factory = factory
+        self.factory_provider = factory
         self.priority = priority
 
     def factory(self) -> T:
-        return self._factory()
+        return self.factory_provider()

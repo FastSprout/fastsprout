@@ -57,3 +57,17 @@ class TestRetraction:
     @then("a running handler cannot be retracted")
     def test_running_handler(self, running_retraction: bool) -> None:
         assert not running_retraction
+
+    @given("a state that was never registered by the bus")
+    def unknown_state(self) -> EventState[Message]:
+        return EventState(Message(value=99))
+
+    @when("an unknown state is retracted")
+    async def unknown_retraction(
+        self, bus: EventBus, unknown_state: EventState[Message]
+    ) -> bool:
+        return await bus.retract(unknown_state)
+
+    @then("retracting an unknown state returns false")
+    def test_unknown_state(self, unknown_retraction: bool) -> None:
+        assert not unknown_retraction

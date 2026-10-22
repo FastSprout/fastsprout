@@ -11,16 +11,16 @@ from sqlalchemy.ext.asyncio import (
 )
 from testcontainers.community.postgres import PostgresContainer
 
-from fastsprout.data.backend.sql import SQLEntity, SQLSignpost
+from fastsprout.data.backend.sql import SQLSignpost
 
-from .sql import TestSQLDatabase, connect, container_database
+from .sql import SQLTestEntityable, TestSQLDatabase, connect, container_database
 
 __all__ = ["TestPostgreSQL", "postgres_context"]
 
 
 @overload
 def postgresql(
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: None = None,
     container: PostgresContainer | None = None,
     engine: Callable[[str], AsyncEngine] = create_async_engine,
@@ -32,7 +32,7 @@ def postgresql(
 
 @overload
 def postgresql[S: SQLSignpost](
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: type[S],
     container: PostgresContainer | None = None,
     engine: Callable[[str], AsyncEngine] = create_async_engine,
@@ -43,7 +43,7 @@ def postgresql[S: SQLSignpost](
 
 
 def postgresql[S: SQLSignpost](
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: type[S] | None = None,
     container: PostgresContainer | None = None,
     engine: Callable[[str], AsyncEngine] = create_async_engine,

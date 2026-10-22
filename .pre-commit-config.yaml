@@ -54,7 +54,7 @@ repos:
 
       - id: basedpyright
         name: basedpyright
-        entry: uv run --system-certs basedpyright src
+        entry: uv run --system-certs basedpyright src docs_src examples
         files: \.py$
         require_serial: true
         pass_filenames: false

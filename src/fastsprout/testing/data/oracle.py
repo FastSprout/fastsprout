@@ -10,16 +10,16 @@ from sqlalchemy.ext.asyncio import (
 )
 from testcontainers.community.oracle import OracleDbContainer
 
-from fastsprout.data.backend.sql import SQLEntity, SQLSignpost
+from fastsprout.data.backend.sql import SQLSignpost
 
-from .sql import TestSQLDatabase, connect, container_database
+from .sql import SQLTestEntityable, TestSQLDatabase, connect, container_database
 
 __all__ = ["TestOracle"]
 
 
 @overload
 def oracle(
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: None = None,
     container: OracleDbContainer | None = None,
     engine: Callable[[str], AsyncEngine] = create_async_engine,
@@ -31,7 +31,7 @@ def oracle(
 
 @overload
 def oracle[S: SQLSignpost](
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: type[S],
     container: OracleDbContainer | None = None,
     engine: Callable[[str], AsyncEngine] = create_async_engine,
@@ -42,7 +42,7 @@ def oracle[S: SQLSignpost](
 
 
 def oracle[S: SQLSignpost](
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: type[S] | None = None,
     container: OracleDbContainer | None = None,
     engine: Callable[[str], AsyncEngine] = create_async_engine,

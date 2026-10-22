@@ -43,10 +43,10 @@ class InvocationBindings:
         arguments: BoundArguments,
         operation: str,
     ) -> None:
-        self.token = uuid4()
+        self.token: UUID = uuid4()
         self.providers: set[Hashable] = set()
         self.cache_keys: set[Hashable] = set()
-        self.arguments = arguments
+        self.arguments: BoundArguments = arguments
         self.arguments.apply_defaults()
         self.arguments.arguments.setdefault("operation", operation)
 

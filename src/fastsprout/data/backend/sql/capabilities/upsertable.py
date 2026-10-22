@@ -50,9 +50,6 @@ class SQLUpsertable[E: SQLEntity[Any]](Upsertable[E], SQLDataBackend):
                     for item in chunk
                 ]
 
-                if not mappings:
-                    continue
-
                 stmt = insert(entity_cls).values(mappings)
 
                 update_cols = {
@@ -81,10 +78,10 @@ class SQLUpsertable[E: SQLEntity[Any]](Upsertable[E], SQLDataBackend):
                     yield item
                     if self.with_events:
                         if item.id in exists_pks:
-                            await self._publish_to_bus(
+                            await self.publish_to_bus(
                                 UpdateEvent[type(item)](entity=item)  # type: ignore[misc,operator]
                             )
                         else:
-                            await self._publish_to_bus(
+                            await self.publish_to_bus(
                                 CreateEvent[type(item)](entity=item)  # type: ignore[misc,operator]
                             )

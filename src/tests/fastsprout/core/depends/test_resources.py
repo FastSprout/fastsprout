@@ -4,6 +4,34 @@ import pytest
 
 from fastsprout.core import Depends, inject_depends
 from fastsprout.core.depends.invocation import with_dependencies
+from fastsprout.core.depends.scope import resolve_yield
+from fastsprout.testing.core import given, then, when
+
+
+class TestMissingResourceScope:
+    @given("an unopened asynchronous resource")
+    def resource(self) -> AsyncGenerator[int, None]:
+        async def values() -> AsyncGenerator[int, None]:
+            yield 7
+
+        return values()
+
+    @when("the resource is resolved outside an invocation")
+    async def resolved(
+        self, resource: AsyncGenerator[int, None]
+    ) -> RuntimeError | None:
+        try:
+            await resolve_yield(resource)
+        except RuntimeError as error:
+            return error
+        finally:
+            await resource.aclose()
+        return None
+
+    @then("resource resolution requires an owner for cleanup")
+    def test_missing_scope(self, resolved: RuntimeError | None) -> None:
+        assert isinstance(resolved, RuntimeError)
+        assert "require an async invocation" in str(resolved)
 
 
 async def test_async_yield_provider_closes_after_invocation() -> None:

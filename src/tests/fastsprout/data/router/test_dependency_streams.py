@@ -5,19 +5,15 @@ import fastsprout.data.router.implementation.datar as router
 from fastsprout.core import Depends
 from fastsprout.data import DataR, SimpleAsyncEntityStream
 from fastsprout.data.backend.sql import SQLQuery
-from fastsprout.data.backend.sql.capabilities.iterable import SQLIterable
+from fastsprout.data.backend.sql.capabilities import SQLAbilitable
 from fastsprout.data.backend.sql.streams.entity_stream import SQLEntityStream
-from fastsprout.data.capabilities.protocols import Abilitable
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.streams.protocols import AsyncEntityStreamable
 
 from .conftest import JoinOrder
 
 
-class IteratorAbility(
-    SQLIterable[JoinOrder],
-    Abilitable[JoinOrder, BaseQuery[JoinOrder, Select[tuple[JoinOrder]]]],
-):
+class IteratorAbility(SQLAbilitable[JoinOrder]):
     def stream(
         self, query: BaseQuery[JoinOrder, Select[tuple[JoinOrder]]], /
     ) -> AsyncEntityStreamable[JoinOrder]:

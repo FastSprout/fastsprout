@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from contextlib import AbstractAsyncContextManager
 from typing import (
     TYPE_CHECKING,
@@ -128,7 +129,14 @@ class TypedSQLMeta(SQLModelMetaclass):
             check_field_visibility(cls, name)
             return super().__getattr__(name)
 
-    def __new__(mcs, name, bases, namespace, **kwargs):
+    def __new__[Value](
+        mcs,
+        name: str,
+        bases: tuple[type, ...],
+        namespace: Mapping[str, Value | list[str] | dict[str, type]],
+        **kwargs: Value | bool,
+    ) -> "TypedSQLMeta":
+        namespace = dict(namespace)
         if any(is_dto_base(base) for base in bases):
             return type.__new__(
                 mcs, name, bases, namespace, init=kwargs.get("init", False)
@@ -159,27 +167,36 @@ class TypedSQLMeta(SQLModelMetaclass):
         }
         token = model_building_context_var.set(True)
         try:
-            return super().__new__(mcs, name, bases, namespace, **kwargs)
+            cls: TypedSQLMeta = super().__new__(
+                mcs, name, bases, namespace, **kwargs
+            )
+            return cls
         finally:
             model_building_context_var.reset(token)
 
-    def __init__(cls, name, bases, namespace, **kwargs):  # noqa: N805  # metaclass
+    def __init__[Value](
+        self,
+        name: str,
+        bases: tuple[type, ...],
+        namespace: Mapping[str, Value],
+        **kwargs: Value,
+    ) -> None:
         if any(is_dto_base(base) for base in bases):
             return
         # SQLModel drops this keyword before delegating to Pydantic.
         if metadata := kwargs.get("__pydantic_generic_metadata__"):
-            cls.__pydantic_generic_metadata__ = metadata
-        super().__init__(name, bases, namespace, **kwargs)
-        if hasattr(cls, "__table__"):
-            model_fields = getattr(cls, "model_fields", {})
-            targets = [n for n in mro_field_names(cls) if n in model_fields]
-            mapper_attrs = sa_inspect(cls).attrs
+            type.__setattr__(self, "__pydantic_generic_metadata__", metadata)
+        super().__init__(name, bases, dict(namespace), **kwargs)
+        if hasattr(self, "__table__"):
+            model_fields = getattr(self, "model_fields", {})
+            targets = [n for n in mro_field_names(self) if n in model_fields]
+            mapper_attrs = sa_inspect(self).attrs
         else:
-            targets = cls.__dict__.get("__fastsprout_fields__", [])
+            targets = self.__dict__.get("__fastsprout_fields__", [])
             mapper_attrs = {}
         descriptors = {
             name: descriptor
-            for base in reversed(cls.__mro__)
+            for base in reversed(self.__mro__)
             for name, descriptor in vars(base)
             .get("__fastsprout_descriptors__", {})
             .items()
@@ -193,8 +210,8 @@ class TypedSQLMeta(SQLModelMetaclass):
             descriptor: Field[Any] = descriptors.get(fname, Field).descriptor(
                 fname, orm_attr
             )
-            descriptor.__set_name__(cls, fname)
-            setattr(cls, fname, descriptor)
+            descriptor.__set_name__(self, fname)
+            setattr(self, fname, descriptor)
 
 
 class SQLSignpost(Signpost[AbstractAsyncContextManager[AsyncSession]]):
@@ -206,11 +223,17 @@ class SQLSignpost(Signpost[AbstractAsyncContextManager[AsyncSession]]):
         entity.__signpost__ = self
 
 
+class BaseSQLEntity[ID: IdentificatorType](
+    Entitieable[ID, AbstractAsyncContextManager[AsyncSession]]
+):
+    __signpost__: SQLSource
+
+
 class SQLEntity(
     SQLModel,
     Schema,
     HasOrm[Mapped[Any]],
-    Entitieable[IDT],
+    BaseSQLEntity[IDT],
     # SQLModel requires legacy generics for inherited model parameters.
     Generic[IDT, SourceT],
     metaclass=TypedSQLMeta,
@@ -220,10 +243,6 @@ class SQLEntity(
 
     if TYPE_CHECKING:
         __table__: ClassVar[Table]
-
-    __signpost__: ClassVar[
-        Signpostable[AbstractAsyncContextManager[AsyncSession]]
-    ]
 
     id: ReadField[IDT]
 
@@ -257,9 +276,7 @@ def validate_source(
         validate_source_type(entity, entity.__signpost__)
 
 
-def validate_source_type(
-    entity: type[SQLEntity[IDT, SourceT]], source: SQLSource
-) -> None:
+def validate_source_type(entity: type[SQLModel], source: SQLSource) -> None:
     """Validate a candidate before changing the entity's source binding."""
     for base in entity.__mro__:
         metadata = vars(base).get("__pydantic_generic_metadata__", {})

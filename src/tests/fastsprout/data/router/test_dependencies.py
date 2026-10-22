@@ -3,8 +3,11 @@ from collections.abc import AsyncIterator, Sequence
 import pytest
 
 from fastsprout.core import Depends
-from fastsprout.data.backend.sql import SQLQuery
+from fastsprout.data.backend.sql import SQLQuery, SQLSignpost
 from fastsprout.data.router import DataR
+from fastsprout.data.router.implementation.dependencies import (
+    AbilityDependencies,
+)
 from fastsprout.testing.core import given, then, when
 
 from .conftest import Item
@@ -14,6 +17,25 @@ type DependencyCall = tuple[str, str, DataR]
 
 @pytest.mark.usefixtures("signpost")
 class TestDependencies:
+    @when("a dependency guard is attached to an unbound backend signpost")
+    def unbound_stream(self, signpost: SQLSignpost) -> TypeError | None:
+        async def read() -> None:
+            raise AssertionError("An unbound stream must not execute")
+
+        guard = AbilityDependencies(DataR(), ())
+        try:
+            guard.stream(signpost, read)
+        except TypeError as error:
+            return error
+        return None
+
+    @then("stream dependencies require the router's transaction binding")
+    def test_unbound_stream(self, unbound_stream: TypeError | None) -> None:
+        assert isinstance(unbound_stream, TypeError)
+        assert str(unbound_stream) == (
+            "A router stream requires its bound signpost"
+        )
+
     @given("a recorder of dependency operation names")
     def calls(self) -> list[str]:
         return []

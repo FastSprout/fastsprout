@@ -6,7 +6,42 @@ from fastsprout.actions.service.datas import DataSOperation
 from fastsprout.core import Undefined
 from fastsprout.testing.core import then, when
 
-from ..common import Record, RecordCreate, RecordPatch, RecordRead, RecordUpdate
+from ..common import (
+    Record,
+    RecordCreate,
+    RecordPatch,
+    RecordRead,
+    RecordUpdate,
+    RecordWrite,
+)
+
+
+class TestReadSchema:
+    @when("a service has neither a constructor entity nor an inherited entity")
+    def unbound(self) -> TypeError | None:
+        try:
+            DataS[Record]()
+        except TypeError as error:
+            return error
+        return None
+
+    @then("unbound services require an explicit entity")
+    def test_unbound(self, unbound: TypeError | None) -> None:
+        assert isinstance(unbound, TypeError)
+        assert "Pass an entity or use DataS[Entity]" in str(unbound)
+
+    @when("a write-only DTO is configured as the read schema")
+    def rejected(self) -> TypeError | None:
+        try:
+            DataS(Record, read=RecordWrite)
+        except TypeError as error:
+            return error
+        return None
+
+    @then("read schemas must permit reading and derive from the entity")
+    def test_write_only_read_schema(self, rejected: TypeError | None) -> None:
+        assert isinstance(rejected, TypeError)
+        assert "read DTO derived from it" in str(rejected)
 
 
 class ConfiguredRecords(

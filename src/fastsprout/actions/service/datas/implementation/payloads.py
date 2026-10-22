@@ -7,6 +7,7 @@ from fastsprout.core.dto.conversion import (
     prepare_update,
     writable_names,
 )
+from fastsprout.core.fields.visibility import EntityVisibility
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.router import DataR
 
@@ -25,7 +26,7 @@ async def prepare_new_entity[E: Entitieable, C: Schema | Entitieable](
     entity: C,
     datar: DataR,
     *,
-    relations: dict[int, Entitieable[IdentificatorType]] | None = None,
+    relations: dict[int, EntityVisibility] | None = None,
 ) -> E:
     payload: E = prepare_create(source, schema, entity)
     return await materialize(
@@ -75,7 +76,7 @@ async def materialize[E: Entitieable](
     creating: bool,
     ancestors: tuple[int, ...] = (),
     stored: E | None = None,
-    relations: dict[int, Entitieable[IdentificatorType]] | None = None,
+    relations: dict[int, EntityVisibility] | None = None,
 ) -> E:
     if id(entity) in ancestors:
         raise ValueError("Cyclic CRUD payload")
@@ -112,17 +113,17 @@ async def materialize[E: Entitieable](
     )
 
 
-async def materialize_relation(
-    entity: Entitieable[IdentificatorType],
+async def materialize_relation[ID: IdentificatorType, Resource](
+    entity: Entitieable[ID, Resource],
     datar: DataR,
     *,
     creating: bool,
     ancestors: tuple[int, ...],
-    relations: dict[int, Entitieable[IdentificatorType]],
-) -> Entitieable[IdentificatorType]:
+    relations: dict[int, EntityVisibility],
+) -> EntityVisibility:
     if id(entity) in relations:
         return relations[id(entity)]
-    source: type[Entitieable[IdentificatorType]] = (
+    source: type[Entitieable[ID, Resource]] = (
         entity.__fastsprout_source__
         if isinstance(entity, ReadDTO)
         else type(entity)
@@ -133,7 +134,7 @@ async def materialize_relation(
         stored = await find_entity(source, entity.id, datar)
         if stored is not None:
             return stored
-    payload: Entitieable[IdentificatorType] = (
+    payload: Entitieable[ID, Resource] = (
         prepare_create(source, source, entity) if creating else entity
     )
     result = await materialize(

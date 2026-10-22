@@ -21,16 +21,14 @@ class SQLFindable[E: SQLEntity[Any]](
         self, query: BaseQuery[E, Select[tuple[E]]], /
     ) -> E | None:
         return await SimpleAsyncEntityStream(
-            SQLEntityStream(query, self._signpost)
+            SQLEntityStream(query, self.signpost)
         ).first()
 
     async def find_exactly_one(
         self, query: BaseQuery[E, Select[tuple[E]]], /
     ) -> E:
         rows = (
-            await SimpleAsyncEntityStream(
-                SQLEntityStream(query, self._signpost)
-            )
+            await SimpleAsyncEntityStream(SQLEntityStream(query, self.signpost))
             .take(2)
             .to_list()
         )
@@ -43,4 +41,4 @@ class SQLFindable[E: SQLEntity[Any]](
     async def find_all(
         self, query: BaseQuery[E, Select[tuple[E]]], /
     ) -> Sequence[E]:
-        return await SQLEntityStream(query, self._signpost).to_list()
+        return await SQLEntityStream(query, self.signpost).to_list()

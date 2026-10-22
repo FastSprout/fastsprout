@@ -27,8 +27,8 @@ class FieldRef[E, T, OrmCtor](Eqable["FieldRef[E, T, OrmCtor]"]):
     __slots__ = ("entity_cls", "name", "orm")
 
     def __init__(self, name: str, entity_cls: type[E], orm: OrmCtor) -> None:
-        self.name = name
-        self.entity_cls = entity_cls
+        self.name: str = name
+        self.entity_cls: type[E] = entity_cls
         self.orm: OrmCtor = orm
 
     def set(self, value: T) -> FieldAssignment[T]:
@@ -110,8 +110,8 @@ class FieldComparison[L, R, T, LeftOrm, RightOrm]:
         left: FieldRef[L, T, LeftOrm],
         right: FieldRef[R, T, RightOrm],
     ) -> None:
-        self.left = left
-        self.right = right
+        self.left: FieldRef[L, T, LeftOrm] = left
+        self.right: FieldRef[R, T, RightOrm] = right
 
     def __bool__(self) -> bool:
         return (

@@ -1,10 +1,11 @@
+from collections.abc import AsyncIterable
 from typing import (
     Protocol,
     runtime_checkable,
 )
 
 from fastsprout.core.types import AnyIterable, LazyAwait
-from fastsprout.core.types.protocols.ables import RichComparisonable
+from fastsprout.core.types.protocols.ables import Addable, RichComparisonable
 from fastsprout.data.types import (
     ConsumerCallable,
     GetterCallable,
@@ -51,4 +52,6 @@ class AsyncValueStreamable[T: Valuable](AsyncCommonStreamable[T], Protocol):
         self, predicate: PredicateCallable[T]
     ) -> "AsyncValueStreamable[T]": ...
 
-    def sum(self) -> LazyAwait[T | None]: ...
+    def sum[R: Valuable](
+        self: AsyncIterable[Addable[T, R]],
+    ) -> LazyAwait[T | R | None]: ...

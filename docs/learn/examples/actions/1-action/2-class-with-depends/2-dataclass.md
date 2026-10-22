@@ -15,11 +15,11 @@ import asyncio
 from typing import assert_type
 
 from fastsprout.actions import Action
-from fastsprout.core import Depends, Field, typed_dataclass
+from fastsprout.core import Depends, Field, Schema, typed_dataclass
 
 
 @typed_dataclass
-class HeroIn:
+class HeroIn(Schema):
     name: Field[str]
 
 
@@ -29,7 +29,7 @@ class HeroPower:
 
 
 @typed_dataclass
-class HeroOut:
+class HeroOut(Schema):
     name: Field[str]
     power: HeroPower
 

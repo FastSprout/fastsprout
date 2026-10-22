@@ -24,6 +24,41 @@ type Orderings = tuple[tuple[str, bool], ...]
 
 
 class TestSQLJoinedQuery(BaseTestSQLJoinedQuery):
+    @when("a join has foreign fields, repeats a source or lacks its statement")
+    def invalid_join(
+        self, joined_source: SQLSignpost, kind: str
+    ) -> TypeError | None:
+        try:
+            if kind == "foreign":
+                SQLQuery(Hero).join(QueryTeam, QueryCountry.id == QueryTeam.id)
+            elif kind == "duplicate":
+                SQLQuery(Hero).join(Hero, Hero.id == Hero.id)
+            else:
+                SQLJoinedQuery[
+                    SQLSource, FieldPredicate[QueryTeam], Hero, QueryTeam
+                ](Hero).build()
+        except TypeError as error:
+            return error
+        return None
+
+    @pytest.mark.parametrize(
+        "kind, message",
+        [
+            ("foreign", "Join fields must belong to the joined entities"),
+            (
+                "duplicate",
+                "Use SQLAlchemy aliases to join the same entity twice",
+            ),
+            ("incomplete", "A joined query requires a SQL statement"),
+        ],
+    )
+    @then("invalid join structures fail before executing SQL")
+    def test_invalid_join(
+        self, invalid_join: TypeError | None, message: str
+    ) -> None:
+        assert isinstance(invalid_join, TypeError)
+        assert str(invalid_join) == message
+
     @when("a chained join is opened as a lazy stream")
     async def chained_stream(
         self, selects: list[str]
@@ -188,18 +223,19 @@ class TestSQLJoinedQuery(BaseTestSQLJoinedQuery):
             assert isinstance(failure, TypeError)
             assert "one shared signpost" in str(failure)
 
-    @when("join fields reference a non-participating entity")
-    def foreign_join(self, joined_source: SQLSignpost) -> TypeError | None:
+    @when("a join containing a Python predicate is built as a SQL statement")
+    def python_statement(self, joined_source: SQLSignpost) -> TypeError | None:
+        query = SQLQuery(Hero).join(QueryTeam, Hero.age == QueryTeam.id)
         try:
-            SQLQuery(Hero).join(QueryTeam, QueryCountry.id == QueryTeam.id)
+            query.where(lambda hero: hero.age > 3).build()
         except TypeError as error:
             return error
         return None
 
-    @then("join fields must reference existing participants and the new entity")
-    def test_foreign_field(self, foreign_join: TypeError | None) -> None:
-        assert isinstance(foreign_join, TypeError)
-        assert "Join fields" in str(foreign_join)
+    @then("Python conditions require streaming instead of SQL compilation")
+    def test_python_statement(self, python_statement: TypeError | None) -> None:
+        assert isinstance(python_statement, TypeError)
+        assert "query execution through stream()" in str(python_statement)
 
     @when("the DataR context is closed before its joined stream is consumed")
     async def closed_stream(

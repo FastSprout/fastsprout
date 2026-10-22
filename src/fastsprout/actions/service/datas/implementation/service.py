@@ -19,7 +19,31 @@ from fastsprout.data.types import Valuable
 from ...simple_service import Service
 from ..protocols import DataSable
 from ..types import DataSOperation, Page, SchemaSetting
-from . import commands, configuration, queries, selection
+from . import commands, configuration
+from .commands import (
+    bulk_create,
+    bulk_delete,
+    bulk_patch,
+    bulk_update,
+    bulk_upsert,
+    delete,
+    delete_by_query,
+    patch,
+    update,
+    update_by_query,
+    upsert,
+)
+from .queries import (
+    count,
+    exists,
+    find_all,
+    find_exactly_one,
+    find_first,
+    get,
+    list,
+    stream,
+)
+from .selection import join, map
 
 __all__ = ["DataS"]
 
@@ -120,25 +144,26 @@ class DataS(Service, DataSable[E, R, C, U, P, CreateSetting]):
     ) -> R:
         return await commands.create(self, entity, datar)
 
-    update = commands.update
-    patch = commands.patch
-    delete = commands.delete
-    upsert = commands.upsert
-    bulk_upsert = commands.bulk_upsert
-    delete_by_query = commands.delete_by_query
-    update_by_query = commands.update_by_query
-    bulk_create = commands.bulk_create
-    bulk_update = commands.bulk_update
-    bulk_patch = commands.bulk_patch
-    bulk_delete = commands.bulk_delete
+    update = update
+    patch = patch
+    delete = delete
+    upsert = upsert
+    delete_by_query = delete_by_query
+    update_by_query = update_by_query
+    bulk_delete = bulk_delete
 
-    get = queries.get
-    exists = queries.exists
-    count = queries.count
-    list = queries.list
-    find_first = queries.find_first
-    find_exactly_one = queries.find_exactly_one
-    find_all = queries.find_all
-    stream = queries.stream
-    map = selection.map
-    join = selection.join
+    get = get
+    exists = exists
+    count = count
+    list = list
+    find_first = find_first
+    find_exactly_one = find_exactly_one
+    find_all = find_all
+    stream = stream
+    map = map
+    join = join
+
+    bulk_create = bulk_create
+    bulk_update = bulk_update
+    bulk_patch = bulk_patch
+    bulk_upsert = bulk_upsert

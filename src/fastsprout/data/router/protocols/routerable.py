@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from collections.abc import Sequence
 from types import TracebackType
 from typing import (
@@ -44,29 +45,29 @@ class Routerable(Finalizable, Protocol):
         traceback: TracebackType | None,
     ) -> None: ...
 
-    def ability[E: Entitieable[Any]](
+    def ability[E: Entitieable](
         self, entity: type[E]
     ) -> DataAbilitable[E, Any, BaseQuery[E, Any], Finalizable]: ...
 
     @overload
-    def stream[E: Entitieable[Any], ContextT, *Ts](
+    def stream[E: Entitieable, ContextT, *Ts](
         self, q: JoinedQueryable[E, ContextT, *Ts]
     ) -> AsyncJoinedStreamable[*Ts]: ...
 
     @overload
-    def stream[E: Entitieable[Any], StatementT](
+    def stream[E: Entitieable, StatementT](
         self, q: BaseQuery[E, StatementT]
     ) -> AsyncEntityStreamable[E]: ...
 
-    def join[E: Entitieable[Any], StatementT](
+    def join[E: Entitieable, StatementT](
         self, q: BaseQuery[E, StatementT]
     ) -> "RoutedJoin[E]": ...
 
+    @abstractmethod
     async def finalize(self) -> None:
         """Flush staged intents, then finalize bound backends —
         highest `priority` first."""
-        ...
 
+    @abstractmethod
     async def abort(self) -> None:
         """Drop staged intents and abort bound backends."""
-        ...

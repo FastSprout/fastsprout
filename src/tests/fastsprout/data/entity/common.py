@@ -1,3 +1,4 @@
+from io import StringIO
 from uuid import UUID
 
 from fastsprout.core import (
@@ -9,6 +10,7 @@ from fastsprout.core import (
     dataclass,
     typed_fields,
 )
+from fastsprout.data.backend.implementation import Signpost
 from fastsprout.data.entity import BaseEntity, Entitieable
 
 __all__ = [
@@ -21,6 +23,7 @@ __all__ = [
     "SchemaEntity",
     "SchemaRead",
     "SchemaWrite",
+    "TextEntity",
 ]
 
 
@@ -28,14 +31,19 @@ class SchemaEntity(BaseEntity[UUID]):
     name: Field[str]
 
 
+class TextEntity(BaseEntity[UUID, StringIO]):
+    __signpost__ = Signpost(StringIO)
+    name: Field[str]
+
+
 @dataclass
-class DataclassEntity(Entitieable[UUID], Schema):
+class DataclassEntity(Entitieable[UUID, None], Schema):
     id: ReadField[UUID]
     name: Field[str]
 
 
 @typed_fields
-class FieldsEntity(Entitieable[UUID], Schema):
+class FieldsEntity(Entitieable[UUID, None], Schema):
     id: ReadField[UUID]
     name: Field[str]
 

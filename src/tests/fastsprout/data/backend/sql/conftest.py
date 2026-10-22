@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Field as SQLField
@@ -16,6 +17,8 @@ from fastsprout.data.backend.sql import (
 )
 from fastsprout.data.backend.sql.capabilities import SQLAbilitable
 from fastsprout.data.backend.sql.entity import SQLSignpost
+from fastsprout.data.backend.sql.helpers import TableName
+from fastsprout.data.backend.sql.session import SessionFactory
 from fastsprout.data.backend.sql.streams import SQLEntityStream
 from fastsprout.data.capabilities.query import Gte, where
 from fastsprout.testing.core import given
@@ -62,6 +65,15 @@ class Hero(SQLEntity[int]):
     age: Field[int] = Field(default=0)
 
 
+class NamedColumnEntity(SQLEntity[int, SQLSignpost]):
+    __tablename__ = TableName("named_column_record")
+
+    id: ReadField[int] = SQLField(
+        sa_column=Column("stored_id", Integer, primary_key=True)
+    )
+    display_name: Field[str] = SQLField(sa_column=Column("stored_name", String))
+
+
 @given("a synchronous session factory for mapped field and DTO models")
 def sql_session_factory() -> Iterator[sessionmaker[Session]]:
     engine = create_engine("sqlite://")
@@ -90,7 +102,8 @@ def sql_signpost(
     async def shared_session() -> AsyncIterator[AsyncSession]:
         yield sql_session
 
-    return SQLSignpost(shared_session)
+    factory: SessionFactory = shared_session
+    return SQLSignpost(factory)
 
 
 @given("SQL abilities using the shared session signpost")

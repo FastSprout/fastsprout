@@ -11,16 +11,16 @@ from sqlalchemy.ext.asyncio import (
 )
 from testcontainers.community.mysql import MySqlContainer
 
-from fastsprout.data.backend.sql import SQLEntity, SQLSignpost
+from fastsprout.data.backend.sql import SQLSignpost
 
-from .sql import TestSQLDatabase, connect, container_database
+from .sql import SQLTestEntityable, TestSQLDatabase, connect, container_database
 
 __all__ = ["TestMySQL"]
 
 
 @overload
 def mysql(
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: None = None,
     container: MySqlContainer | None = None,
     engine: Callable[[str], AsyncEngine] = create_async_engine,
@@ -32,7 +32,7 @@ def mysql(
 
 @overload
 def mysql[S: SQLSignpost](
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: type[S],
     container: MySqlContainer | None = None,
     engine: Callable[[str], AsyncEngine] = create_async_engine,
@@ -43,7 +43,7 @@ def mysql[S: SQLSignpost](
 
 
 def mysql[S: SQLSignpost](
-    *entities: type[SQLEntity],
+    *entities: SQLTestEntityable,
     signpost: type[S] | None = None,
     container: MySqlContainer | None = None,
     engine: Callable[[str], AsyncEngine] = create_async_engine,

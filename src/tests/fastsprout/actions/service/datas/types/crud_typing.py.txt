@@ -1,5 +1,5 @@
 from collections.abc import Mapping, Sequence
-from typing import ClassVar, assert_type
+from typing import assert_type
 from uuid import UUID
 
 from sqlmodel import Field as SQLField
@@ -14,10 +14,9 @@ from fastsprout.core.types import AnyIterable
 from fastsprout.data import sql
 from fastsprout.data import DataR
 from fastsprout.data.capabilities.query import BaseQuery
-from fastsprout.data.entity import Entitieable, Signpostable
+from fastsprout.data.entity import Entitieable
 from fastsprout.data.types import Valuable
 from fastsprout.data.streams.protocols import AsyncCommonStreamable
-from fastsprout.data.streams.implementation.base_common_stream import BaseCommonStream
 
 
 class Hero(sql.SQLEntity[UUID]):
@@ -133,6 +132,10 @@ async def batch_checks(
     assert_type(await default.bulk_update(heroes).to_list(), list[Hero])
     assert_type(await default.bulk_delete(deletes), int)
     custom = DataS(Hero, read=HeroRead, create=HeroCreate, update=HeroPatch, patch=HeroPatch)
+    assert_type(custom.bulk_create(creates), AsyncCommonStreamable[HeroRead])
+    assert_type(custom.bulk_update(updates), AsyncCommonStreamable[HeroRead])
+    assert_type(custom.bulk_patch(updates), AsyncCommonStreamable[HeroRead])
+    assert_type(custom.bulk_upsert(heroes), AsyncCommonStreamable[HeroRead])
     assert_type(await custom.bulk_create(creates).to_list(), list[HeroRead])
     assert_type(await custom.bulk_update(updates).to_list(), list[HeroRead])
     assert_type(await custom.bulk_patch(updates).to_list(), list[HeroRead])
@@ -145,8 +148,7 @@ async def batch_checks(
 
 
 @dataclass(kw_only=True)
-class MemoryEntity(Entitieable[UUID]):
-    __signpost__: ClassVar[Signpostable[None]]
+class MemoryEntity(Entitieable[UUID, None]):
     id: ReadField[UUID]
     name: Field[str]
     secret: InternalField[str]
@@ -191,7 +193,7 @@ async def selection_checks[Statement](query: BaseQuery[Hero, Statement], other: 
     selected = SelectedActions()
     assert_type(await selected.create(HeroCreate(name="Batman")), HeroRead)
     assert_type(await selected.find_first(query), HeroRead | None)
-    assert_type(selected.bulk_create([HeroCreate(name="Batman")]), BaseCommonStream[HeroRead])
+    assert_type(selected.bulk_create([HeroCreate(name="Batman")]), AsyncCommonStreamable[HeroRead])
     await selected.create(HeroPatch(score=1))  # error: reportArgumentType; mypy: arg-type
     service = DataS(Hero, read=HeroRead)
     assert_type(await service.get(query), HeroRead | None)

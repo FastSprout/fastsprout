@@ -10,12 +10,16 @@ __all__ = [
     "ExtraWritable",
     "ExtraWriteField",
     "InternalField",
+    "Internalable",
     "ReadField",
     "Readable",
     "SQLExtraReadable",
     "SQLExtraWritable",
     "SQLFieldable",
+    "SQLInternalable",
     "SQLReadable",
+    "SQLWritable",
+    "Writable",
     "WriteField",
 ]
 
@@ -60,19 +64,6 @@ class ExtraWritable(Protocol):
     ) -> Literal["entity", "extra_write", "extra_read_write"]: ...
 
 
-if TYPE_CHECKING:
-    from sqlalchemy import Table
-
-    class SQLFieldable(Protocol):
-        __table__: ClassVar[Table]
-
-    class SQLReadable(Readable, SQLFieldable, Protocol): ...
-
-    class SQLExtraReadable(ExtraReadable, SQLFieldable, Protocol): ...
-
-    class SQLExtraWritable(ExtraWritable, SQLFieldable, Protocol): ...
-
-
 class Writable(Protocol):
     @property
     def fastsprout_visibility(
@@ -85,6 +76,23 @@ class Writable(Protocol):
 class Internalable(Protocol):
     @property
     def fastsprout_visibility(self) -> Literal["entity"]: ...
+
+
+if TYPE_CHECKING:
+    from sqlalchemy import Table
+
+    class SQLFieldable(Protocol):
+        __table__: ClassVar[Table]
+
+    class SQLReadable(Readable, SQLFieldable, Protocol): ...
+
+    class SQLWritable(Writable, SQLFieldable, Protocol): ...
+
+    class SQLInternalable(Internalable, SQLFieldable, Protocol): ...
+
+    class SQLExtraReadable(ExtraReadable, SQLFieldable, Protocol): ...
+
+    class SQLExtraWritable(ExtraWritable, SQLFieldable, Protocol): ...
 
 
 class ReadField[T](Field[T, Readable]):

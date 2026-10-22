@@ -19,7 +19,7 @@ class SQLIterable[E: SQLEntity[Any]](
     def iter(
         self, query: BaseQuery[E, Select[tuple[E]]], /
     ) -> AsyncIterator[E]:
-        return aiter(SQLEntityStream(query, self._signpost))
+        return aiter(SQLEntityStream(query, self.signpost))
 
     def iter_per(
         self,
@@ -28,4 +28,4 @@ class SQLIterable[E: SQLEntity[Any]](
         *,
         chunk_size: int = DEFAULT_ITERATION_CHUNK_SIZE,
     ) -> AsyncIterator[Sequence[E]]:
-        return SQLEntityStream(query, self._signpost).chunked(chunk_size)
+        return SQLEntityStream(query, self.signpost).chunked(chunk_size)

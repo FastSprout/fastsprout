@@ -17,11 +17,15 @@ if TYPE_CHECKING:
     from .visibility import (
         ExtraReadable,
         ExtraWritable,
+        Internalable,
         Readable,
         SQLExtraReadable,
         SQLExtraWritable,
         SQLFieldable,
+        SQLInternalable,
         SQLReadable,
+        SQLWritable,
+        Writable,
     )
 
 __all__ = ["Field", "check_field_visibility", "model_building_context_var"]
@@ -41,9 +45,10 @@ def check_field_visibility(owner: type, name: str) -> None:
 
 T = TypeVar("T")
 FieldOwner = TypeVar("FieldOwner", default=object)
+FieldOrm = TypeVar("FieldOrm", default=None)
 
 
-class Field(Generic[T, FieldOwner]):  # default type parameter on Python 3.12
+class Field(Generic[T, FieldOwner, FieldOrm]):
     """Typed field descriptor.
 
     Annotation form: `is_active: Field[bool]`
@@ -74,13 +79,13 @@ class Field(Generic[T, FieldOwner]):  # default type parameter on Python 3.12
         default: T | UndefinedType = Undefined,
         default_factory: Callable[[], T] | None = None,
     ) -> None:
-        self.name = ""
-        self.orm = None
-        self.default = default
-        self.default_factory = default_factory
+        self.name: str = ""
+        self.orm: FieldOrm | None = None
+        self.default: T | UndefinedType = default
+        self.default_factory: Callable[[], T] | None = default_factory
 
     @classmethod
-    def descriptor(cls, name: str, orm: Any = None) -> Self:
+    def descriptor(cls, name: str, orm: FieldOrm | None = None) -> Self:
         """Internal: build the descriptor installed on model classes.
 
         Bypasses the public specifier constructor — framework use only
@@ -103,49 +108,65 @@ class Field(Generic[T, FieldOwner]):  # default type parameter on Python 3.12
 
         @overload
         def __get__[E: SQLExtraReadable](
-            self: "Field[T, ExtraReadable]",
+            self: "Field[T, ExtraReadable, FieldOrm]",
             instance: None,
             owner: type[E],
         ) -> FieldRef[E, T, Mapped[T]]: ...
 
         @overload
         def __get__[E: SQLExtraWritable](
-            self: "Field[T, ExtraWritable]",
+            self: "Field[T, ExtraWritable, FieldOrm]",
             instance: None,
             owner: type[E],
         ) -> FieldRef[E, T, Mapped[T]]: ...
 
         @overload
         def __get__[E: SQLReadable](
-            self: "Field[T, Readable]",
+            self: "Field[T, Readable, FieldOrm]",
+            instance: None,
+            owner: type[E],
+        ) -> FieldRef[E, T, Mapped[T]]: ...
+
+        @overload
+        def __get__[E: SQLWritable](
+            self: "Field[T, Writable, FieldOrm]",
+            instance: None,
+            owner: type[E],
+        ) -> FieldRef[E, T, Mapped[T]]: ...
+
+        @overload
+        def __get__[E: SQLInternalable](
+            self: "Field[T, Internalable, FieldOrm]",
             instance: None,
             owner: type[E],
         ) -> FieldRef[E, T, Mapped[T]]: ...
 
         @overload
         def __get__[E: SQLFieldable](
-            self: "Field[T, object]",
+            self: "Field[T, object, FieldOrm]",
             instance: None,
             owner: type[E],
         ) -> FieldRef[E, T, Mapped[T]]: ...
 
         @overload
         def __get__[E: Readable](
-            self: "Field[T, Readable]", instance: None, owner: type[E]
-        ) -> FieldRef[E, T, None]: ...
+            self: "Field[T, Readable, FieldOrm]", instance: None, owner: type[E]
+        ) -> FieldRef[E, T, FieldOrm | None]: ...
 
     @overload
     def __get__[OrmCtor](
-        self: "Field[T, object]", instance: None, owner: type[HasOrm[OrmCtor]]
+        self: "Field[T, object, FieldOrm]",
+        instance: None,
+        owner: type[HasOrm[OrmCtor]],
     ) -> FieldRef[Any, T, OrmCtor]: ...
     @overload
     def __get__[E](
-        self: "Field[T, object]", instance: None, owner: type[E]
-    ) -> FieldRef[E, T, None]: ...
+        self: "Field[T, object, FieldOrm]", instance: None, owner: type[E]
+    ) -> FieldRef[E, T, FieldOrm | None]: ...
     @overload
     def __get__(
         self, instance: None, owner: type[FieldOwner]
-    ) -> FieldRef[FieldOwner, T, Any]: ...
+    ) -> FieldRef[FieldOwner, T, FieldOrm | None]: ...
     @overload
     def __get__(self, instance: FieldOwner, owner: type[FieldOwner]) -> T: ...
     def __get__(

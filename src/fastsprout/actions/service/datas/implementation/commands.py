@@ -4,13 +4,12 @@ from typing_extensions import TypeVar
 
 from fastsprout.core import Depends, IdentificatorType, Schema
 from fastsprout.core.dto.conversion import project_read
+from fastsprout.core.fields.visibility import EntityVisibility
 from fastsprout.core.types import AnyIterable
 from fastsprout.core.types.protocols.identificable import Identificatable
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.router import DataR
-from fastsprout.data.streams.implementation.base_common_stream import (
-    BaseCommonStream,
-)
+from fastsprout.data.streams.protocols import AsyncCommonStreamable
 from fastsprout.data.types import Valuable
 from fastsprout.data.utils.iterable import achain
 
@@ -146,7 +145,7 @@ async def bulk_create(
     *,
     datar: DataR = Depends(),
 ) -> list[R]:
-    relations: dict[int, Entitieable[IdentificatorType]] = {}
+    relations: dict[int, EntityVisibility] = {}
     prepared: list[E] = [
         await prepare_new_entity(
             self.entity, self.create_schema, entity, datar, relations=relations
@@ -164,7 +163,7 @@ def bulk_update(
     /,
     *,
     datar: DataR = Depends(),
-) -> BaseCommonStream[R]: ...
+) -> AsyncCommonStreamable[R]: ...
 
 
 @overload
@@ -174,7 +173,7 @@ def bulk_update(
     /,
     *,
     datar: DataR = Depends(),
-) -> BaseCommonStream[R]: ...
+) -> AsyncCommonStreamable[R]: ...
 
 
 @batch_stream
