@@ -32,16 +32,38 @@ the SQL context's table, session, and binding lifecycle. Pass a configured
 `PostgresContainer`, an engine factory, or a session factory for native settings.
 The default image is the public `postgres:18-alpine` image.
 
-Container tests require Docker. Select them with the integration marker:
+Container lifecycle tests require a local Docker API. Select them with the
+docker marker:
 
 ```bash
 uv run --extra testing-data \
-  pytest src/tests/fastsprout/testing/data -m integration --no-cov
+  pytest src/tests/fastsprout/testing/data -m docker --no-cov
 ```
 
-Use `pytest -m "not integration"` to run without containers. Unavailable Docker
-infrastructure fails integration tests. The CI container job requires a runner
-allowing privileged Docker-in-Docker services.
+Use `pytest -m "not integration"` to run without external services. Unavailable
+Docker infrastructure fails the selected container lifecycle tests.
+
+CI runs database and broker integration tests against ordinary GitLab service
+containers. It does not start Docker-in-Docker, mount a Docker socket, or require
+privileged jobs. PostgreSQL, MySQL, MariaDB, Oracle, Kafka, NATS, and RabbitMQ each
+run in their own job on Python 3.12–3.14. Service jobs are serialized to limit
+cluster resource use. The integration jobs, changelog, and public API type
+coverage run in merge request pipelines as well as branch pipelines.
+
+For example, with an existing PostgreSQL service:
+
+```bash
+TEST_SERVICE_URL=postgresql+asyncpg://tester:testing@localhost:5432/heroes \
+  uv run --extra testing-data pytest \
+  src/tests/fastsprout/testing/data/test_services.py -m integration --no-cov
+```
+
+Broker service tests use `TEST_SERVICE_URL` and the corresponding class in
+`src/tests/fastsprout/events/backend/test_services.py`: `TestKafkaService`,
+`TestNATSService`, or `TestRabbitMQService`. Each test uses its own route to
+isolate messages on a shared service. Container factory configuration, startup
+failure, cancellation, and cleanup contracts remain covered by unit tests;
+the docker-marked tests additionally exercise a real local Docker runtime.
 
 See the [PostgreSQL example](../learn/examples/testing/2-data/2-postgresql.md).
 

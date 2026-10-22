@@ -178,7 +178,8 @@ testpaths = ["src/tests"]
 asyncio_mode = "auto"
 markers = [
     "unit: Unit tests - no external dependencies",
-    "integration: Integration tests - testcontainers or in-memory mocks",
+    "integration: Tests against real database or broker services",
+    "docker: Testcontainers startup and cleanup tests requiring a local Docker API",
     "slow: Tests taking more than 5 seconds",
 ]
 

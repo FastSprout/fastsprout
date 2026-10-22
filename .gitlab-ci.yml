@@ -3,6 +3,13 @@
 # Release on tag, ordered by stage: Nexus -> TestPyPI -> PyPI.
 stages: [static-analysis, test, release-nexus, release-testpypi, release-pypi, docs]
 
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+    - when: always
+
 default:
   retry:
     max: 2
@@ -82,33 +89,137 @@ python-quality:
       - UV_PYTHON: ["3.12", "3.13", "3.14"]
   image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
 
-container-tests:
+.integration-tests:
   stage: test
   retry: *retry_nonrelease_job
   parallel: *python_matrix
+  resource_group: integration-services
+  interruptible: true
+  dependencies: []
   image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
-  services:
-    - name: harbor.3dcra.net/dockerhub-proxy/docker:28.5.1-dind
-      alias: docker
-      command: ["--tls=false"]
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-    TESTCONTAINERS_HOST_OVERRIDE: docker
-    RYUK_CONTAINER_IMAGE: harbor.3dcra.net/dockerhub-proxy/testcontainers/ryuk:0.8.1
   script:
-    # The main pytest matrix collects project coverage; this job exercises real containers.
     - >-
       uv run --locked --all-extras --all-groups pytest
-      src/tests/fastsprout/testing/data src/tests/fastsprout/testing/events
-      -m integration --no-cov --junitxml=container-tests.xml
+      "$TEST_SERVICE_CASE"
+      -m integration --no-cov --junitxml=integration-tests.xml
   artifacts:
     when: always
     reports:
-      junit: container-tests.xml
+      junit: integration-tests.xml
+  rules: &verification_rules
+    - when: on_success
+
+.database-tests:
+  extends: .integration-tests
+  variables:
+    TEST_SERVICE_CASE: src/tests/fastsprout/testing/data/test_services.py
+
+postgresql-tests:
+  extends: .database-tests
+  variables:
+    TEST_SERVICE_URL: postgresql+asyncpg://tester:testing@backend:5432/heroes
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/library/postgres:18-alpine
+      alias: backend
+      variables:
+        POSTGRES_USER: tester
+        POSTGRES_PASSWORD: testing
+        POSTGRES_DB: heroes
+        HEALTHCHECK_TCP_PORT: "5432"
+
+mysql-tests:
+  extends: .database-tests
+  variables:
+    TEST_SERVICE_URL: mysql+asyncmy://tester:testing@backend:3306/heroes
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/library/mysql:8.4
+      alias: backend
+      variables:
+        MYSQL_ROOT_PASSWORD: testing_root
+        MYSQL_USER: tester
+        MYSQL_PASSWORD: testing
+        MYSQL_DATABASE: heroes
+        HEALTHCHECK_TCP_PORT: "3306"
+
+mariadb-tests:
+  extends: .database-tests
+  variables:
+    TEST_SERVICE_URL: mysql+asyncmy://tester:testing@backend:3306/heroes
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/library/mariadb:11.4
+      alias: backend
+      variables:
+        MARIADB_ROOT_PASSWORD: testing_root
+        MARIADB_USER: tester
+        MARIADB_PASSWORD: testing
+        MARIADB_DATABASE: heroes
+        HEALTHCHECK_TCP_PORT: "3306"
+
+oracle-tests:
+  extends: .database-tests
+  variables:
+    TEST_SERVICE_URL: oracle+oracledb://tester:testing@backend:1521/?service_name=FREEPDB1
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/gvenzl/oracle-free:23-slim-faststart
+      alias: backend
+      variables:
+        ORACLE_PASSWORD: testing_root
+        APP_USER: tester
+        APP_USER_PASSWORD: testing
+        HEALTHCHECK_TCP_PORT: "1521"
+
+kafka-tests:
+  extends: .integration-tests
+  variables:
+    TEST_SERVICE_CASE: src/tests/fastsprout/events/backend/test_services.py::TestKafkaService
+    TEST_SERVICE_URL: backend:9092
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/confluentinc/cp-kafka:7.6.0
+      alias: backend
+      variables:
+        CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+        KAFKA_NODE_ID: "1"
+        KAFKA_PROCESS_ROLES: broker,controller
+        KAFKA_CONTROLLER_QUORUM_VOTERS: 1@backend:9093
+        KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+        KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://backend:9092
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+        KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+        KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+        KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+        KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+        KAFKA_HEAP_OPTS: -Xms128m -Xmx512m
+        HEALTHCHECK_TCP_PORT: "9092"
+
+nats-tests:
+  extends: .integration-tests
+  variables:
+    TEST_SERVICE_CASE: src/tests/fastsprout/events/backend/test_services.py::TestNATSService
+    TEST_SERVICE_URL: nats://backend:4222
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/library/nats:2-alpine
+      alias: backend
+      variables:
+        HEALTHCHECK_TCP_PORT: "4222"
+
+rabbitmq-tests:
+  extends: .integration-tests
+  variables:
+    TEST_SERVICE_CASE: src/tests/fastsprout/events/backend/test_services.py::TestRabbitMQService
+    TEST_SERVICE_URL: amqp://tester:testing@backend:5672/
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/library/rabbitmq:4.1.0-alpine
+      alias: backend
+      variables:
+        RABBITMQ_DEFAULT_USER: tester
+        RABBITMQ_DEFAULT_PASS: testing
+        HEALTHCHECK_TCP_PORT: "5672"
 
 changelog:
   stage: static-analysis
+  rules: *verification_rules
   image:
     name: harbor.3dcra.net/dockerhub-proxy/orhunp/git-cliff:2.14.2
     entrypoint: [""]
@@ -124,6 +235,7 @@ changelog:
 
 type-coverage:
   stage: static-analysis
+  rules: *verification_rules
   retry: *retry_nonrelease_job
   parallel: *python_matrix
   image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim

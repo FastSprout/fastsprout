@@ -16,6 +16,7 @@ from .conftest import ContextRecord
 
 
 @pytest.mark.integration
+@pytest.mark.docker
 class TestPostgreSQLContext(BaseTestSQLDatabase):
     def make_database(
         self,

@@ -14,6 +14,7 @@ from .conftest import ContextRecord
 
 
 @pytest.mark.integration
+@pytest.mark.docker
 class TestOracleContext(BaseTestSQLDatabase):
     def make_database(
         self,
