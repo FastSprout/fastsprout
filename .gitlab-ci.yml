@@ -82,8 +82,17 @@ build-sonar:
     paths:
       - "${SONAR_USER_HOME}/cache"
       - sonar-scanner/
+  before_script:
+    - mkdir -p "${SONAR_USER_HOME}/ssl"
+    - >-
+      keytool -importcert -noprompt -trustcacerts
+      -alias threedcra -file "${THREE_DCRA_CA}"
+      -keystore "${SONAR_USER_HOME}/ssl/truststore.p12"
+      -storetype PKCS12 -storepass changeit
   script:
-    - sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}"
+    - >-
+      sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}"
+      -Dsonar.scanner.truststorePassword=changeit
   allow_failure: true
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
