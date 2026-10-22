@@ -110,13 +110,12 @@ container-tests:
 changelog:
   stage: static-analysis
   image:
-    name: harbor.3dcra.net/github-proxy/orhunp/git-cliff:2.14.2
+    name: harbor.3dcra.net/dockerhub-proxy/orhunp/git-cliff:2.14.2
     entrypoint: [""]
   variables:
     GIT_DEPTH: "0"
     GIT_STRATEGY: clone
   script:
-    - git fetch origin --tags
     - git-cliff --config cliff.toml --output CHANGELOG.txt
   artifacts:
     expose_as: Changelog
