@@ -4,7 +4,7 @@ from .deletable import Deletable
 from .findable import Findable
 from .iterable import Iterable
 from .streamable import Streamable
-from .updatable import Updatable, UpdatableByQuery
+from .updatable import Updatable, UpdatableByQueryable
 from .upsertable import Upsertable
 
 __all__ = [
@@ -15,6 +15,6 @@ __all__ = [
     "Iterable",
     "Streamable",
     "Updatable",
-    "UpdatableByQuery",
+    "UpdatableByQueryable",
     "Upsertable",
 ]

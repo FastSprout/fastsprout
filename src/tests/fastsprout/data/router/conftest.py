@@ -1,64 +1,64 @@
-from contextlib import AsyncExitStack
+from collections.abc import AsyncIterator
 
-import pytest
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlmodel import Field as SQLField
 
-from fastsprout.core import Field
-from fastsprout.data.backend.sql import SQLEntity
-from fastsprout.data.backend.sql.entity import SQLSignpost
+from fastsprout.core import Field, ReadField
+from fastsprout.data.backend.sql import SQLEntity, SQLSignpost
+from fastsprout.testing.core import given
+from fastsprout.testing.data import TestSQLite
+
+
+class Item(SQLEntity[int]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str] = Field(default="")
+
+
+@given("an isolated SQLite database for DataR operations")
+async def signpost() -> AsyncIterator[SQLSignpost]:
+    async with TestSQLite(Item) as database:
+        yield database.signpost
 
 
 class JoinOrder(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     customer_id: Field[int]
     product_id: Field[int]
 
 
 class JoinCustomer(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str]
 
 
 class JoinProduct(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str]
 
 
-@pytest.fixture
-async def databases():
-    engines = []
-    async with AsyncExitStack() as stack:
-        for entities, rows in [
-            (
-                [JoinOrder],
+@given("orders and their catalog stored in two isolated SQLite databases")
+async def databases() -> AsyncIterator[tuple[AsyncEngine, AsyncEngine]]:
+    async with (
+        TestSQLite(JoinOrder) as orders,
+        TestSQLite(JoinCustomer, JoinProduct) as catalog,
+    ):
+        async with orders.session() as session:
+            session.add_all(
                 [
                     JoinOrder(id=1, customer_id=10, product_id=20),
                     JoinOrder(id=2, customer_id=11, product_id=21),
                     JoinOrder(id=3, customer_id=99, product_id=20),
-                ],
-            ),
-            (
-                [JoinCustomer, JoinProduct],
+                ]
+            )
+            await session.commit()
+        async with catalog.session() as session:
+            session.add_all(
                 [
                     JoinCustomer(id=10, name="Ada"),
                     JoinCustomer(id=11, name="Lin"),
                     JoinProduct(id=20, name="Tea"),
                     JoinProduct(id=21, name="Coffee"),
-                ],
-            ),
-        ]:
-            engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-            engines.append(engine)
-            stack.push_async_callback(engine.dispose)
-            async with engine.begin() as connection:
-                for entity in entities:
-                    await connection.run_sync(entity.__table__.create)
-            factory = async_sessionmaker(engine, expire_on_commit=False)
-            signpost = SQLSignpost(factory)
-            for entity in entities:
-                entity.__signpost__ = signpost
-            async with factory() as session:
-                session.add_all(rows)
-                await session.commit()
-        yield engines
+                ]
+            )
+            await session.commit()
+        yield orders.engine, catalog.engine

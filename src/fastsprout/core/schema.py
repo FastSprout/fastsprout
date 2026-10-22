@@ -1,13 +1,16 @@
+from typing import ClassVar
+
 from pydantic import AliasGenerator, BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel, to_snake
 
 from fastsprout.core.fields.metaclass import TypedModelMeta
 from fastsprout.core.fields.visibility import EntityVisibility
+from fastsprout.core.types.schema import Schema
 
-__all__ = ["BaseSchema"]
+__all__ = ["BaseSchema", "Schema"]
 
 
-class BaseSchema(EntityVisibility, BaseModel, metaclass=TypedModelMeta):
+class BaseSchema(Schema, EntityVisibility, BaseModel, metaclass=TypedModelMeta):
     """Base schema with type-safe field descriptors.
 
     Subclasses declare fields with Field[T] annotations:
@@ -24,7 +27,7 @@ class BaseSchema(EntityVisibility, BaseModel, metaclass=TypedModelMeta):
         Hero.is_active.set(True)        # FieldAssignment[bool]
     """
 
-    model_config = ConfigDict(
+    model_config: ClassVar[ConfigDict] = ConfigDict(
         alias_generator=AliasGenerator(
             alias=to_snake,
             validation_alias=to_camel,

@@ -1,24 +1,24 @@
 from collections.abc import AsyncIterator, Iterable, Sequence
 from typing import ClassVar, Protocol, runtime_checkable
 
-from fastsprout.core.schema import BaseSchema
+from fastsprout.core.types.schema import Schema
 
 __all__ = [
-    "BaseAction",
-    "BaseActionGroup",
-    "BaseIterableAction",
-    "BaseIterableTriggerAction",
-    "BaseIteratorAction",
-    "BaseIteratorTriggerAction",
-    "BaseNullableAction",
-    "BaseSequenceAction",
-    "BaseSequenceTriggerAction",
-    "BaseTriggerAction",
+    "ActionGroupable",
+    "Actionable",
+    "IterableActionable",
+    "IterableTriggerActionable",
+    "IteratorActionable",
+    "IteratorTriggerActionable",
+    "NullableActionable",
+    "SequenceActionable",
+    "SequenceTriggerActionable",
+    "TriggerActionable",
 ]
 
 
 @runtime_checkable
-class BaseAction[I: BaseSchema, O: BaseSchema](Protocol):
+class Actionable[I: Schema, O: Schema](Protocol):
     """Atomic unit of work in fastsprout.
 
     Actions take a single typed payload and return a typed result.
@@ -30,7 +30,7 @@ class BaseAction[I: BaseSchema, O: BaseSchema](Protocol):
 
 
 @runtime_checkable
-class BaseNullableAction[I: BaseSchema, O: BaseSchema | None](Protocol):
+class NullableActionable[I: Schema, O: Schema | None](Protocol):
     """Atomic unit of work in fastsprout.
 
     Actions take a single typed payload and return a typed result or nullable value.
@@ -42,7 +42,7 @@ class BaseNullableAction[I: BaseSchema, O: BaseSchema | None](Protocol):
 
 
 @runtime_checkable
-class BaseIterableAction[I: BaseSchema, O: BaseSchema](Protocol):
+class IterableActionable[I: Schema, O: Schema](Protocol):
     """Atomic unit of work in fastsprout.
 
     Actions take a single typed payload and return a typed result.
@@ -54,7 +54,7 @@ class BaseIterableAction[I: BaseSchema, O: BaseSchema](Protocol):
 
 
 @runtime_checkable
-class BaseIteratorAction[I: BaseSchema, O: BaseSchema](Protocol):
+class IteratorActionable[I: Schema, O: Schema](Protocol):
     """Atomic unit of work in fastsprout.
 
     Actions take a single typed payload and return a typed result.
@@ -66,7 +66,7 @@ class BaseIteratorAction[I: BaseSchema, O: BaseSchema](Protocol):
 
 
 @runtime_checkable
-class BaseSequenceAction[I: BaseSchema, O: BaseSchema](Protocol):
+class SequenceActionable[I: Schema, O: Schema](Protocol):
     """Atomic unit of work in fastsprout.
 
     Actions take a single typed payload and return a typed result.
@@ -78,35 +78,35 @@ class BaseSequenceAction[I: BaseSchema, O: BaseSchema](Protocol):
 
 
 @runtime_checkable
-class BaseTriggerAction[O: BaseSchema](Protocol):
+class TriggerActionable[O: Schema](Protocol):
     """Action triggered without payload (cron jobs, no-input commands)."""
 
     async def __call__(self, /) -> O: ...
 
 
 @runtime_checkable
-class BaseIterableTriggerAction[O: BaseSchema](Protocol):
+class IterableTriggerActionable[O: Schema](Protocol):
     """Action triggered without payload (cron jobs, no-input commands)."""
 
     async def __call__(self, /) -> Iterable[O]: ...
 
 
 @runtime_checkable
-class BaseIteratorTriggerAction[O: BaseSchema](Protocol):
+class IteratorTriggerActionable[O: Schema](Protocol):
     """Action triggered without payload (cron jobs, no-input commands)."""
 
     def __call__(self, /) -> AsyncIterator[O]: ...
 
 
 @runtime_checkable
-class BaseSequenceTriggerAction[O: BaseSchema](Protocol):
+class SequenceTriggerActionable[O: Schema](Protocol):
     """Action triggered without payload (cron jobs, no-input commands)."""
 
     async def __call__(self, /) -> Sequence[O]: ...
 
 
 @runtime_checkable
-class BaseActionGroup(Protocol):
+class ActionGroupable(Protocol):
     """Group of actions — class with multiple decorated methods."""
 
     __action_group__: ClassVar[bool]

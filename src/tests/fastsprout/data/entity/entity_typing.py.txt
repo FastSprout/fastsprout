@@ -1,0 +1,76 @@
+from collections.abc import Callable
+from io import StringIO
+from typing import assert_type
+from uuid import UUID, uuid4
+
+from fastsprout.core import IdentificatorType
+from fastsprout.data.entity import Entitieable
+from fastsprout.data.streams.implementation import SimpleAsyncEntityStream
+from models import (
+    DataclassEntity, DataclassRead, DataclassWrite,
+    FieldsEntity, FieldsRead, FieldsWrite,
+    SchemaEntity, SchemaRead, SchemaWrite,
+    TextEntity,
+)
+
+
+def identity[ID: IdentificatorType, Resource](entity: Entitieable[ID, Resource]) -> ID:
+    assert_type(entity.id, ID)
+    return entity.id
+
+
+def resource[ID: IdentificatorType, Resource](entity: type[Entitieable[ID, Resource]]) -> Resource:
+    return entity.signpost().factory()
+
+
+def text_resource(entity: TextEntity) -> None:
+    assert_type(resource(TextEntity), StringIO)
+    assert_type(entity.__signpost__.factory(), StringIO)
+    assert_type(TextEntity.__signpost__.factory(), StringIO)
+    assert_type(TextEntity.signpost().factory(), StringIO)
+    assert_type(identity(entity), UUID)
+
+
+def create[**P, E](factory: Callable[P, E], *args: P.args, **kwargs: P.kwargs) -> E:
+    return factory(*args, **kwargs)
+
+
+async def check(schema: SchemaEntity, dataclass: DataclassEntity, fields: FieldsEntity) -> None:
+    assert_type(identity(schema), UUID)
+    assert_type(identity(dataclass), UUID)
+    assert_type(identity(fields), UUID)
+    assert_type(create(SchemaEntity, id=uuid4(), name="item"), SchemaEntity)
+    assert_type(create(DataclassEntity, id=uuid4(), name="item"), DataclassEntity)
+    assert_type(create(FieldsEntity, id=uuid4(), name="item"), FieldsEntity)
+    assert_type(SimpleAsyncEntityStream([schema]), SimpleAsyncEntityStream[SchemaEntity])
+    assert_type(SimpleAsyncEntityStream([dataclass]), SimpleAsyncEntityStream[DataclassEntity])
+    assert_type(SimpleAsyncEntityStream([fields]), SimpleAsyncEntityStream[FieldsEntity])
+    async for item in SimpleAsyncEntityStream([schema]):
+        assert_type(item.id, UUID)
+    create(SchemaEntity, id="invalid", name="item")  # error: reportArgumentType; mypy: arg-type
+    create(DataclassEntity, id="invalid", name="item")  # error: reportArgumentType; mypy: arg-type
+    create(FieldsEntity, id="invalid", name="item")  # error: reportArgumentType; mypy: arg-type
+
+
+def read(schema: SchemaRead, dataclass: DataclassRead, fields: FieldsRead) -> None:
+    assert_type(schema.id, UUID)
+    assert_type(dataclass.id, UUID)
+    assert_type(fields.id, UUID)
+    assert_type(identity(schema), UUID)
+    assert_type(identity(dataclass), UUID)
+    assert_type(identity(fields), UUID)
+
+
+def write(schema: SchemaWrite, dataclass: DataclassWrite, fields: FieldsWrite) -> None:
+    _ = schema.id  # error: reportAttributeAccessIssue; mypy: call-overload
+    _ = dataclass.id  # error: reportAttributeAccessIssue; mypy: call-overload
+    _ = fields.id  # error: reportAttributeAccessIssue; mypy: call-overload
+
+
+class Foreign:
+    id: UUID
+
+
+def foreign(entity: Foreign) -> None:
+    identity(entity)  # error: reportArgumentType; mypy: arg-type
+    SimpleAsyncEntityStream([entity])  # error: reportArgumentType; mypy: type-var

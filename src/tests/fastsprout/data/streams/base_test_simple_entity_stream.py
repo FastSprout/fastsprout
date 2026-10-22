@@ -1,4 +1,4 @@
-from collections.abc import Awaitable, Callable, Generator
+from collections.abc import Awaitable, Callable
 from typing import Any, cast
 from unittest.mock import AsyncMock, Mock
 
@@ -10,163 +10,16 @@ from fastsprout.data.streams.implementation import SimpleAsyncEntityStream
 from tests.fastsprout.data.streams.conftest import (
     RANGE_START_END,
     make_async_entity_range,
-    make_entity_range,
 )
+
+from .base_test_entity_operations import BaseTestEntityOperations
 
 __all__ = ["BaseTestSimpleAsyncEntityStream"]
 
 
-class BaseTestSimpleAsyncEntityStream[E: Entitieable[Any]]:
-    __slots__ = ("_entity_builder", "_entity_type", "_range_generator")
-
-    _entity_type: type[E]
-    _entity_builder: staticmethod
-    _range_generator: staticmethod
-
-    @property
-    def entity_stream(self) -> SimpleAsyncEntityStream[E]:
-        return SimpleAsyncEntityStream(
-            self._range_generator(self._entity_builder)
-        )  # pyright: ignore[reportCallIssue]
-
-    async def test_concat(self):
-        # given
-        entity_stream = self.entity_stream
-        async_iterable = make_async_entity_range(self._entity_builder)
-        entity_stream_async = SimpleAsyncEntityStream(
-            make_async_entity_range(self._entity_builder)
-        )
-        sync_iterable: Generator[E, None, None] = make_entity_range()  # pyright: ignore[reportAssignmentType]
-        entity_stream_sync = SimpleAsyncEntityStream(
-            make_entity_range(self._entity_builder)
-        )
-        # when
-        result = entity_stream.concat(
-            async_iterable,
-            entity_stream_async,
-            sync_iterable,
-            entity_stream_sync,
-        )
-        # then
-        item_number = 0
-        async for _ in result:
-            item_number += 1
-        assert item_number == (RANGE_START_END[1] * 5)
-
-    async def test_map(self):
-        # given
-        entity_stream = self.entity_stream
-        # when
-        result = entity_stream.map(lambda entity: entity)
-        # then
-        assert len(await result.to_list()) == RANGE_START_END[1]
-
-    async def test_filter(self):
-        # given
-        entity_stream = self.entity_stream
-        # when
-        result = entity_stream.filter(lambda _: True)
-        # then
-        assert len(await result.to_list()) == RANGE_START_END[1]
-
-    async def test_filter_all_out(self):
-        # given
-        entity_stream = self.entity_stream
-        # when
-        result = entity_stream.filter(lambda _: False)
-        # then
-        assert len(await result.to_list()) == 0
-
-    async def test_distinct(self):
-        # given
-        entities = list(make_entity_range(self._entity_builder))
-        entity_stream = SimpleAsyncEntityStream(entities + entities)
-        # when
-        result = entity_stream.distinct()
-        # then
-        assert len(await result.to_list()) == RANGE_START_END[1]
-
-    @pytest.mark.parametrize("mock_class", [Mock, AsyncMock])
-    async def test_peek(self, mock_class: type[Mock] | type[AsyncMock]):
-        # given
-        mock = mock_class(return_value=None)
-        entity_stream = self.entity_stream
-        # when
-        result = entity_stream.peek(mock)
-        # then
-        assert len(await result.to_list()) == RANGE_START_END[1]
-        assert len(mock.call_args_list) == RANGE_START_END[1]
-
-    async def test_take(self):
-        # given
-        entity_stream = self.entity_stream
-        # when
-        result = entity_stream.take(3)
-        # then
-        assert len(await result.to_list()) == 3
-
-    async def test_take_minus(self):
-        # given
-        entity_stream = self.entity_stream
-        # when
-        result = entity_stream.take(-1)
-        # then
-        assert len(await result.to_list()) == 0
-
-    async def test_take_more_than_available(self):
-        # given
-        entity_stream = self.entity_stream
-        # when
-        result = entity_stream.take(RANGE_START_END[1] + 10)
-        # then
-        assert len(await result.to_list()) == RANGE_START_END[1]
-
-    async def test_drop(self):
-        # given
-        entity_stream = self.entity_stream
-        # when
-        result = entity_stream.drop(3)
-        # then
-        assert len(await result.to_list()) == RANGE_START_END[1] - 3
-
-    async def test_drop_more_than_available(self):
-        # given
-        entity_stream = self.entity_stream
-        # when
-        result = entity_stream.drop(RANGE_START_END[1] + 10)
-        # then
-        assert len(await result.to_list()) == 0
-
-    async def test_take_while(self):
-        # given
-        entity_stream = self.entity_stream
-        index = 0
-
-        def predicate(_) -> bool:
-            nonlocal index
-            index += 1
-            return index <= 3
-
-        # when
-        result = entity_stream.take_while(predicate)
-        # then
-        assert len(await result.to_list()) == 3
-
-    async def test_drop_while(self):
-        # given
-        entity_stream = self.entity_stream
-        index = 0
-
-        def predicate(_) -> bool:
-            nonlocal index
-            index += 1
-            return index <= 3
-
-        # when
-        result = entity_stream.drop_while(predicate)
-        # then
-        assert len(await result.to_list()) == RANGE_START_END[1] - 3
-
+class BaseTestSimpleAsyncEntityStream[E: Entitieable](
+    BaseTestEntityOperations[E]
+):
     async def test_to_list(self):
         # given
         entity_stream = self.entity_stream
@@ -176,15 +29,7 @@ class BaseTestSimpleAsyncEntityStream[E: Entitieable[Any]]:
         assert isinstance(result, list)
         assert len(result) == RANGE_START_END[1]
         for item in result:
-            assert isinstance(item, self._entity_type)
-
-    async def test_to_values(self):
-        # given
-        entity_stream = self.entity_stream
-        # when
-        result = entity_stream.to_values(lambda entity: entity.id)
-        # then
-        assert len(await result.to_list()) == RANGE_START_END[1]
+            assert isinstance(item, self.entity_type)
 
     async def test_to_dict(self):
         # given
@@ -226,7 +71,7 @@ class BaseTestSimpleAsyncEntityStream[E: Entitieable[Any]]:
         assert len(mock.call_args_list) == RANGE_START_END[1]
         for call in mock.call_args_list:
             assert len(call.args) == 1
-            assert isinstance(call.args[0], self._entity_type)
+            assert isinstance(call.args[0], self.entity_type)
 
     async def test_reduce(self):
         # given
@@ -262,7 +107,7 @@ class BaseTestSimpleAsyncEntityStream[E: Entitieable[Any]]:
         # when
         result = await entity_stream.first()
         # then
-        assert isinstance(result, self._entity_type)
+        assert isinstance(result, self.entity_type)
 
     async def test_first_empty(self):
         # given
@@ -326,66 +171,6 @@ class BaseTestSimpleAsyncEntityStream[E: Entitieable[Any]]:
         result = await entity_stream.any(lambda _: True)
         # then
         assert result is False
-
-    async def test_chained_lazy_await(self):
-        # given
-        entity_stream = self.entity_stream
-        # when
-        result = await entity_stream.filter(lambda _: True).take(5).count()
-        # then
-        assert result == 5
-
-    async def test_sort(self):
-        # given
-        entities = list(make_entity_range(self._entity_builder))
-        entity_stream = SimpleAsyncEntityStream(list(reversed(entities)))
-        # when
-        result = await entity_stream.sort(lambda entity: entity.id).to_list()
-        # then
-        assert [e.id for e in result] == sorted(e.id for e in entities)
-
-    async def test_sort_reverse(self):
-        # given
-        entities = list(make_entity_range(self._entity_builder))
-        entity_stream = SimpleAsyncEntityStream(entities)
-        # when
-        result = await entity_stream.sort(
-            lambda entity: entity.id, reverse=True
-        ).to_list()
-        # then
-        assert [e.id for e in result] == sorted(
-            (e.id for e in entities), reverse=True
-        )
-
-    async def test_sort_with_async_key(self):
-        # given
-        entities = list(make_entity_range(self._entity_builder))
-        entity_stream = SimpleAsyncEntityStream(list(reversed(entities)))
-
-        async def key(entity: E) -> int:
-            return entity.id
-
-        # when
-        result = await entity_stream.sort(key).to_list()
-        # then
-        assert [e.id for e in result] == sorted(e.id for e in entities)
-
-    async def test_sort_stable_on_equal_keys(self):
-        # given
-        entities = list(make_entity_range(self._entity_builder))
-        entity_stream = SimpleAsyncEntityStream(entities)
-        # when
-        result = entity_stream.sort(lambda _: 0)
-        # then
-        assert await result.to_list() == entities
-
-    async def test_sort_empty(self):
-        # given
-        entity_stream = SimpleAsyncEntityStream[E]([])
-        # when
-        result = entity_stream.sort(lambda entity: entity.id)
-        # then
-        assert await result.to_list() == []
 
     @pytest.mark.parametrize(
         "stream_call, expected_result",
@@ -505,7 +290,7 @@ class BaseTestSimpleAsyncEntityStream[E: Entitieable[Any]]:
         # given
         # when
         stream_result = await stream_call(
-            self._entity_builder, self._range_generator(self._entity_builder)
+            self.entity_builder, self.range_generator(self.entity_builder)
         )
         # then
         assert stream_result == expected_result

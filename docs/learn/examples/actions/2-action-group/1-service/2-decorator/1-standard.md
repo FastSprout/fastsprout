@@ -1,0 +1,17 @@
+# 1. Standard
+
+<!-- example-source: examples/actions/02_action_group/01_service/02_decorator/01_standard.py -->
+
+Action service — standard.
+
+## Source
+
+```{.python}
+--8<-- "examples/actions/02_action_group/01_service/02_decorator/01_standard.py"
+```
+
+## Result
+
+```text
+content=b'FastSprout' signature='signed:10'
+```

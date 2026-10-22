@@ -7,5 +7,6 @@
       members:
         - DataR
         - JoinedStream
+        - Relationship
         - SimpleAsyncEntityStream
         - SimpleAsyncValueStream

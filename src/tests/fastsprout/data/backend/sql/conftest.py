@@ -1,11 +1,11 @@
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Field as SQLField
 from sqlmodel import Session, create_engine
@@ -17,7 +17,12 @@ from fastsprout.data.backend.sql import (
 )
 from fastsprout.data.backend.sql.capabilities import SQLAbilitable
 from fastsprout.data.backend.sql.entity import SQLSignpost
+from fastsprout.data.backend.sql.helpers import TableName
+from fastsprout.data.backend.sql.session import SessionFactory
 from fastsprout.data.backend.sql.streams import SQLEntityStream
+from fastsprout.data.capabilities.query import Gte, where
+from fastsprout.testing.core import given
+from fastsprout.testing.data import TestSQLite
 
 
 class SearchField[T](Field[T]): ...
@@ -27,7 +32,7 @@ class SortField[T](Field[T]): ...
 
 
 class CustomSQLBase(SQLEntity[UUID], table=False):
-    id: Field[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
     code: SearchField[str]
     inherited: SearchField[str]
 
@@ -41,7 +46,7 @@ class CustomSQLRecord(CustomSQLMiddle):
 
 
 class DefaultSQLEntity(SQLEntity[UUID], table=False):
-    id: Field[UUID] = SQLField(default_factory=uuid4, primary_key=True)
+    id: ReadField[UUID] = SQLField(default_factory=uuid4, primary_key=True)
     last_login: InternalField[datetime | None] = InternalField[datetime | None](
         default=None
     )
@@ -55,12 +60,21 @@ class VisibilitySQLUser(DefaultSQLEntity):
 
 
 class Hero(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str] = Field(default="")
     age: Field[int] = Field(default=0)
 
 
-@pytest.fixture
+class NamedColumnEntity(SQLEntity[int, SQLSignpost]):
+    __tablename__ = TableName("named_column_record")
+
+    id: ReadField[int] = SQLField(
+        sa_column=Column("stored_id", Integer, primary_key=True)
+    )
+    display_name: Field[str] = SQLField(sa_column=Column("stored_name", String))
+
+
+@given("a synchronous session factory for mapped field and DTO models")
 def sql_session_factory() -> Iterator[sessionmaker[Session]]:
     engine = create_engine("sqlite://")
     try:
@@ -71,38 +85,57 @@ def sql_session_factory() -> Iterator[sessionmaker[Session]]:
         engine.dispose()
 
 
-@pytest.fixture
+@given("a SQL session containing ten heroes")
 async def sql_session() -> AsyncIterator[AsyncSession]:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    try:
-        async with engine.begin() as connection:
-            await connection.run_sync(Hero.__table__.create)
-        async with AsyncSession(engine, expire_on_commit=False) as session:
+    async with TestSQLite(Hero) as database:
+        async with database.session() as session:
             session.add_all(Hero(id=i, name=f"h{i}", age=i) for i in range(10))
             await session.flush()
             yield session
-    finally:
-        await engine.dispose()
 
 
-@pytest.fixture
-def sql_ability(
+@given("a signpost sharing the prepared SQL session")
+def sql_signpost(
     sql_session: AsyncSession,
-) -> SQLAbilitable[Hero, SQLQuery[Any]]:
+) -> SQLSignpost:
     @asynccontextmanager
     async def shared_session() -> AsyncIterator[AsyncSession]:
         yield sql_session
 
-    return SQLAbilitable(SQLSignpost(shared_session))
+    factory: SessionFactory = shared_session
+    return SQLSignpost(factory)
 
 
-@pytest.fixture
+@given("SQL abilities using the shared session signpost")
+def sql_ability(sql_signpost: SQLSignpost) -> SQLAbilitable[Hero]:
+    return SQLAbilitable(sql_signpost)
+
+
+@given("a query selecting heroes")
 def query() -> SQLQuery[Hero]:
     return SQLQuery(entity=Hero)
 
 
-@pytest.fixture
+async def matching_hero(hero: Hero) -> bool:
+    return hero.age >= 5
+
+
+@pytest.fixture(params=["native", "lambda", "async"])
+def selected_query(request: pytest.FixtureRequest) -> SQLQuery[Hero]:
+    query = SQLQuery(Hero)
+    if request.param == "native":
+        query.where(where(Hero.age, Gte(5)))
+    elif request.param == "lambda":
+        query.where(lambda hero: hero.age >= 5)
+    else:
+        query.where(matching_hero)
+    return query.order_by(Hero.id).offset(1).limit(2)
+
+
+@given("an SQL entity stream using the selected query")
 def entity_stream(
-    sql_ability: SQLAbilitable[Hero, SQLQuery[Any]], query: SQLQuery[Hero]
+    sql_ability: SQLAbilitable[Hero], query: SQLQuery[Hero]
 ) -> SQLEntityStream[Hero]:
-    return sql_ability.stream(query)
+    stream = sql_ability.stream(query)
+    assert isinstance(stream, SQLEntityStream)
+    return stream

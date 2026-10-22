@@ -92,6 +92,8 @@ def build(source: Path, destination: Path, slug: str) -> None:
 def copy_markdown(source: Path, destination: Path) -> list[tuple[Path, str]]:
     pages = []
     for markdown in sorted((source / "docs").rglob("*.md")):
+        if markdown.name == "AGENTS.md":
+            continue
         relative = markdown.relative_to(source / "docs")
         content = render_example_output(
             markdown.read_text(encoding="utf-8"), source
@@ -166,6 +168,9 @@ def write_markdown_and_llms(
     source: Path, destination: Path, slug: str, config
 ) -> None:
     pages = copy_markdown(source, destination)
+    (destination / "navigation.json").write_text(
+        json.dumps(config["nav"], indent=2) + "\n", encoding="utf-8"
+    )
     write_llms(destination, slug, config, pages)
     write_full(
         destination,

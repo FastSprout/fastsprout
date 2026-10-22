@@ -16,8 +16,8 @@ include:
       extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
       checks:
         - uv run --all-extras --all-groups --all-packages ruff check
-        - uv run --all-extras --all-groups --all-packages basedpyright --pythonversion $UV_PYTHON src docs_src
-        - uv run  --all-extras --all-groups --all-packages pylint --disable=all --enable=C0302,C0415 --max-module-lines=300 --ignore-paths=src/tests ./src
+        - uv run --all-extras --all-groups --all-packages basedpyright --pythonversion $UV_PYTHON src docs_src examples
+        - uv run --all-extras --all-groups --all-packages pylint ./src ./examples
 
   - component: $CI_SERVER_FQDN/opensource/templates/pytest@0.1.10
     inputs:
@@ -62,6 +62,8 @@ include:
       cert: ""
 
 pytest:
+  variables:
+    PYTEST_ADDOPTS: '-m "not integration"'
   retry: &retry_nonrelease_job
     max: 2
     when:
@@ -75,10 +77,60 @@ pytest:
 
 python-quality:
   retry: *retry_nonrelease_job
-  parallel:
+  parallel: &python_matrix
     matrix:
       - UV_PYTHON: ["3.12", "3.13", "3.14"]
   image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
+
+container-tests:
+  stage: test
+  retry: *retry_nonrelease_job
+  parallel: *python_matrix
+  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/docker:28.5.1-dind
+      alias: docker
+      command: ["--tls=false"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    TESTCONTAINERS_HOST_OVERRIDE: docker
+    RYUK_CONTAINER_IMAGE: harbor.3dcra.net/dockerhub-proxy/testcontainers/ryuk:0.8.1
+  script:
+    # The main pytest matrix collects project coverage; this job exercises real containers.
+    - >-
+      uv run --locked --all-extras --all-groups pytest
+      src/tests/fastsprout/testing/data src/tests/fastsprout/testing/events
+      -m integration --no-cov --junitxml=container-tests.xml
+  artifacts:
+    when: always
+    reports:
+      junit: container-tests.xml
+
+changelog:
+  stage: static-analysis
+  image:
+    name: harbor.3dcra.net/github-proxy/orhunp/git-cliff:2.14.2
+    entrypoint: [""]
+  variables:
+    GIT_DEPTH: "0"
+    GIT_STRATEGY: clone
+  script:
+    - git fetch origin --tags
+    - git-cliff --config cliff.toml --output CHANGELOG.txt
+  artifacts:
+    expose_as: Changelog
+    paths:
+      - CHANGELOG.txt
+
+type-coverage:
+  stage: static-analysis
+  retry: *retry_nonrelease_job
+  parallel: *python_matrix
+  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
+  coverage: '/Type completeness score: (\d+(?:\.\d+)?)%/'
+  script:
+    - uv run --locked --all-extras --all-groups basedpyright --pythonversion $UV_PYTHON --verifytypes fastsprout --ignoreexternal
 
 docs-check:
   stage: static-analysis
@@ -90,10 +142,10 @@ docs-check:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
   script:
     - git fetch origin --tags
-    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/generate_readme_docs.py
+    - uv run --locked --no-default-groups --group docs --extra testing-data --extra testing-events python scripts/generate_readme_docs.py
     - git diff --exit-code -- docs examples
     - test -z "$(git ls-files --others --exclude-standard docs/learn)"
-    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/build_docs.py --dev-ref HEAD --output public
+    - uv run --locked --no-default-groups --group docs --extra testing-data --extra testing-events python scripts/build_docs.py --dev-ref HEAD --output public
   artifacts:
     paths:
       - public
@@ -103,6 +155,7 @@ docs-check:
         - docs/**/*
         - docs_src/**/*
         - examples/**/*
+        - src/fastsprout/**/*
         - README.md
         - SECURITY.md
         - assets/**/*
@@ -125,10 +178,34 @@ pages:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
   script:
     - git fetch origin +refs/heads/development:refs/remotes/origin/development --tags
-    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/build_docs.py --dev-ref origin/development --output public
+    - uv run --locked --no-default-groups --group docs --extra testing-data --extra testing-events python scripts/build_docs.py --dev-ref origin/development --output public
   artifacts:
     paths:
       - public
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "development"'
+    - if: '$CI_COMMIT_TAG'
+
+wiki:
+  stage: docs
+  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python3.12-bookworm-slim
+  needs:
+    - job: pages
+      artifacts: true
+  resource_group: wiki
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
+  script:
+    - ': "${WIKI_PUSH_TOKEN:?Set a masked WIKI_PUSH_TOKEN with write_repository access}"'
+    - uv run --locked --no-default-groups --group docs python scripts/export_wiki.py --site public --output wiki-export --wiki-url "$CI_PROJECT_URL/-/wikis"
+    - git clone "${CI_SERVER_PROTOCOL}://oauth2:${WIKI_PUSH_TOKEN}@${CI_SERVER_FQDN}/${CI_PROJECT_PATH}.wiki.git" wiki
+    - git -C wiki rm -r --ignore-unmatch .
+    - cp -a wiki-export/. wiki/
+    - git -C wiki config user.name "FastSprout CI"
+    - git -C wiki config user.email "gitlab-ci@${CI_SERVER_HOST}"
+    - git -C wiki add --all
+    - 'git -C wiki diff --cached --quiet || git -C wiki commit -m "docs: sync website ${CI_COMMIT_SHORT_SHA}"'
+    - git -C wiki push origin HEAD
   rules:
     - if: '$CI_COMMIT_BRANCH == "development"'
     - if: '$CI_COMMIT_TAG'

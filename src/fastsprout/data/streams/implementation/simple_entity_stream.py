@@ -1,8 +1,9 @@
-from collections.abc import AsyncIterable
+from collections.abc import AsyncIterable, Hashable
 from operator import itemgetter
 from typing import Any, cast
 
 from fastsprout.core import hidden_lazy_await
+from fastsprout.core.fields.field_ref import FieldRef
 from fastsprout.core.types import AnyIterable
 from fastsprout.core.types.protocols.ables import RichComparisonable
 from fastsprout.data.entity import Entitieable
@@ -19,17 +20,36 @@ from fastsprout.data.types import (
 from fastsprout.data.utils.callable import resolve_any_callable
 from fastsprout.data.utils.iterable import achain
 
-from ..protocols import AsyncEntityStream
+from ..protocols import AsyncEntityStreamable
+from .joined_stream import JoinedStream
 from .simple_value_stream import SimpleAsyncValueStream
 
 __all__ = ["SimpleAsyncEntityStream"]
 
 
 class SimpleAsyncEntityStream[E: Entitieable](
-    BaseCommonStream[E], AsyncEntityStream[E]
+    BaseCommonStream[E], AsyncEntityStreamable[E]
 ):
+    def join[F: Entitieable, Key: Hashable, LeftOrm, RightOrm](
+        self,
+        other: AsyncEntityStreamable[F],
+        *,
+        on: tuple[FieldRef[E, Key, LeftOrm], FieldRef[F, Key, RightOrm]],
+    ) -> JoinedStream[E, F]:
+        left, right = on
+
+        def left_key(row: tuple[E]) -> Hashable:
+            return getattr(row[0], left.name)
+
+        def right_key(row: F) -> Hashable:
+            return getattr(row, right.name)
+
+        return JoinedStream(self).join(other, on=(left_key, right_key))
+
     @hidden_lazy_await
-    async def concat(self, *others: "AsyncEntityStream[E] | AnyIterable[E]"):
+    async def concat(
+        self, *others: "AsyncEntityStreamable[E] | AnyIterable[E]"
+    ):
         return SimpleAsyncEntityStream[E](
             achain(self, *(cast(tuple[AsyncIterable, ...], others)))
         )
@@ -70,7 +90,7 @@ class SimpleAsyncEntityStream[E: Entitieable](
         return SimpleAsyncEntityStream[E](gen())
 
     @hidden_lazy_await
-    async def only_of[R: Entitieable[Any]](  # pyright: ignore[reportIncompatibleMethodOverride]
+    async def only_of[R: Entitieable](  # pyright: ignore[reportIncompatibleMethodOverride]
         self,
         entity: type[R],
     ):

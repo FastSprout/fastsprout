@@ -1,0 +1,53 @@
+from typing import assert_type
+
+from fastsprout.core import BaseSchema, Field, dataclass, typed_dataclass
+from fastsprout.core.fields.field_ref import FieldRef
+from fastsprout.core.fields.metaclass import install_descriptors
+
+
+@dataclass
+class Record:
+    value: Field[int]
+    label: Field[str] = Field(default="default")
+
+
+@typed_dataclass()
+class Config:
+    value: Field[str]
+
+
+@dataclass(frozen=True)
+class Snapshot:
+    value: int
+
+
+@dataclass(kw_only=True)
+class Options:
+    value: str
+
+
+class IntegerField(Field[int]):
+    pass
+
+
+def check() -> None:
+    record = Record(1)
+    assert_type(record.value, int)
+    assert_type(record.label, str)
+    assert_type(Config("value").value, str)
+    assert_type(Snapshot(1).value, int)
+    assert_type(Options(value="value").value, str)
+
+    field = Field[int, BaseSchema, str].descriptor("power", "hero_power")
+    assert_type(field.orm, str | None)
+    assert_type(field.__get__(None, BaseSchema), FieldRef[BaseSchema, int, str | None])
+    plain_field = Field[int, BaseSchema].descriptor("power")
+    assert_type(plain_field.__get__(None, BaseSchema), FieldRef[BaseSchema, int, None])
+    descriptors: dict[str, type[IntegerField]] = {"value": IntegerField}
+    install_descriptors(Record, descriptors)
+    install_descriptors(Record, ["value"])
+
+    Record("wrong")  # error: reportArgumentType; mypy: arg-type
+    Config(1)  # error: reportArgumentType; mypy: arg-type
+    Snapshot(1).value = 2  # error: reportAttributeAccessIssue; mypy: misc
+    Options("wrong")  # error: reportCallIssue; mypy: call-arg

@@ -14,46 +14,46 @@ from .conftest import (
 class TestSimpleAsyncEntityStreamIntSync(
     BaseTestSimpleAsyncEntityStream[TestEntityInt]
 ):
-    _entity_type = TestEntityInt
-    _entity_builder = staticmethod(build_test_entity_int)
-    _range_generator = staticmethod(make_entity_range)
+    entity_type = TestEntityInt
+    entity_builder = staticmethod(build_test_entity_int)
+    range_generator = staticmethod(make_entity_range)
 
 
 class TestSimpleAsyncEntityStreamIntAsync(
     BaseTestSimpleAsyncEntityStream[TestEntityInt]
 ):
-    _entity_type = TestEntityInt
-    _entity_builder = staticmethod(build_test_entity_int)
-    _range_generator = staticmethod(make_async_entity_range)
+    entity_type = TestEntityInt
+    entity_builder = staticmethod(build_test_entity_int)
+    range_generator = staticmethod(make_async_entity_range)
 
 
 class TestSimpleAsyncEntityStreamStrSync(
     BaseTestSimpleAsyncEntityStream[TestEntityStr]
 ):
-    _entity_type = TestEntityStr
-    _entity_builder = staticmethod(build_test_entity_str)
-    _range_generator = staticmethod(make_entity_range)
+    entity_type = TestEntityStr
+    entity_builder = staticmethod(build_test_entity_str)
+    range_generator = staticmethod(make_entity_range)
 
 
 class TestSimpleAsyncEntityStreamStrAsync(
     BaseTestSimpleAsyncEntityStream[TestEntityStr]
 ):
-    _entity_type = TestEntityStr
-    _entity_builder = staticmethod(build_test_entity_str)
-    _range_generator = staticmethod(make_async_entity_range)
+    entity_type = TestEntityStr
+    entity_builder = staticmethod(build_test_entity_str)
+    range_generator = staticmethod(make_async_entity_range)
 
 
 class TestSimpleAsyncEntityStreamUUIDSync(
     BaseTestSimpleAsyncEntityStream[TestEntityUUID]
 ):
-    _entity_type = TestEntityUUID
-    _entity_builder = staticmethod(build_test_entity_uuid)
-    _range_generator = staticmethod(make_entity_range)
+    entity_type = TestEntityUUID
+    entity_builder = staticmethod(build_test_entity_uuid)
+    range_generator = staticmethod(make_entity_range)
 
 
 class TestSimpleAsyncEntityStreamUUIDAsync(
     BaseTestSimpleAsyncEntityStream[TestEntityUUID]
 ):
-    _entity_type = TestEntityUUID
-    _entity_builder = staticmethod(build_test_entity_uuid)
-    _range_generator = staticmethod(make_async_entity_range)
+    entity_type = TestEntityUUID
+    entity_builder = staticmethod(build_test_entity_uuid)
+    range_generator = staticmethod(make_async_entity_range)

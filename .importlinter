@@ -14,9 +14,83 @@ containers =
     fastsprout
     tests.fastsprout
 layers =
+    testing
+    actions
     data
     events
     core
+
+[importlinter:contract:FastSprout-testing-core-architecture]
+name = FastSprout Testing Core Architecture
+type = forbidden
+source_modules =
+    fastsprout.testing.core
+forbidden_modules =
+    fastsprout.actions
+    fastsprout.data
+    fastsprout.events
+
+
+[importlinter:contract:FastSprout-testing-layers-architecture]
+name = FastSprout Testing Layers Architecture
+type = layers
+containers =
+    fastsprout.testing
+layers =
+    data | events
+    container
+    core
+
+
+; === FastSprout-actions-level layers ===
+[importlinter:contract:FastSprout-actions-layers-architecture]
+name = FastSprout Actions Layers Architecture
+type = layers
+containers =
+    fastsprout.actions
+    tests.fastsprout.actions
+layers =
+    workflows
+    service
+    action
+
+
+; === FastSprout-actions-service-level layers ===
+[importlinter:contract:FastSprout-actions-service-layers-architecture]
+name = FastSprout Actions Service Layers Architecture
+type = layers
+containers =
+    fastsprout.actions.service
+    tests.fastsprout.actions.service
+layers =
+    datas
+    simple_service
+
+
+; === FastSprout-actions-workflows-level layers ===
+[importlinter:contract:FastSprout-actions-workflows-layers-architecture]
+name = FastSprout Actions Workflows Layers Architecture
+type = layers
+containers =
+    fastsprout.actions.workflows
+    tests.fastsprout.actions.workflows
+layers =
+    workflow
+    execution
+    types | fork
+
+
+; === FastSprout-actions-action-level layers ===
+[importlinter:contract:FastSprout-action-workflows-layers-architecture]
+name = FastSprout Actions action Layers Architecture
+type = layers
+containers =
+    fastsprout.actions.action
+    tests.fastsprout.actions.action
+layers =
+    decorator_action
+    class_action | function_action
+
 
 ; === FastSprout-data-level layers ===
 [importlinter:contract:FastSprout-data-layers-architecture]
@@ -33,3 +107,48 @@ layers =
     entity
     utils
     exceptions | types | consts
+
+
+; === FastSprout-data-query-level layers ===
+[importlinter:contract:FastSprout-data-query-layers-architecture]
+name = FastSprout Data Query Layers Architecture
+type = layers
+containers =
+    fastsprout.data.capabilities.query
+layers =
+    base_query
+    predicate
+    operators
+
+
+; === FastSprout-events-level layers ===
+[importlinter:contract:FastSprout-events-layers-architecture]
+name = FastSprout Events Layers Architecture
+type = layers
+containers =
+    fastsprout.events
+    tests.fastsprout.events
+layers =
+    decorators
+    bus
+    middleware
+    backend
+    event
+    types | consts
+
+
+; === FastSprout-core-level layers ===
+[importlinter:contract:FastSprout-core-layers-architecture]
+name = FastSprout Core Layers Architecture
+type = layers
+containers =
+    fastsprout.core
+    tests.fastsprout.core
+layers =
+    decorators
+    context
+    depends
+    dto
+    action | schema
+    fields
+    exceptions | types

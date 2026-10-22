@@ -57,12 +57,21 @@ reveal_type(Hero.name.orm)
 """
 
 SQL_ENTITY = """
-from fastsprout.core import Field
+from typing import assert_type
+from sqlalchemy.orm import Mapped
+from fastsprout.core import Field, ReadDTO, ReadField
+from fastsprout.core.fields.field_ref import FieldRef
 from fastsprout.data.backend.sql import SQLEntity
 
 class Hero(SQLEntity[int]):
-    id: Field[int]
+    id: ReadField[int]
     name: Field[str]
+
+class HeroRead(ReadDTO, Hero): ...
+
+assert_type(Hero.id, FieldRef[Hero, int, Mapped[int]])
+assert_type(Hero.name, FieldRef[Hero, str, Mapped[str]])
+assert_type(HeroRead.id, FieldRef[HeroRead, int, Mapped[int]])
 
 reveal_type(Hero.id.orm)
 reveal_type(Hero.name.orm)

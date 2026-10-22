@@ -1,0 +1,27 @@
+import asyncio
+from typing import Any, assert_type
+
+from fastsprout.core import BaseSchema
+from fastsprout.events import Event, EventResult, EventState
+
+
+class OrderCreated(Event):
+    order_id: int
+
+
+class Receipt(BaseSchema):
+    number: str
+
+
+async def results(state: EventState[OrderCreated]) -> None:
+    raw = await state.wait()
+    assert_type(raw, EventResult[OrderCreated, Any])
+    result = await state.wait(Receipt, return_when="FIRST_COMPLETED")
+    assert_type(result, EventResult[OrderCreated, Receipt])
+    assert_type(result.state, EventState[OrderCreated])
+    assert_type(await result.wait(), EventResult[OrderCreated, Receipt])
+    done, pending = await state.wait(Receipt)
+    assert_type(done, list[Receipt])
+    assert_type(pending, list[asyncio.Future[Any]])
+    assert_type(done[0].number, str)
+    await state.wait(str)  # error: reportCallIssue,reportArgumentType; mypy: type-var

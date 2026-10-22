@@ -127,7 +127,7 @@ async def test_join_rejects_streams_from_another_router(databases, chained):
     # given
     async with DataR() as data, DataR() as other:
         foreign = other.stream(SQLQuery(entity=JoinCustomer))
-        # when / then
+        # then
         with pytest.raises(DataRError, match="Not supported source"):
             if chained:
                 data.join(SQLQuery(entity=JoinOrder)).join(

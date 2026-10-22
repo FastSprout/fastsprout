@@ -14,7 +14,7 @@ class FieldAssignment[T]:
     __slots__ = ("name", "value")
 
     def __init__(self, name: str, value: T) -> None:
-        self.name = name
+        self.name: str = name
         self.value: T = value
 
     def __repr__(self) -> str:

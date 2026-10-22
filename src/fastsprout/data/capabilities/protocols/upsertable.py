@@ -14,7 +14,7 @@ __all__ = ["Upsertable"]
 class Upsertable[E: Entitieable](Protocol):
     async def upsert(self, entity: E, /) -> E: ...
     async def bulk_upsert(self, entities: AnyIterable[E], /) -> Sequence[E]: ...
-    async def iter_bulk_upsert(
+    def iter_bulk_upsert(
         self,
         entities: AnyIterable[E],
         /,

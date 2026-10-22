@@ -3,19 +3,19 @@ from typing import assert_type
 
 from sqlmodel import Field as SQLField
 
-from fastsprout.core import Field
+from fastsprout.core import Field, ReadField
 from fastsprout.data import DataR, JoinedStream
 from fastsprout.data.backend.sql import SQLEntity, SQLQuery
 from fastsprout.data.router.protocols import Routerable
 
 
 class Order(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     customer_id: Field[int]
 
 
 class Customer(SQLEntity[int]):
-    id: Field[int] = SQLField(primary_key=True)
+    id: ReadField[int] = SQLField(primary_key=True)
     name: Field[str]
 
 
@@ -47,6 +47,12 @@ async def check_streams(numbers: AsyncIterable[int], words: AsyncIterable[str], 
 
 
 async def check_router(data: DataR, protocol: Routerable, other: DataR) -> None:
+    native = data.stream(SQLQuery(Order)).join(data.stream(SQLQuery(Customer)), on=(Order.customer_id, Customer.id))
+    assert_type(await native.to_list(), list[tuple[Order, Customer]])
+    chained = native.join(data.stream(SQLQuery(Customer)), on=(lambda row: row[1].id, lambda customer: customer.id))
+    assert_type(await chained.to_list(), list[tuple[Order, Customer, Customer]])
+    nested = native.join(native, on=(lambda row: row[0].id, lambda row: row[0].id))
+    assert_type(await nested.to_list(), list[tuple[Order, Customer, tuple[Order, Customer]]])
     first = data.join(SQLQuery(entity=Order))
     assert_type(await first.to_list(), list[tuple[Order]])
     assert_type(await protocol.join(SQLQuery(entity=Order)).to_list(), list[tuple[Order]])

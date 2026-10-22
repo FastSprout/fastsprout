@@ -1,0 +1,32 @@
+from collections.abc import Awaitable, Callable
+from typing import assert_type
+from fastsprout.events import Event, EventBus, EventState
+from fastsprout.events.event import Eventable
+from fastsprout.events.middleware import EventsMiddleware, EventsMiddlewareFactoryable
+
+class Message(Event):
+    value: int
+
+class Recorder:
+    def __init__(self, bus: EventBus, /, label: str) -> None:
+        self.label = label
+    async def __call__(self, event_state: EventState[Message]) -> None:
+        pass
+
+bus = EventBus()
+wrapped = EventsMiddleware(Recorder, 'test')
+typed: EventsMiddleware[Message, [str]] = wrapped
+bound: EventsMiddlewareFactoryable[Message, [str]] = wrapped.bind(bus)
+assert_type(wrapped.resolve(bus), Callable[[EventState[Eventable]], Awaitable[None]])
+EventBus(middleware=[wrapped])
+bus.add_middleware(Recorder, 'test')
+
+
+class Unrelated(Event):
+    pass
+
+
+async def wrong_state(handler: EventsMiddlewareFactoryable[Message, [str]], state: EventState[Unrelated]) -> None:
+    await handler(state)  # error: reportArgumentType; mypy: arg-type
+
+invalid: EventsMiddleware[Message, [str]] = EventsMiddleware(Recorder, 123)  # error: reportArgumentType; mypy: arg-type

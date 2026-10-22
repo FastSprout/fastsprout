@@ -1,9 +1,9 @@
 from collections.abc import AsyncIterator, Sequence
 from typing import Any
 
-from sqlalchemy import inspect
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Mapped, class_mapper
 
 from fastsprout.core.types import AnyIterable
 from fastsprout.data.backend.sql.data_backend import SQLDataBackend
@@ -33,25 +33,22 @@ class SQLUpsertable[E: SQLEntity[Any]](Upsertable[E], SQLDataBackend):
             stream = SimpleAsyncEntityStream(entities)
             async for chunk in stream.chunked():
                 entity_cls = type(chunk[0])
-                mapper = inspect(entity_cls)
+                mapper = class_mapper(entity_cls)
                 pk_keys = get_primary_key(entity_cls)
                 pk: Mapped[Any] = entity_cls.id.orm  # pyright: ignore[reportGeneralTypeIssues]
                 built_q_id = (
-                    self.query_for(entity_cls)
-                    ._built_select.with_only_columns(pk)
+                    select(pk)
+                    .where(pk.in_(item.id for item in chunk))
                     .order_by(None)
                 )
 
                 mappings = [
                     {
-                        col.key: getattr(item, col.key)
+                        col.columns[0]: getattr(item, col.key)
                         for col in mapper.column_attrs
                     }
                     for item in chunk
                 ]
-
-                if not mappings:
-                    continue
 
                 stmt = insert(entity_cls).values(mappings)
 
@@ -81,10 +78,10 @@ class SQLUpsertable[E: SQLEntity[Any]](Upsertable[E], SQLDataBackend):
                     yield item
                     if self.with_events:
                         if item.id in exists_pks:
-                            await self._publish_to_bus(
+                            await self.publish_to_bus(
                                 UpdateEvent[type(item)](entity=item)  # type: ignore[misc,operator]
                             )
                         else:
-                            await self._publish_to_bus(
+                            await self.publish_to_bus(
                                 CreateEvent[type(item)](entity=item)  # type: ignore[misc,operator]
                             )

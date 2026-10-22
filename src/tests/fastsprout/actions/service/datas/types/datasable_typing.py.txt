@@ -1,0 +1,97 @@
+from typing import assert_type
+
+from fastsprout.actions.service.datas.implementation.service import DataS
+from fastsprout.actions.service.datas.protocols import DataSable
+from fastsprout.core import BaseSchema, Field, InternalField, ReadDTO, ReadField, Schema, WriteDTO, dataclass, typed_fields
+from fastsprout.data.entity import BaseEntity, Entitieable
+from fastsprout.data.types import Valuable
+
+
+def check_contract[E: Entitieable, R: Valuable | Entitieable, C: Schema, U: Schema, P: Schema](
+    service: DataS[E, R, C, U, P],
+) -> DataSable[E, R, C, U, P]:
+    return service
+
+
+async def reject_foreign_payload[E: Entitieable](service: DataSable[E]) -> None:
+    await service.create("foreign")  # error: reportArgumentType; mypy: arg-type
+
+
+@dataclass
+class CreateInput(Schema):
+    name: str
+
+
+@typed_fields
+class UpdateInput(Schema):
+    name: str
+
+
+class PatchInput(BaseSchema):
+    name: str | None = None
+
+
+class ForeignInput:
+    name: str
+
+
+def schema_defaults[E: Entitieable](source: type[E], service: DataSable[E]) -> None:
+    default = DataS(source)
+    assert_type(default.create_schema, type[E])
+    assert_type(default.update_schema, type[E])
+    assert_type(default.patch_schema, type[E])
+    assert_type(service.create_schema, type[E])
+    assert_type(service.update_schema, type[E])
+    assert_type(service.patch_schema, type[E])
+
+    custom = DataS(source, create=CreateInput, update=UpdateInput, patch=PatchInput)
+    assert_type(custom.create_schema, type[CreateInput])
+    assert_type(custom.update_schema, type[UpdateInput])
+    assert_type(custom.patch_schema, type[PatchInput])
+    DataS(source, create=ForeignInput)  # error: reportCallIssue, reportArgumentType; mypy: type-var
+    DataS(source, update=ForeignInput)  # error: reportArgumentType; mypy: type-var
+    DataS(source, patch=ForeignInput)  # error: reportArgumentType; mypy: type-var
+
+
+async def schema_inputs[E: Entitieable](
+    service: DataSable[E, E, CreateInput, UpdateInput, PatchInput],
+    entity: E,
+) -> None:
+    await service.create(entity)
+    await service.create(CreateInput(name="Batman"))
+    await service.create(UpdateInput(name="Batman"))  # error: reportArgumentType; mypy: arg-type
+    await service.create(ForeignInput())  # error: reportArgumentType; mypy: arg-type
+
+
+class Hero(BaseEntity[int]):
+    id: ReadField[int] = ReadField(default=1)
+    name: Field[str]
+    secret: InternalField[str] = InternalField(default="internal")
+
+
+class HeroCreate(WriteDTO, Hero): ...
+
+
+class HeroRead(ReadDTO, Hero): ...
+
+
+async def concrete_schema_types() -> None:
+    default = DataS(Hero)
+    payload = default.create_schema(name="Batman")
+    assert_type(payload, Hero)
+    assert_type(payload.name, str)
+    assert_type(payload.id, int)
+    assert_type(payload.secret, str)
+    assert_type(await default.create(payload), Hero)
+
+    explicit = DataS(Hero, read=HeroRead, create=HeroCreate)
+    assert_type(explicit.create_schema, type[HeroCreate])
+    write = explicit.create_schema(name="Batman")
+    assert_type(write, HeroCreate)
+    assert_type(write.name, str)
+    _ = write.id  # error: reportAttributeAccessIssue; mypy: call-overload
+    _ = write.secret  # error: reportAttributeAccessIssue; mypy: call-overload
+    read = await explicit.create(write)
+    assert_type(read, HeroRead)
+    assert_type(read.id, int)
+    _ = read.secret  # error: reportAttributeAccessIssue; mypy: call-overload

@@ -1,11 +1,15 @@
+from collections.abc import AsyncIterable
 from collections.abc import Generator as Generatorable
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 __all__ = [
+    "ACloseable",
     "AIterable",
     "ANextable",
     "Addable",
     "AllComparisonsable",
+    "AsyncIterableResolvable",
+    "AwaitGenerator",
     "Awaitable",
     "Boolable",
     "Callable",
@@ -15,6 +19,7 @@ __all__ = [
     "DunderGTable",
     "DunderLEable",
     "DunderLTable",
+    "Eqable",
     "Floatable",
     "Generatorable",
     "Hashable",
@@ -35,8 +40,21 @@ __all__ = [
 ]
 
 
+@runtime_checkable
+class ACloseable(Protocol):
+    async def aclose(self) -> None: ...
+
+
+class AsyncIterableResolvable[T](Protocol):
+    async def resolve(self) -> AsyncIterable[T]: ...
+
+
+# Python leaves scheduler yield/send values unconstrained; T is the resolved result.
+type AwaitGenerator[T] = Generatorable[Any, Any, T]
+
+
 class Awaitable[T](Protocol):
-    def __await__(self) -> Generatorable[Any, Any, T]: ...
+    def __await__(self) -> AwaitGenerator[T]: ...
 
 
 class Nextable[T](Protocol):
@@ -47,20 +65,20 @@ class ANextable[T](Protocol):
     def __anext__(self) -> Awaitable[T]: ...
 
 
-class AIterator[T](ANextable[T], Protocol):
-    def __aiter__(self) -> "AIterator[T]": ...
+class AIteratorable[T](ANextable[T], Protocol):
+    def __aiter__(self) -> "AIteratorable[T]": ...
 
 
 class AIterable[T](Protocol):
-    def __aiter__(self) -> AIterator[T]: ...
+    def __aiter__(self) -> AIteratorable[T]: ...
 
 
-class Iterator[T](Nextable[T], Protocol):
-    def __iter__(self) -> "Iterator[T]": ...
+class Iteratorable[T](Nextable[T], Protocol):
+    def __iter__(self) -> "Iteratorable[T]": ...
 
 
 class Iterable[T](Protocol):
-    def __iter__(self) -> Iterator[T]: ...
+    def __iter__(self) -> Iteratorable[T]: ...
 
 
 class Callable[**P, R](Protocol):
@@ -88,6 +106,8 @@ class DunderGEable[T](Protocol):
 
 
 class Eqable[T](Protocol):  # type: ignore
+    __slots__ = ()
+
     def __eq__(self, other: T | object, /) -> Boolable: ...  # type: ignore
 
 

@@ -8,14 +8,14 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[5]
 
-_MYPY_CONFIG = "[mypy]\n"
-_MYPY_REVEAL = re.compile(r'Revealed type is "(?P<type>.+)"')
-_PYRIGHT_REVEAL = re.compile(r'^Type of "(?P<expr>.+)" is "(?P<type>.+)"$')
+MYPY_CONFIG = "[mypy]\n"
+MYPY_REVEAL = re.compile(r'Revealed type is "(?P<type>.+)"')
+PYRIGHT_REVEAL = re.compile(r'^Type of "(?P<expr>.+)" is "(?P<type>.+)"$')
 
 
-def _write_tmp(code: str, suffix: str) -> Path:
+def write_tmp(code: str, suffix: str) -> Path:
     f = tempfile.NamedTemporaryFile(
         mode="w", suffix=suffix, delete=False, dir="/tmp"
     )
@@ -24,9 +24,9 @@ def _write_tmp(code: str, suffix: str) -> Path:
     return Path(f.name)
 
 
-def _run_mypy(code: str, python_version: str) -> list[str]:
-    code_path = _write_tmp(code, ".py")
-    cfg_path = _write_tmp(_MYPY_CONFIG, ".ini")
+def run_mypy(code: str, python_version: str) -> list[str]:
+    code_path = write_tmp(code, ".py")
+    cfg_path = write_tmp(MYPY_CONFIG, ".ini")
     try:
         result = subprocess.run(
             [
@@ -51,12 +51,12 @@ def _run_mypy(code: str, python_version: str) -> list[str]:
     return [
         m.group("type")
         for line in result.stdout.splitlines()
-        if (m := _MYPY_REVEAL.search(line))
+        if (m := MYPY_REVEAL.search(line))
     ]
 
 
-def _run_pyright(code: str, python_version: str) -> list[str]:
-    code_path = _write_tmp(code, ".py")
+def run_pyright(code: str, python_version: str) -> list[str]:
+    code_path = write_tmp(code, ".py")
     try:
         result = subprocess.run(
             [
@@ -81,13 +81,13 @@ def _run_pyright(code: str, python_version: str) -> list[str]:
     return [
         m.group("type")
         for diag in payload.get("generalDiagnostics", [])
-        if (m := _PYRIGHT_REVEAL.match(diag["message"]))
+        if (m := PYRIGHT_REVEAL.match(diag["message"]))
     ]
 
 
-_RUNNERS: dict[str, Callable[[str, str], list[str]]] = {
-    "mypy": _run_mypy,
-    "pyright": _run_pyright,
+RUNNERS: dict[str, Callable[[str, str], list[str]]] = {
+    "mypy": run_mypy,
+    "pyright": run_pyright,
 }
 
 
@@ -100,7 +100,7 @@ def reveal_types(
     Usage: reveal_types("mypy", code) or reveal_types("pyright", code).
     """
 
-    def _reveal(tool: str, code: str) -> list[str]:
-        return _RUNNERS[tool](code, checker_python_version)
+    def reveal(tool: str, code: str) -> list[str]:
+        return RUNNERS[tool](code, checker_python_version)
 
-    return _reveal
+    return reveal

@@ -1,21 +1,54 @@
 import asyncio
 from abc import ABC
-from contextlib import AbstractAsyncContextManager, asynccontextmanager
-from typing import Any
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from contextlib import (
+    AbstractAsyncContextManager,
+    aclosing,
+    asynccontextmanager,
+)
+from functools import partial
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
 from fastsprout.core import Undefined, UndefinedType
 from fastsprout.data.backend.implementation.data_backend import BaseDataBackend
-from fastsprout.data.backend.sql.entity import SQLEntity
 from fastsprout.data.backend.sql.finalizer import SQLFinalizable
-from fastsprout.data.entity import Signpostable
+from fastsprout.data.capabilities.query import And, BaseQuery, Expression
+from fastsprout.data.capabilities.query.predicate import evaluate
+from fastsprout.data.consts import DEFAULT_ITERATION_CHUNK_SIZE
+from fastsprout.data.entity import Entitieable, Signpostable
+from fastsprout.data.streams.implementation import (
+    JoinedStream,
+    SimpleAsyncValueStream,
+)
 from fastsprout.events import EventBus
 from fastsprout.events.event import Eventable
 
-from .query import SQLQuery
+__all__ = ["SQLDataBackend", "prepare_query"]
 
-__all__ = ["SQLDataBackend"]
+
+def prepare_query[E: Entitieable, StatementT, R](
+    query: BaseQuery[E, StatementT, R], native: bool
+) -> tuple[StatementT, BaseQuery[E, StatementT, R] | None]:
+    fallback = None if native else query.copy()
+    if fallback is not None:
+        query = query.unpaged().unfiltered()
+    return query.build(), fallback
+
+
+def row_predicate[E: Entitieable, R, *Ts](
+    query: BaseQuery[E, Select[tuple[E, *Ts]], R],
+    joined: Callable[[tuple[E, *Ts]], Awaitable[bool]] | None = None,
+) -> Callable[[tuple[E, *Ts]], Awaitable[bool]]:
+    condition: Expression[E] = And(*query.conditions)
+
+    async def matching(row: tuple[E, *Ts]) -> bool:
+        return await evaluate(condition, row[0]) and (
+            joined is None or await joined(row)
+        )
+
+    return matching
 
 
 class SQLDataBackend(
@@ -30,14 +63,18 @@ class SQLDataBackend(
         bus: EventBus | UndefinedType | None = Undefined,
     ) -> None:
         super().__init__(signpost, bus=bus)
-        self.__waited_events: list[Eventable] = []
+        self.waited_events: list[Eventable] = []
 
     @asynccontextmanager
     async def bind(self):
-        """Signpost side of the backend: open a session for the context
-        and yield a clone bound to it."""
-        async with self._signpost.factory() as session:
-            yield SQLFinalizable(session)
+        """Yield the shared finalizer for this SQL session."""
+        async with self.signpost.factory() as session:
+            flow = session.info.get("fastsprout_finalizer")
+            if not isinstance(flow, SQLFinalizable):
+                flow = session.info["fastsprout_finalizer"] = SQLFinalizable(
+                    session
+                )
+            yield flow
 
     @asynccontextmanager
     async def session(self):
@@ -45,17 +82,74 @@ class SQLDataBackend(
             async with flow.session() as session:
                 yield session
 
+    async def scalars[T](
+        self, statement: Select[tuple[T]]
+    ) -> AsyncGenerator[T, None]:
+        async with self.session() as session:
+            result = await session.stream(
+                statement,
+                execution_options={"yield_per": DEFAULT_ITERATION_CHUNK_SIZE},
+            )
+            try:
+                async for item in result.scalars():
+                    self.check_stream_context()
+                    yield item
+            finally:
+                await result.close()
+
+    async def rows[*Ts](
+        self, statement: Select[tuple[*Ts]]
+    ) -> AsyncGenerator[tuple[*Ts], None]:
+        async with self.session() as session:
+            result = await session.stream(
+                statement,
+                execution_options={"yield_per": DEFAULT_ITERATION_CHUNK_SIZE},
+            )
+            try:
+                async for row in result.tuples():
+                    self.check_stream_context()
+                    yield row
+            finally:
+                await result.close()
+
+    def stream_rows[E: Entitieable, R, *Ts](
+        self,
+        query: BaseQuery[E, Select[tuple[E, *Ts]], R],
+        *,
+        native_conditions: bool,
+        condition: Callable[[tuple[E, *Ts]], Awaitable[bool]] | None = None,
+    ) -> JoinedStream[E, *Ts]:
+        statement, fallback = prepare_query(query, native_conditions)
+        if fallback is None:
+            return JoinedStream.from_factory(partial(self.rows, statement))
+
+        async def rows() -> AsyncGenerator[tuple[E, *Ts], None]:
+            async with aclosing(self.rows(statement)) as source:
+                stream = (
+                    SimpleAsyncValueStream(source)
+                    .filter(row_predicate(fallback, condition))
+                    .drop(fallback.offset_value)
+                )
+                if isinstance(fallback.limit_value, int):
+                    stream = stream.take(fallback.limit_value)
+                async for row in stream:
+                    yield row
+
+        return JoinedStream.from_factory(rows)
+
     @asynccontextmanager
     async def transaction(self):
         async with self.bind() as flow:
-            async with flow.transaction() as transaction:
-                yield transaction
-                await super()._publish_to_bus(*self.__waited_events)
-                self.__waited_events = []
+            try:
+                async with flow.transaction() as transaction:
+                    yield transaction
+                if self.waited_events:
+                    flow.after_commit.append(
+                        partial(super().publish_to_bus, *self.waited_events)
+                    )
+            finally:
+                self.waited_events.clear()
 
-    def query_for[E: SQLEntity[Any]](self, entity: type[E]) -> SQLQuery[E]:  # pyright: ignore[reportIncompatibleMethodOverride]
-        return SQLQuery[E](entity=entity)
-
-    async def _publish_to_bus[E: Eventable](self, /, *events: E) -> None:
-        self.__waited_events.extend(events)
+    async def publish_to_bus(self, /, *events: Eventable) -> None:
+        self.waited_events.extend(events)
         await asyncio.sleep(0)

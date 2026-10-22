@@ -1,0 +1,67 @@
+from collections.abc import AsyncIterator
+from typing import assert_type
+from sqlalchemy.orm import Mapped
+from sqlmodel import Field as SQLField
+
+from fastsprout.core import Field, ReadField
+from fastsprout.core.fields.field_predicate import FieldPredicate
+from fastsprout.core.fields.field_ref import FieldComparison
+from fastsprout.data import DataR
+from fastsprout.data.backend.sql import SQLEntity, SQLJoinedQuery, SQLQuery
+from fastsprout.data.backend.sql.entity import SQLSource
+from fastsprout.data.capabilities.query import BaseQuery
+from fastsprout.data.router.protocols import Routerable
+from fastsprout.data.streams.protocols import AsyncEntityStreamable, AsyncJoinedStreamable
+
+
+class Hero(SQLEntity[int]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+    age: Field[int]
+
+
+class Other(SQLEntity[int]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+
+class Country(SQLEntity[int]):
+    id: ReadField[int] = SQLField(primary_key=True)
+
+
+async def field_conditions(stream: AsyncEntityStreamable[Hero], values: AsyncIterator[int]) -> None:
+    query = SQLQuery(Hero)
+    assert_type(Hero.name.eq("Batman"), FieldPredicate[Hero])
+    assert_type(query.where(query.Or(Hero.name.eq("Batman"), Hero.age.gte(5))), SQLQuery[Hero])
+    query.where(query.And(Hero.age.in_(values), Hero.age.between(1, 10)))
+    query.where(query.Xor(Hero.age.lt(5), Hero.age.gt(7)))
+    query.where(query.Nand(Hero.name.ne("Robin"), Hero.age.lte(20)))
+    assert_type(stream.filter(Hero.name.eq("Batman")), AsyncEntityStreamable[Hero])
+    Hero.name.eq(5)  # error: reportArgumentType; mypy: arg-type
+    Hero.age.in_(["bad"])  # error: reportArgumentType; mypy: list-item
+    Hero.age.between("bad", 10)  # error: reportArgumentType; mypy: arg-type
+    query.where(Other.name.eq("Batman"))  # error: reportArgumentType; mypy: arg-type
+
+
+async def joined_results(datar: DataR, router: Routerable) -> None:
+    assert_type(Hero.id == Other.id, FieldComparison[Hero, Other, int, Mapped[int], Mapped[int]])
+    query = SQLQuery(Hero).join(Other, Hero.id == Other.id)
+    assert_type(query, SQLJoinedQuery[SQLSource, FieldPredicate[Other], Hero, Other])
+    assert_type(datar.stream(query), AsyncJoinedStreamable[Hero, Other])
+    assert_type(router.stream(query), AsyncJoinedStreamable[Hero, Other])
+    async for hero, other in datar.stream(query):
+        assert_type(hero, Hero)
+        assert_type(other, Other)
+    query3 = query.join(Country, Other.id == Country.id)
+    assert_type(query3, SQLJoinedQuery[SQLSource, FieldPredicate[Other] | FieldPredicate[Country], Hero, Other, Country])
+    query3.where(query3.Or(Hero.name.eq("Batman"), Other.name.eq("Robin"), Country.id.eq(1)))
+    query3.where(lambda hero: hero.age > 5)
+    assert_type(datar.stream(query3), AsyncJoinedStreamable[Hero, Other, Country])
+    assert_type(await datar.stream(query).to_list(), list[tuple[Hero, Other]])
+    entity_query(query)  # error: reportArgumentType; mypy: arg-type
+    SQLQuery(Hero).join(Other, True)  # error: reportArgumentType; mypy: arg-type
+    SQLQuery(Hero).join(Other, Hero.name == Other.id)  # error: reportArgumentType; mypy: arg-type
+
+
+def entity_query[StatementT](query: BaseQuery[Hero, StatementT]) -> None:
+    pass

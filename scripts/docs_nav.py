@@ -4,56 +4,138 @@ import os
 import re
 import subprocess
 import sys
-from itertools import groupby
+from itertools import groupby, takewhile
 from pathlib import Path
+
+TITLE_WORDS = {
+    "api": "API",
+    "crud": "CRUD",
+    "datar": "DataR",
+    "dto": "DTO",
+    "orm": "ORM",
+    "pyd": "Pydantic",
+    "sql": "SQL",
+    "sqlite": "SQLite",
+    "postgresql": "PostgreSQL",
+    "mysql": "MySQL",
+    "mariadb": "MariaDB",
+    "rabbitmq": "RabbitMQ",
+    "nats": "NATS",
+}
+
+type Navigation = list[dict[str, str | Navigation]]
+
+
+def example_parts(path: Path) -> tuple[tuple[int, str], ...]:
+    """Read numbered chapters from parent directories and the filename."""
+    chapters = [
+        name for name in path.parts[:-1] if re.fullmatch(r"\d+_[a-z_]+", name)
+    ]
+    return tuple(
+        part for name in (*chapters, path.stem) for part in numbered_parts(name)
+    )
+
+
+def numbered_parts(name: str) -> tuple[tuple[int, str], ...]:
+    parts: list[tuple[int, str]] = []
+    number: int | None = None
+    words: list[str] = []
+    for token in name.replace("-", "_").split("_"):
+        if token.isdecimal():
+            if number is not None:
+                parts.append((number, title_words(words)))
+            number, words = int(token), []
+        else:
+            words.append(token)
+    if number is None or not words:
+        raise ValueError(f"Example needs a numbered name: {name}")
+    parts.append((number, title_words(words)))
+    return tuple(parts)
+
+
+def title_words(words: list[str]) -> str:
+    return " ".join(TITLE_WORDS.get(word, word.title()) for word in words)
+
+
+def common_words(words: list[list[str]]) -> list[str]:
+    return [
+        parts[0]
+        for parts in takewhile(
+            lambda parts: len(set(parts)) == 1,
+            zip(*words, strict=False),
+        )
+    ]
+
+
+def shared_name(titles: list[str]) -> str:
+    words = [title.split() for title in titles]
+    prefix = common_words(words)
+    if prefix:
+        return " ".join(prefix)
+    suffix = common_words([list(reversed(item)) for item in words])
+    return " ".join(reversed(suffix))
+
+
+def relative_name(title: str, common: str) -> str:
+    if title == common:
+        return "Overview"
+    if title.startswith(f"{common} "):
+        return title[len(common) + 1 :]
+    if title.endswith(f" {common}"):
+        return title[: -len(common) - 1]
+    return title
 
 
 def page_title(page: Path) -> str:
     return page.read_text(encoding="utf-8").splitlines()[0][2:]
 
 
-def shared_name(titles: list[str]) -> str:
-    words = [title.partition(". ")[2].split() for title in titles]
-    prefix = []
-    for parts in zip(*words, strict=False):
-        if len(set(parts)) != 1:
-            break
-        prefix.append(parts[0])
-    return " ".join(prefix)
-
-
-def example_pages(docs_dir: Path, layer: str) -> list[dict]:
+def example_pages(docs_dir: Path, layer: str) -> Navigation:
+    layer_dir = docs_dir / "learn" / "examples" / layer
     pages = sorted(
-        (docs_dir / "learn" / "examples" / layer).glob("*.md"),
-        key=lambda page: (int(page.stem.partition("-")[0]), page.stem),
+        (
+            page
+            for page in layer_dir.rglob("*.md")
+            if "<!-- example-source:" in page.read_text(encoding="utf-8")
+        ),
+        key=lambda page: tuple(
+            (int(part.partition("-")[0]), part)
+            for part in page.relative_to(layer_dir).parts
+        ),
     )
-    items = []
-    for number, grouped in groupby(
-        pages, key=lambda page: int(page.stem.partition("-")[0])
+    return example_nav(pages, layer_dir, layer)
+
+
+def example_nav(
+    pages: list[Path], layer_dir: Path, layer: str, depth: int = 0
+) -> Navigation:
+    items: Navigation = []
+    for name, grouped in groupby(
+        pages, key=lambda page: page.relative_to(layer_dir).parts[depth]
     ):
-        variants = list(grouped)
-        if len(variants) == 1:
-            page = variants[0]
+        descendants = list(grouped)
+        if name.endswith(".md"):
+            page = descendants[0]
+            relative = page.relative_to(layer_dir).as_posix()
             items.append(
-                {page_title(page): f"learn/examples/{layer}/{page.name}"}
+                {page_title(page): f"learn/examples/{layer}/{relative}"}
             )
-            continue
-        common = shared_name([page_title(page) for page in variants])
-        children = [
-            {
-                page_title(page).partition(". ")[2].removeprefix(common).strip()
-                or "Overview": f"learn/examples/{layer}/{page.name}"
-            }
-            for page in variants
-        ]
-        items.append({f"{number}. {common}": children})
+        else:
+            number, title = example_parts(Path(name))[0]
+            items.append(
+                {
+                    f"{number}. {title}": example_nav(
+                        descendants, layer_dir, layer, depth + 1
+                    )
+                }
+            )
     return items
 
 
 def on_config(config):
-    examples = [{"Overview": "learn/examples/index.md"}]
+    examples: Navigation = [{"Overview": "learn/examples/index.md"}]
     docs_dir = Path(config["docs_dir"])
-    for layer in ("core", "data", "events"):
+    for layer in ("core", "actions", "data", "events", "testing"):
         pages = example_pages(docs_dir, layer)
         if pages:
             examples.append({layer.title(): pages})
@@ -84,8 +166,27 @@ def run_python_example(source: Path, root: Path) -> str:
     if previous_path := environment.get("PYTHONPATH"):
         source_path += os.pathsep + previous_path
     environment["PYTHONPATH"] = source_path
+    command = [sys.executable, str(source)]
+    testing = source.is_relative_to(root / "examples/testing")
+    if testing:
+        command = [
+            sys.executable,
+            "-m",
+            "pytest",
+            str(source),
+            "-p",
+            "fastsprout.testing.core.plugin",
+            "-m",
+            "not integration",
+            "-qq",
+            "--no-header",
+            "-o",
+            "addopts=",
+            "-o",
+            "verbosity_test_cases=1",
+        ]
     run = subprocess.run(
-        [sys.executable, str(source)],
+        command,
         cwd=root,
         env=environment,
         capture_output=True,
@@ -93,15 +194,19 @@ def run_python_example(source: Path, root: Path) -> str:
         timeout=30,
         check=False,
     )
-    if run.returncode:
+    if run.returncode not in ((0, 5) if testing else (0,)):
         raise RuntimeError(
             f"{source.relative_to(root)} failed with exit code {run.returncode}:\n"
             f"{run.stderr}"
         )
-    output = run.stdout.rstrip("\n")
+    output = (
+        "No tests selected by -m 'not integration'."
+        if testing and run.returncode == 5
+        else run.stdout.rstrip("\n")
+    )
     if not output:
         raise ValueError(f"{source.relative_to(root)} did not print a result")
-    return output
+    return "\n".join(line.rstrip() for line in output.splitlines())
 
 
 def replace_result_block(markdown: str, output: str) -> str:
@@ -127,12 +232,14 @@ def replace_result_block(markdown: str, output: str) -> str:
     )
 
 
-def replace_source_block(markdown: str, source: Path) -> str:
-    block = re.search(r"(?ms)^```python\n.*?^```[ \t]*$", markdown)
+def replace_source_block(markdown: str, source: Path, root: Path) -> str:
+    block = re.search(
+        r"(?ms)^```(?:python|\{\.python\})\n.*?^```[ \t]*$", markdown
+    )
     if block is None:
         raise ValueError(f"Missing Python code block for {source}")
     replacement = (
-        f"```python\n{source.read_text(encoding='utf-8').rstrip()}\n```"
+        f'```{{.python}}\n--8<-- "{source.relative_to(root).as_posix()}"\n```'
     )
     return markdown[: block.start()] + replacement + markdown[block.end() :]
 
@@ -142,7 +249,7 @@ def render_example_output(markdown: str, root: Path) -> str:
         return markdown
     source = example_source(markdown, root)
     output = run_python_example(source, root)
-    updated = replace_source_block(markdown, source)
+    updated = replace_source_block(markdown, source, root)
     return replace_result_block(updated, output)
 
 

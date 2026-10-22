@@ -32,15 +32,39 @@ dependencies = ["pydantic>=2.13.5", "typing-extensions>=4.14"]
 
 [project.optional-dependencies]
 data-sql = ["sqlmodel==0.0.42", 'sqlalchemy']
-events = [
-    "bubus>=1.5.6",
-    "croniter>=6.2.4",
-]
+events = ["bubus>=1.5.6", "croniter>=6.2.4"]
+testing = ["hypothesis>=6.0", "pytest>=9.0.3", "pytest-asyncio>=1.4.0", "typeguard>=4.4,<5"]
 standard = ["fastsprout[data-sql,events]"]
+testing-data = [
+    "asyncmy>=0.2.10",
+    "aiosqlite>=0.22.1",
+    "asyncpg>=0.30",
+    "fastsprout[data-sql,testing]",
+    "testcontainers[mysql,oracle,postgres]>=4.15,<5",
+]
 
+events-rabbit = [
+    "fastsprout[events]",
+    "faststream[rabbit]>=0.7.5,<0.8",
+]
+testing-events = [
+    "fastsprout[events-kafka,events-nats,events-rabbit,testing]",
+    "testcontainers[kafka,nats,rabbitmq]>=4.15,<5",
+]
+
+events-nats = [
+    "fastsprout[events]",
+    "faststream[nats]>=0.7.5,<0.8",
+]
+
+events-kafka = [
+    "fastsprout[events]",
+    "faststream[kafka]>=0.7.5,<0.8",
+]
 
 [dependency-groups]
 dev = [
+    "fastsprout[testing]",
     "basedpyright>=1.39.3",
     "import-linter[ui]>=2.3",
     "ipython>=9.4.0",
@@ -56,9 +80,12 @@ dev = [
     "aiosqlite>=0.22.1",
     "bubus>=1.5.6",
     "faststream[kafka]>=0.7.5",
+    "graphifyy>=0.9.93",
 ]
 docs = [
     "aiosqlite>=0.22.1",
+    "beautifulsoup4>=4.13,<5",
+    "markdownify>=1.2,<2",
     "mkdocs-material>=9,<10",
     "mkdocstrings[python]>=0.30,<1",
     "packaging>=24",
@@ -91,11 +118,16 @@ lint.select = ["B", "C9", "E", "F", "I", "N", "RUF", "UP", "T"]
 line-length = 80
 
 [tool.ruff.lint.per-file-ignores]
-"examples/*.py" = ["T201"]
-"docs_src/*.py" = ["T201"]
+"examples/*.py" = ["T201", 'B008']
+# Numeric prefixes define the chapter order of runnable documentation examples.
+"examples/**/[0-9]*_*.py" = ["N999"]
+"docs_src/*.py" = ["T201", 'B008']
 
 [tool.ruff.lint.mccabe]
 max-complexity = 5
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastsprout.core.Depends"]
 
 [tool.ruff.lint.flake8-annotations]
 mypy-init-return = true
@@ -105,18 +137,62 @@ include = ["src", "examples"]
 typeCheckingMode = "standard"
 
 [[tool.basedpyright.executionEnvironments]]
-root = "src/tests"
+root = "src/tests/fastsprout"
+extraPaths = ["src", "."]
 reportArgumentType = false
 reportOptionalCall = false
 reportCallIssue = false
 
+[tool.pylint.main]
+init-hook = "import sys; sys.path.insert(0, '.')"
+load-plugins = ["tools.pylint.exports", "tools.pylint.dataclasses", "tools.pylint.names", "tools.pylint.testing"]
+
+[tool.pylint.messages_control]
+disable = ["all"]
+enable = [
+    "too-many-lines",
+    "import-outside-toplevel",
+    "missing-module-all",
+    "import-outside-all",
+    "private-name",
+    "private-module-name",
+    "missing-package-init",
+    "stdlib-dataclass",
+    "conflicting-test-phases",
+    "untyped-test-phase",
+    "redundant-test-phase-comment",
+    "combined-test-phase-comment",
+    "invalid-all-format",
+    "invalid-all-object",
+    "undefined-all-variable",
+]
+
+[tool.pylint.format]
+max-module-lines = 300
+
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -vvv --cov=src/fastsprout --cov-report=term-missing --cov-fail-under=85"
+pythonpath = ["."]
+addopts = "-ra -vvv --cov=src/fastsprout --cov-report=term-missing"
 testpaths = ["src/tests"]
 asyncio_mode = "auto"
 markers = [
     "unit: Unit tests - no external dependencies",
     "integration: Integration tests - testcontainers or in-memory mocks",
     "slow: Tests taking more than 5 seconds",
+]
+
+[tool.coverage.run]
+# SQLAlchemy's async bridge switches greenlets during database calls.
+concurrency = ["greenlet", "thread"]
+patch = ["subprocess"]
+
+[tool.coverage.report]
+fail_under = 100
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "pragma: full coverage",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
 ]

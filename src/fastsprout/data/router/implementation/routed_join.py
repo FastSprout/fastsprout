@@ -1,10 +1,12 @@
 from collections.abc import AsyncGenerator
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from fastsprout.data.capabilities import BaseQuery
 from fastsprout.data.entity import Entitieable
 from fastsprout.data.streams.implementation import JoinedStream
 from fastsprout.data.streams.implementation.joined_stream import JoinKey
+
+__all__ = ["RoutedJoin"]
 
 if TYPE_CHECKING:
     from fastsprout.data.router.protocols import Routerable
@@ -14,22 +16,22 @@ class RoutedJoin[*Ts]:
     """Internal adapter routing join queries through the same DataR context."""
 
     def __init__(self, router: "Routerable", joined: JoinedStream[*Ts]) -> None:
-        self._router = router
-        self._joined = joined
+        self.router = router
+        self.joined = joined
 
-    def join[E: Entitieable[Any], StatementT](
+    def join[E: Entitieable, StatementT](
         self,
         q: BaseQuery[E, StatementT],
         *,
         on: tuple[JoinKey[tuple[*Ts]], JoinKey[E]],
     ) -> "RoutedJoin[*Ts, E]":
         return RoutedJoin(
-            self._router,
-            self._joined.join(self._router.stream(q), on=on),
+            self.router,
+            self.joined.join(self.router.stream(q), on=on),
         )
 
     def __aiter__(self) -> AsyncGenerator[tuple[*Ts], None]:
-        return self._joined.__aiter__()
+        return self.joined.__aiter__()
 
     async def to_list(self) -> list[tuple[*Ts]]:
-        return await self._joined.to_list()
+        return await self.joined.to_list()
