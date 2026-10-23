@@ -20,36 +20,52 @@
 <a href="https://pypi.org/project/fastsprout/"><img alt="PyPI downloads" src="https://api.pepy.tech/badge/fastsprout"></a>
 </p>
 
-FastSprout provides typed building blocks for Python backends: schemas, fields,
-actions, DTO visibility, data routing, and events. Start with the core layer and
-add the data or events extras when your application needs them.
+FastSprout puts application operations in typed actions and services, so an API,
+CLI, and worker can reuse the same behavior and dependency checks. It provides
+entity services for repeated CRUD work, a data router for shared persistence
+contexts, and workflows for composing async operations.
 
-[Documentation](https://github.com/FastSprout/fastsprout/tree/development/docs) ·
-[Getting started](https://github.com/FastSprout/fastsprout/blob/development/docs/getting-started.md) ·
+[Documentation](https://fastsprout.dev/dev/) ·
+[Getting started](https://fastsprout.dev/dev/getting-started/) ·
 [Runnable examples](https://github.com/FastSprout/fastsprout/tree/development/examples) ·
-[API reference](https://github.com/FastSprout/fastsprout/tree/development/src/fastsprout) ·
+[API reference](https://fastsprout.dev/dev/api/) ·
 [Source](https://github.com/FastSprout/fastsprout) ·
 [Contributing](https://github.com/FastSprout/fastsprout/blob/development/CONTRIBUTING.txt) ·
 [Changelog](https://github.com/FastSprout/fastsprout/blob/development/CHANGELOG.txt)
 
 ## Install
 
-FastSprout supports Python 3.12-3.14.
+FastSprout supports Python 3.12-3.14. The guides linked here describe the
+development API; PyPI release `0.1.1` predates `fastsprout.actions`. Install the
+development version for these features:
 
 ```bash
-pip install "fastsprout[standard]"
+pip install 'fastsprout[standard] @ git+https://github.com/FastSprout/fastsprout.git@development'
 ```
+
+See [Getting Started](https://fastsprout.dev/dev/getting-started/) to run the
+repository examples. For a PyPI release, choose its matching documentation version.
+
+## What it helps with
+
+- Reuse an application operation and its checks across endpoints, commands, and workers.
+- Replace repeated entity CRUD, schema projection, and pagination code with `DataS`.
+- Share persistence resources and choose when related changes settle with `DataR`.
+- Compose typed async operations and process their results with `Workflow`.
 
 ## Explore
 
-- **Core:** typed schemas, fields, actions, and DTO visibility.
-- **Data:** routing entities to persistence backends, streams, and joins.
+- **Core:** typed schemas, fields, DTO visibility, and dependency injection.
+- **Actions:** function and class actions, services, `DataS` entity operations, and workflows.
+- **Data:** `DataR` persistence contexts, entity backends, typed queries, streams, and joins.
 - **Events:** EventBus with Bubus, asyncio.Queue, RabbitMQ, NATS, and Kafka adapters.
 - **Testing:** typed pytest phases and database/broker test contexts.
 
-The [features guide](https://github.com/FastSprout/fastsprout/blob/development/docs/features.md) describes each
-layer. The [API reference](https://github.com/FastSprout/fastsprout/tree/development/src/fastsprout) is generated from
-the Python source in this repository.
+The [features guide](https://fastsprout.dev/dev/features/) explains the problems
+these layers address. Start with [actions and services](https://fastsprout.dev/dev/guide/actions/)
+or [DataS, DataR, and persistence](https://fastsprout.dev/dev/guide/data/).
+The [API reference](https://fastsprout.dev/dev/api/) is generated from the Python
+source in this repository.
 
 ## Security and license
 

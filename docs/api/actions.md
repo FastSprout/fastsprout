@@ -1,7 +1,8 @@
 # Actions API
 
 See the [Actions guide](../guide/actions.md) for runnable examples of
-function actions, services, CRUD operations, and workflows.
+function actions, services, CRUD operations, and workflows. The
+[data guide](../guide/data.md) explains how `DataS` uses `DataR` for persistence.
 
 ::: fastsprout.actions
     options:

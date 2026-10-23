@@ -3,12 +3,17 @@
 `fastsprout.actions` defines application operations with typed inputs,
 results, and dependencies. Call an action directly, group related actions
 in a service, or compose them into a workflow. The same operation can be
-used from an HTTP handler, CLI command, or event subscriber.
+used from an HTTP handler, CLI command, or event subscriber. This keeps
+application checks and behavior in one callable operation as the number of
+entry points grows. See [Features](../features.md) for the problems the layers
+address together.
 
-Install the standard extra for the examples in this guide:
+The examples use the development API. Start with the
+[development checkout](../getting-started.md#install), or install that version
+with the standard extra:
 
 ```bash
-pip install 'fastsprout[standard]'
+pip install 'fastsprout[standard] @ git+https://github.com/FastSprout/fastsprout.git@development'
 ```
 
 | Use | Start with |
@@ -68,8 +73,13 @@ examples show how to share context with nested calls.
 
 ## Entity services with DataS
 
-`DataS(Entity)` provides typed CRUD actions backed by `DataR`. It uses the
-entity as its default read and write schema. Explicit `read`, `create`,
+`DataS(Entity)` is an application service for an entity. It replaces repeated
+CRUD handlers with typed operations backed by `DataR`. DataR routes those
+operations to persistence and shares their backend context. The
+[data guide](data.md) explains their responsibilities with a complete SQLite
+program.
+
+DataS uses the entity as its default read and write schema. Explicit `read`, `create`,
 `update`, and `patch` schemas let the service expose separate contracts for
 each operation. The `operations` setting controls which operations are
 available.

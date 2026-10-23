@@ -10,3 +10,6 @@ services.
 
 Start with the [Actions guide](guide/actions.md) to define application operations,
 group them into services, and compose workflows.
+
+See [DataS, DataR, and persistence](guide/data.md) to understand entity services,
+backend routing, query streams, and transaction boundaries.

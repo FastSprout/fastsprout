@@ -93,6 +93,7 @@ nav:
   - Features: features.md
   - Getting Started: getting-started.md
   - Actions: guide/actions.md
+  - Data: guide/data.md
   - Events: guide/events.md
   - Learn: learn/examples/index.md
   - Reference:
