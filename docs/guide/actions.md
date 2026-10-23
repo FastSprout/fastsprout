@@ -35,10 +35,12 @@ uv run --extra standard python examples/actions/01_action/03_function/01_pyd.py
 ```
 
 For a class with a single operation, inherit from `Action[Input, Output]`
-and implement async `__call__`. Inputs and outputs can use Pydantic schemas,
-dataclasses, or ordinary typed objects. See the runnable
+and implement async `__call__`. Its input and output types must inherit
+`Schema`: use `BaseSchema`, or inherit `Schema` in your dataclass or custom
+class. See the runnable
 [class action](../learn/examples/actions/1-action/1-class/1-pydantic.md)
-and [dataclass action](../learn/examples/actions/1-action/3-function/2-dataclass.md)
+[dataclass action](../learn/examples/actions/1-action/1-class/2-dataclass.md),
+and [custom object action](../learn/examples/actions/1-action/1-class/3-object.md)
 examples.
 
 ## Services and dependency injection
