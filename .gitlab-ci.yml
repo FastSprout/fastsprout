@@ -275,6 +275,8 @@ docs-check:
         - scripts/build_docs.py
         - scripts/docs_nav.py
         - scripts/generate_readme_docs.py
+        - scripts/export_wiki.py
+        - .github/workflows/docs.yml
         - pyproject.toml
         - uv.lock
 

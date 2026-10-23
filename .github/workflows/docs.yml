@@ -1,0 +1,125 @@
+name: Docs
+
+on:
+  push:
+    branches: [development]
+    tags: ["*"]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    runs-on: ubuntu-24.04
+    outputs:
+      wiki_ready: ${{ steps.wiki.outputs.ready }}
+    container:
+      image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+    defaults:
+      run:
+        shell: bash
+    env:
+      DOCS_DEV_REF: ${{ github.event_name == 'pull_request' && 'HEAD' || 'refs/remotes/gitlab/development' }}
+    steps:
+      - name: Install build tools
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends git curl
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch canonical documentation versions
+        run: >-
+          git fetch --no-tags
+          https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout.git
+          +refs/heads/development:refs/remotes/gitlab/development
+          '+refs/tags/*:refs/tags/*'
+
+      - name: Verify generated examples
+        run: |
+          uv run --locked --no-default-groups --group docs --extra testing-data --extra testing-events python scripts/generate_readme_docs.py
+          git diff --exit-code -- docs examples README.md
+          test -z "$(git ls-files --others --exclude-standard docs/learn)"
+
+      - name: Test wiki exports
+        run: >-
+          uv run --locked --no-default-groups --group docs --extra testing-data --extra testing-events
+          pytest -o addopts='' src/tests/test_wiki.py
+
+      - name: Build versioned documentation
+        run: >-
+          uv run --locked --no-default-groups --group docs --extra testing-data --extra testing-events
+          python scripts/build_docs.py --dev-ref "$DOCS_DEV_REF" --output public
+
+      - name: Export GitHub Wiki
+        run: >-
+          uv run --locked --no-default-groups --group docs
+          python scripts/export_wiki.py --site public --output wiki-export
+          --wiki-url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/wiki" --github
+
+      - name: Upload documentation
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: documentation
+          path: public
+          if-no-files-found: error
+
+      - name: Upload wiki
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wiki
+          path: wiki-export
+          if-no-files-found: error
+
+      - name: Check GitHub Wiki initialization
+        id: wiki
+        if: github.event_name != 'pull_request'
+        run: |
+          wiki_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/wiki"
+          target="$(curl --fail --silent --show-error --location --output /dev/null --write-out '%{url_effective}' "$wiki_url")"
+          if [[ "$target" == "$wiki_url" || "$target" == "$wiki_url/"* ]]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo '::warning::Save the first Home page in GitHub Wiki, then rerun Docs to publish the exported documentation. The wiki export is available in the wiki artifact.'
+          fi
+
+  wiki:
+    if: github.event_name != 'pull_request' && needs.docs.outputs.wiki_ready == 'true'
+    needs: docs
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: github-wiki
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: wiki
+          path: wiki-export
+
+      - name: Publish GitHub Wiki
+        run: |
+          git -C wiki rm -r --ignore-unmatch .
+          cp -a wiki-export/. wiki/
+          git -C wiki config user.name 'github-actions[bot]'
+          git -C wiki config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -C wiki add --all
+          if ! git -C wiki diff --cached --quiet; then
+            git -C wiki commit -m "docs: sync website ${GITHUB_SHA:0:8}"
+            git -C wiki push origin HEAD
+          fi

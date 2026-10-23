@@ -98,6 +98,7 @@ nav:
       - Overview: reference.md
       - Dependencies: guide/dependencies.md
       - Testing: guide/testing.md
+      - Documentation: guide/documentation.md
   - API Reference:
       - Overview: api/index.md
       - Core: api/core.md

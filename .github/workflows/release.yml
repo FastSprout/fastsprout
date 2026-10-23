@@ -95,3 +95,7 @@ jobs:
           else
             gh release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --notes-file release-notes.md
           fi
+
+  docs:
+    needs: release
+    uses: ./.github/workflows/docs.yml
