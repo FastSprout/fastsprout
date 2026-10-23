@@ -1,25 +1,20 @@
-"""Prepare a task through an action with a shared input check."""
+"""Prepare one typed task draft and print its result."""
 
 import asyncio
 
 from fastsprout.actions import action
-from fastsprout.core import BaseSchema, Depends, Field
+from fastsprout.core import BaseSchema
 
 
 class NewTask(BaseSchema):
-    title: Field[str]
+    title: str
 
 
 class TaskDraft(BaseSchema):
-    title: Field[str]
+    title: str
 
 
-async def require_title(payload: NewTask) -> None:
-    if not payload.title.strip():
-        raise ValueError("Task title cannot be empty")
-
-
-@action(dependencies=[Depends(require_title)])
+@action
 async def prepare_task(payload: NewTask) -> TaskDraft:
     return TaskDraft(title=payload.title.strip())
 

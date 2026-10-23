@@ -93,8 +93,14 @@ pagination, and Python predicates. SQL-supported operations execute in the
 database; other transformations run while consuming the stream. Joins can
 combine routed sources, with examples for SQL and mixed processing stages.
 
-Start with [DataS, DataR, and persistence](guide/data.md), including a complete
-SQLite program and an explanation of transaction and stream lifetimes.
+Try the [rollback example](tutorial/transactions.md): after an exception,
+two separate service calls leave their committed rows in the example database;
+the same pair in a shared DataR context leaves no rows. This makes the
+transaction boundary visible in a subsequent read.
+
+Follow the [data tutorial](tutorial/entity-operations.md) to build up that
+example, then use [DataS, DataR, and persistence](guide/data.md) to look up
+schemas, queries, transaction lifetimes, and streams.
 
 ## Core: define contracts that survive composition
 

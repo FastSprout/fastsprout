@@ -1,41 +1,40 @@
-# Getting Started
+# 1. Your first action
 
-A task tracker may expose an HTTP endpoint and a worker that both create and
-complete tasks. They need the same title checks, missing-task rule, and database
-behavior. FastSprout puts that behavior in typed actions and entity services,
-then shares persistence work through an explicit data context.
+An HTTP handler and a worker can both need to prepare a task title. Put that
+operation in one callable function so both entry points can use it. This first
+step trims a title and returns a typed draft.
 
 ## Install
 
-Use Python 3.12, 3.13, or 3.14. These examples follow the development branch;
-PyPI release `0.1.1` predates `fastsprout.actions`. To run the repository examples,
-check out development and prepare its environment with uv:
+Use Python 3.12, 3.13, or 3.14. This tutorial follows development; PyPI release
+`0.1.1` predates `fastsprout.actions`. Run the examples from a development
+checkout:
 
 ```bash
 git clone --branch development https://github.com/FastSprout/fastsprout.git
 cd fastsprout
-uv sync --extra data-sql
+uv sync
 ```
 
-The SQL extra enables the adapter used below; the development environment also
-includes the async SQLite driver, `aiosqlite`.
+<details markdown="1">
+<summary>Install in another project</summary>
 
-To use the same API in another project, install the development package:
+Install the same development version directly:
 
 ```bash
-pip install 'fastsprout[data-sql] @ git+https://github.com/FastSprout/fastsprout.git@development' aiosqlite
+pip install 'fastsprout @ git+https://github.com/FastSprout/fastsprout.git@development'
 ```
 
-`fastsprout[standard]` bundles the SQL and local events extras. Database drivers
-are installed separately. For a PyPI release, select its matching documentation
-version. See [Features](features.md) for the problems each layer addresses.
+</details>
 
-## Define an application operation once
+The first three steps use application actions. Add the SQL extra when you
+reach [storing tasks](tutorial/entity-operations.md). For a published PyPI
+package, select its matching documentation version.
 
-An API endpoint and a worker should apply the same title check when preparing a
-task. Here, `@action` makes `prepare_task` a typed callable action, and
-`Depends(require_title)` runs the shared check before its body. An empty title
-raises `ValueError`; a valid title is normalized and returned as `TaskDraft`.
+## Prepare a task title
+
+Save this program as `docs_src/quickstart.py` in the checkout. The file is
+already included so you can also run it immediately.
 
 <!-- example-source: docs_src/quickstart.py -->
 
@@ -43,15 +42,10 @@ raises `ValueError`; a valid title is normalized and returned as `TaskDraft`.
 --8<-- "docs_src/quickstart.py"
 ```
 
-The action knows its input, output, and dependencies. Your adapter supplies
-`NewTask` and awaits the result. A second action can reuse the same dependency
-instead of copying its check.
-
-Run the [source file](https://github.com/FastSprout/fastsprout/blob/development/docs_src/quickstart.py)
-from the repository root:
+Run it from the repository root:
 
 ```bash
-uv run python docs_src/quickstart.py
+uv run python -m docs_src.quickstart
 ```
 
 ## Result
@@ -60,64 +54,19 @@ uv run python docs_src/quickstart.py
 Write documentation
 ```
 
-## Choose the building blocks for a feature
+## What happened?
 
-| Building block | Use it for |
-| --- | --- |
-| `@action` or `Action[Input, Output]` | One application operation with typed arguments and results |
-| `Service` | A group of related operations with shared dependencies |
-| `DataS[Entity]` | An entity service with CRUD, schemas, pagination, and bulk operations |
-| `DataR` | A persistence context that routes operations to entity backends |
-| `Workflow` | A sequence or graph of typed operations |
+`NewTask` describes the input: a title supplied by a caller. `TaskDraft`
+describes the result. Both inherit from `BaseSchema`, using ordinary Python
+type annotations for their fields.
 
-For a task tracker, `Tasks` is an application service. `DataS[Task]` supplies its
-standard entity operations, so you can focus on a rule such as completing an
-existing task. This complete program defines the entity, its service, and
-the SQLite setup:
+`@action` wraps the async function as an action and preserves its callable
+signature. `await prepare_task(...)` runs it and returns a `TaskDraft`; its
+`title` has the surrounding spaces removed. The action has the same calling
+interface for an HTTP handler, a worker, or a test.
 
-```{.python}
---8<-- "docs_src/data/quickstart.py"
-```
+Try changing the input to another title. An empty string is also a string, so
+this version accepts it. The next step adds the application rule that rejects
+an empty title, then shares that rule between two actions.
 
-`DataS` handles the CRUD calls and their schema contracts. The custom `complete`
-action checks for a missing task and reuses `get` and `update`. Inherit from
-`Service` instead when your operations span several entities or do not need
-standard CRUD behavior. See the [Actions guide](guide/actions.md) for both styles.
-
-## Put related data operations in one context
-
-`DataR` routes an operation to the entity's persistence backend. For SQL
-entities, a `SQLSignpost` points to an async session factory. A DataR context
-shares the session associated with that signpost and settles the work when
-the context exits.
-
-Pass the same `datar` to the service's create, list, and complete calls. They
-then use one context; you choose its boundary around the application operation.
-Normal exit finalizes the work, an exception aborts it, and exit releases
-resources. This is also where you consume lazy query streams.
-
-The program above creates an in-memory SQLite database, runs the service calls
-in `async with DataR()`, and counts the remaining pending tasks through
-`datar.stream(query)`. Run it from the repository root:
-
-```bash
-uv run --extra data-sql python docs_src/data/quickstart.py
-```
-
-Read [DataS, DataR, and persistence](guide/data.md) for the full source and an
-explanation of every part, including queries, DTOs, transactions, and streams.
-
-## Compose operations as the feature grows
-
-A `Service` can call other actions or services. A `Workflow` can pass results
-through sequential steps, run two async branches concurrently, route by schema
-type, and process multiple results through async iteration. Dependencies keep
-checks and collaborators attached to the operation across these calls.
-
-Continue with:
-
-- [Actions, services, and workflows](guide/actions.md) for application behavior.
-- [DataS, DataR, and persistence](guide/data.md) for entity services and storage.
-- [Dependencies](guide/dependencies.md) for shared checks and injection.
-- [Events](guide/events.md) to publish results and register subscribers.
-- [Testing](guide/testing.md) to exercise operations and backend contexts.
+Continue to [2. Share a check between actions](tutorial/shared-checks.md).

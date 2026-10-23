@@ -32,65 +32,18 @@ Import `DataS` from `fastsprout.actions` and `DataR` from `fastsprout.data`.
 DataS belongs to the application layer because it adds service contracts and
 dependencies on top of data access.
 
-## Run a complete SQLite example
+## Learn it one step at a time
 
-Use the [development checkout](../getting-started.md#install) to run the
-repository example. To use the same API in another project, install the
-development package with its SQL adapter and SQLite driver:
+The tutorial introduces application actions first, then adds persistence:
 
-```bash
-pip install 'fastsprout[data-sql] @ git+https://github.com/FastSprout/fastsprout.git@development' aiosqlite
-```
+1. [Store and retrieve tasks](../tutorial/entity-operations.md) with DataS.
+2. [Roll back related writes](../tutorial/transactions.md) with a shared DataR.
+3. [Select and page tasks](../tutorial/queries.md) with queries and streams.
 
-The following program is self-contained. It creates an in-memory database,
-uses a customized DataS service, and supplies one DataR context to every call.
-The final query reuses the same selection after the task has been completed.
-
-<!-- example-source: docs_src/data/quickstart.py -->
-
-```{.python}
---8<-- "docs_src/data/quickstart.py"
-```
-
-Run the [source file](https://github.com/FastSprout/fastsprout/blob/development/docs_src/data/quickstart.py)
-from the repository root:
-
-```bash
-uv run --extra data-sql python docs_src/data/quickstart.py
-```
-
-## Result
-
-```text
-Created: Write documentation
-Pending: 1
-Completed: True
-Remaining: 0
-```
-
-## How the example solves the problem
-
-1. `Task` declares the stored fields and the signpost used to obtain its SQL
-   session. `ReadField` marks its identity as a readable field.
-2. `Tasks(DataS[Task])` inherits CRUD operations. Its `complete` action adds the
-   application's missing-task rule and reuses the existing read and update
-   behavior.
-3. `async with DataR()` opens the context. Passing `datar=datar` puts create,
-   list, complete, and the final stream in that same context.
-4. `tasks.create` writes through the entity's routed persistence capabilities.
-   `tasks.list` applies the query and returns a `Page[Task]` with items and a total.
-5. `tasks.complete` loads and updates the entity. The service's public async
-   method is an action, so it can participate in dependency injection and
-   composition with other service operations.
-6. `datar.stream(pending)` reads directly through the data layer. Counting it
-   after completion returns zero because the query still selects incomplete
-   tasks.
-7. Successful context exit finalizes the backend work and closes its resources.
-   The engine is disposed in `finally`, including when an operation fails.
-
-The in-memory database exists only for this program. In an application,
-configure an engine and schema migrations as part of your persistence setup;
-place DataR contexts around the operations whose changes should settle together.
+Each step has a small runnable program and its generated output. The SQLite
+setup is available in a collapsed block in the first data lesson. Start with
+[Your first action](../getting-started.md) for the full course, or use the
+sections below to look up a concept after trying it.
 
 ## What DataS adds to data access
 
