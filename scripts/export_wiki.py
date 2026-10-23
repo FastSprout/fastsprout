@@ -1,4 +1,4 @@
-"""Mirror built documentation pages and navigation into a GitLab wiki."""
+"""Export built documentation pages and navigation for GitLab or GitHub Wiki."""
 
 import argparse
 import json
@@ -31,18 +31,38 @@ def page_route(relative: Path) -> str:
     return path.as_posix().removeprefix(".").strip("/")
 
 
-def sidebar(items: Navigation, base: str, depth: int = 0) -> list[str]:
+def wiki_page(relative: Path, github: bool) -> str:
+    path = relative.with_suffix("")
+    return "-".join(path.parts) if github else path.as_posix()
+
+
+def wiki_file(relative: Path, github: bool) -> Path:
+    return Path(wiki_page(relative, github) + ".md")
+
+
+def sidebar(
+    items: Navigation,
+    base: str,
+    depth: int = 0,
+    *,
+    prefix: str = "",
+    github: bool = False,
+) -> list[str]:
     lines = []
     for item in items:
         for title, value in item.items():
             label = (
-                f"[{title}]({base}/{quote(Path(value).with_suffix('').as_posix())})"
+                f"[{title}]({base}/{quote(wiki_page(Path(prefix) / value, github))})"
                 if isinstance(value, str)
                 else title
             )
             lines.append(f"{'  ' * depth}- {label}")
             if isinstance(value, list):
-                lines.extend(sidebar(value, base, depth + 1))
+                lines.extend(
+                    sidebar(
+                        value, base, depth + 1, prefix=prefix, github=github
+                    )
+                )
     return lines
 
 
@@ -60,7 +80,10 @@ def rewrite_link(url: str, base: str, links: dict[str, str]) -> str:
 
 
 def page_links(
-    site: Path, versions: list[DocumentationVersion], wiki_url: str
+    site: Path,
+    versions: list[DocumentationVersion],
+    wiki_url: str,
+    github: bool = False,
 ) -> tuple[dict[str, str], list[Path]]:
     links: dict[str, str] = {}
     pages: list[Path] = []
@@ -69,7 +92,9 @@ def page_links(
         for page in sorted((site / slug).rglob("*.md")):
             relative = page.relative_to(site / slug)
             pages.append(Path(slug) / relative)
-            target = f"{wiki_url}/{quote((Path(slug) / relative.with_suffix('')).as_posix())}"
+            target = (
+                f"{wiki_url}/{quote(wiki_page(Path(slug) / relative, github))}"
+            )
             for alias in (slug, *version["aliases"]):
                 root = f"{SITE_URL}/{alias}/"
                 route = page_route(relative)
@@ -78,7 +103,7 @@ def page_links(
                 links[root + (f"{route}/" if route else "") + "index.html"] = (
                     target
                 )
-    links[SITE_URL + "/"] = f"{wiki_url}/home"
+    links[SITE_URL + "/"] = f"{wiki_url}/{'Home' if github else 'home'}"
     return links, pages
 
 
@@ -88,7 +113,14 @@ def copy_assets(
     versions: list[DocumentationVersion],
     wiki_url: str,
     links: dict[str, str],
+    github: bool = False,
 ) -> None:
+    asset_url = (
+        "https://raw.githubusercontent.com/wiki"
+        + urlsplit(wiki_url).path.removesuffix("/wiki")
+        if github
+        else wiki_url
+    )
     for version in versions:
         slug = version["version"]
         for asset in (site / slug / "assets").rglob("*"):
@@ -106,7 +138,7 @@ def copy_assets(
                 shutil.copyfile(asset, target)
                 for alias in (slug, *version["aliases"]):
                     links[f"{SITE_URL}/{alias}/{relative.as_posix()}"] = (
-                        f"{wiki_url}/{quote(f'{slug}/{relative}')}"
+                        f"{asset_url}/{quote(f'{slug}/{relative}')}"
                     )
 
 
@@ -115,6 +147,7 @@ def write_sidebar(
     destination: Path,
     versions: list[DocumentationVersion],
     wiki_url: str,
+    github: bool = False,
 ) -> None:
     navigation = []
     for version in versions:
@@ -123,15 +156,19 @@ def write_sidebar(
             (site / slug / "navigation.json").read_text(encoding="utf-8")
         )
         navigation.extend([f"## {version['title']}", ""])
-        navigation.extend(sidebar(items, f"{wiki_url}/{quote(slug)}"))
+        navigation.extend(sidebar(items, wiki_url, prefix=slug, github=github))
         navigation.append("")
-    (destination / "_sidebar.md").write_text(
+    (destination / ("_Sidebar.md" if github else "_sidebar.md")).write_text(
         "\n".join(navigation).rstrip() + "\n", encoding="utf-8"
     )
 
 
 def write_page(
-    site: Path, destination: Path, relative: Path, links: dict[str, str]
+    site: Path,
+    destination: Path,
+    relative: Path,
+    links: dict[str, str],
+    github: bool = False,
 ) -> None:
     route = page_route(relative)
     article = ArticleMarkdown()
@@ -141,12 +178,14 @@ def write_page(
     )
     if not article.blocks:
         raise ValueError(f"No article in {relative}")
-    target = destination / relative
+    target = destination / wiki_file(relative, github)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(article.markdown(), encoding="utf-8")
 
 
-def export(site: Path, destination: Path, wiki_url: str) -> None:
+def export(
+    site: Path, destination: Path, wiki_url: str, github: bool = False
+) -> None:
     versions: list[DocumentationVersion] = json.loads(
         (site / "versions.json").read_text(encoding="utf-8")
     )
@@ -155,13 +194,19 @@ def export(site: Path, destination: Path, wiki_url: str) -> None:
         for version in versions
         if "latest" in version["aliases"]
     )
+    links, pages = page_links(site, versions, wiki_url, github)
+    targets = [wiki_file(relative, github) for relative in pages]
+    if len(targets) != len(set(targets)):
+        raise ValueError("Wiki page names collide after flattening paths")
     destination.mkdir(parents=True, exist_ok=False)
-    links, pages = page_links(site, versions, wiki_url)
-    copy_assets(site, destination, versions, wiki_url, links)
-    write_sidebar(site, destination, versions, wiki_url)
+    copy_assets(site, destination, versions, wiki_url, links, github)
+    write_sidebar(site, destination, versions, wiki_url, github)
     for relative in pages:
-        write_page(site, destination, relative, links)
-    shutil.copyfile(destination / latest / "index.md", destination / "home.md")
+        write_page(site, destination, relative, links, github)
+    shutil.copyfile(
+        destination / wiki_file(Path(latest) / "index.md", github),
+        destination / ("Home.md" if github else "home.md"),
+    )
 
 
 def main() -> None:
@@ -169,8 +214,13 @@ def main() -> None:
     parser.add_argument("--site", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--wiki-url", required=True)
+    parser.add_argument(
+        "--github",
+        action="store_true",
+        help="Use GitHub Wiki page and asset URLs",
+    )
     args = parser.parse_args()
-    export(args.site, args.output, args.wiki_url.rstrip("/"))
+    export(args.site, args.output, args.wiki_url.rstrip("/"), args.github)
 
 
 if __name__ == "__main__":
