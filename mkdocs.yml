@@ -91,7 +91,14 @@ extra:
 nav:
   - FastSprout: index.md
   - Features: features.md
-  - Getting Started: getting-started.md
+  - Getting Started:
+      - 1. First action: getting-started.md
+      - 2. Shared checks: tutorial/shared-checks.md
+      - 3. Services: tutorial/services.md
+      - 4. Entity operations: tutorial/entity-operations.md
+      - 5. Transactions: tutorial/transactions.md
+      - 6. Queries: tutorial/queries.md
+      - 7. Workflows: tutorial/workflows.md
   - Actions: guide/actions.md
   - Data: guide/data.md
   - Events: guide/events.md

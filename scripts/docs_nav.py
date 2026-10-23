@@ -160,16 +160,12 @@ def example_source(markdown: str, root: Path) -> Path:
     return source
 
 
-def run_python_example(source: Path, root: Path) -> str:
-    environment = os.environ.copy()
-    source_path = str(root / "src")
-    if previous_path := environment.get("PYTHONPATH"):
-        source_path += os.pathsep + previous_path
-    environment["PYTHONPATH"] = source_path
-    command = [sys.executable, str(source)]
-    testing = source.is_relative_to(root / "examples/testing")
-    if testing:
-        command = [
+def example_command(source: Path, root: Path) -> list[str]:
+    if source.is_relative_to(root / "docs_src"):
+        module = ".".join(source.relative_to(root).with_suffix("").parts)
+        return [sys.executable, "-m", module]
+    if source.is_relative_to(root / "examples/testing"):
+        return [
             sys.executable,
             "-m",
             "pytest",
@@ -185,8 +181,18 @@ def run_python_example(source: Path, root: Path) -> str:
             "-o",
             "verbosity_test_cases=1",
         ]
+    return [sys.executable, str(source)]
+
+
+def run_python_example(source: Path, root: Path) -> str:
+    environment = os.environ.copy()
+    source_path = str(root / "src")
+    if previous_path := environment.get("PYTHONPATH"):
+        source_path += os.pathsep + previous_path
+    environment["PYTHONPATH"] = source_path
+    testing = source.is_relative_to(root / "examples/testing")
     run = subprocess.run(
-        command,
+        example_command(source, root),
         cwd=root,
         env=environment,
         capture_output=True,
