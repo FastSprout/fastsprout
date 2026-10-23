@@ -1,26 +1,32 @@
-"""A runnable typed action for the Getting Started guide."""
+"""Prepare a task through an action with a shared input check."""
 
 import asyncio
 
-from fastsprout.core import Actionable, BaseSchema, Field
+from fastsprout.actions import action
+from fastsprout.core import BaseSchema, Depends, Field
 
 
-class GreetingInput(BaseSchema):
-    name: Field[str]
+class NewTask(BaseSchema):
+    title: Field[str]
 
 
-class Greeting(BaseSchema):
-    message: Field[str]
+class TaskDraft(BaseSchema):
+    title: Field[str]
 
 
-class Greet(Actionable[GreetingInput, Greeting]):
-    async def __call__(self, payload: GreetingInput, /) -> Greeting:
-        return Greeting(message=f"Hello, {payload.name}!")
+async def require_title(payload: NewTask) -> None:
+    if not payload.title.strip():
+        raise ValueError("Task title cannot be empty")
+
+
+@action(dependencies=[Depends(require_title)])
+async def prepare_task(payload: NewTask) -> TaskDraft:
+    return TaskDraft(title=payload.title.strip())
 
 
 async def main() -> None:
-    greeting = await Greet()(GreetingInput(name="world"))
-    print(greeting.message)
+    draft = await prepare_task(NewTask(title="  Write documentation  "))
+    print(draft.title)
 
 
 if __name__ == "__main__":
