@@ -17,8 +17,8 @@ After changing examples, regenerate their documentation and check the site:
     uv run --all-extras --group docs python scripts/generate_readme_docs.py
     uv run --all-extras --group docs mkdocs build --strict
 
-Edit examples and documentation sources. Generated example pages, the wiki,
-and CHANGELOG.txt are updated automatically.
+Edit examples and documentation sources. Generated example pages and
+CHANGELOG.txt are updated automatically.
 
 Submit a pull request against development. Keep each commit focused on one
 complete change, including its tests, examples, and documentation. Explain
