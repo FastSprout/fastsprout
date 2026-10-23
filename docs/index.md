@@ -30,9 +30,7 @@ add the data or events extras when your application needs them.
 [API reference](https://github.com/FastSprout/fastsprout/tree/development/src/fastsprout) ·
 [Source](https://github.com/FastSprout/fastsprout) ·
 [Contributing](https://github.com/FastSprout/fastsprout/blob/development/CONTRIBUTING.txt) ·
-[Changelog](https://github.com/FastSprout/fastsprout/blob/development/CHANGELOG.txt) ·
-[GitHub wiki](https://github.com/FastSprout/fastsprout/wiki) ·
-[GitLab wiki](https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/wikis/home)
+[Changelog](https://github.com/FastSprout/fastsprout/blob/development/CHANGELOG.txt)
 
 ## Install
 

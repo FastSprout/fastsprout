@@ -29,7 +29,7 @@ def code_language(element: Tag) -> str:
 
 
 class ArticleMarkdown:
-    """Export rendered articles for full-text documentation and the wiki."""
+    """Export rendered articles for full-text documentation."""
 
     def __init__(self) -> None:
         self.blocks: list[str] = []

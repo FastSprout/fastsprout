@@ -1,36 +1,31 @@
 # Documentation publishing
 
-The versioned site and both project wikis use the same documentation sources.
-GitLab's `docs` stage publishes the site and GitLab Wiki. The GitHub Actions
-`Docs` workflow builds the site and publishes GitHub Wiki when `development`
-or a release tag is pushed. The release workflow also calls `Docs` after
-publishing a release. Pull requests build the documentation without publishing.
+The versioned documentation site is published at
+[fastsprout.dev](https://fastsprout.dev/). It contains usage guides, runnable
+examples, and an API reference generated from the Python source.
 
-The GitHub workflow builds from the mirrored release tags and development
-branch on GitHub. It retains the rendered site and exported wiki as workflow
-artifacts.
+GitLab's `docs` stage publishes the site when `development` or a release tag
+is pushed. The GitHub Actions `Docs` workflow builds the same documentation
+from the mirrored release tags and development branch on GitHub, and retains
+the rendered site as a workflow artifact named `documentation`. The release
+workflow also calls `Docs` after publishing a release. Pull requests build
+the documentation for review.
 
-Before the first GitHub Wiki publication, save a page named `Home` in the
-repository's Wiki tab, then rerun the latest `Docs` workflow. This initializes
-the separate wiki repository. Until then, the build retains the wiki export as
-an artifact and reports that initialization is pending. Subsequent updates use
-the workflow's built-in `GITHUB_TOKEN` with `contents: write` in the publishing
-job; no personal access token is required.
-
-Build and inspect the exports locally:
+Build the complete versioned site from the repository root:
 
 ```bash
 uv run --locked --all-extras --all-groups python scripts/build_docs.py \
   --dev-ref HEAD --output public
-
-uv run --locked --group docs python scripts/export_wiki.py \
-  --site public --output github-wiki --github \
-  --wiki-url https://github.com/FastSprout/fastsprout/wiki
-
-uv run --locked --group docs python scripts/export_wiki.py \
-  --site public --output gitlab-wiki \
-  --wiki-url https://gitlab.3dcra.eu/opensource/fastsprout/fastsprout/-/wikis
 ```
 
-Use a new output directory for each export. GitHub pages use version-prefixed
-names and a `_Sidebar.md` navigation file. GitLab keeps nested page paths.
+Omit `--dev-ref HEAD` to include uncommitted changes in the development
+version. Open `public/index.html` to choose a release or the development
+version. To serve the build locally:
+
+```bash
+python -m http.server --directory public
+```
+
+Use a new output directory for each build. Historical releases retain their
+own documentation; changes to current guides appear in the development
+version until the next release.

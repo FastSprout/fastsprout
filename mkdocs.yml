@@ -92,6 +92,7 @@ nav:
   - FastSprout: index.md
   - Features: features.md
   - Getting Started: getting-started.md
+  - Actions: guide/actions.md
   - Events: guide/events.md
   - Learn: learn/examples/index.md
   - Reference:
@@ -102,6 +103,7 @@ nav:
   - API Reference:
       - Overview: api/index.md
       - Core: api/core.md
+      - Actions: api/actions.md
       - Data: api/data.md
       - SQL: api/sql.md
       - Events: api/events.md

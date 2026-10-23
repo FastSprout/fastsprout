@@ -275,7 +275,6 @@ docs-check:
         - scripts/build_docs.py
         - scripts/docs_nav.py
         - scripts/generate_readme_docs.py
-        - scripts/export_wiki.py
         - .github/workflows/docs.yml
         - pyproject.toml
         - uv.lock
@@ -295,30 +294,6 @@ pages:
   artifacts:
     paths:
       - public
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "development"'
-    - if: '$CI_COMMIT_TAG'
-
-wiki:
-  stage: docs
-  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python3.12-bookworm-slim
-  needs:
-    - job: pages
-      artifacts: true
-  resource_group: wiki
-  before_script:
-    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
-  script:
-    - ': "${WIKI_PUSH_TOKEN:?Set a masked WIKI_PUSH_TOKEN with write_repository access}"'
-    - uv run --locked --no-default-groups --group docs python scripts/export_wiki.py --site public --output wiki-export --wiki-url "$CI_PROJECT_URL/-/wikis"
-    - git clone "${CI_SERVER_PROTOCOL}://oauth2:${WIKI_PUSH_TOKEN}@${CI_SERVER_FQDN}/${CI_PROJECT_PATH}.wiki.git" wiki
-    - git -C wiki rm -r --ignore-unmatch .
-    - cp -a wiki-export/. wiki/
-    - git -C wiki config user.name "FastSprout CI"
-    - git -C wiki config user.email "gitlab-ci@${CI_SERVER_HOST}"
-    - git -C wiki add --all
-    - 'git -C wiki diff --cached --quiet || git -C wiki commit -m "docs: sync website ${CI_COMMIT_SHORT_SHA}"'
-    - git -C wiki push origin HEAD
   rules:
     - if: '$CI_COMMIT_BRANCH == "development"'
     - if: '$CI_COMMIT_TAG'
