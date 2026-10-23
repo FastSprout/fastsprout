@@ -6,9 +6,9 @@ GitLab's `docs` stage publishes the site and GitLab Wiki. The GitHub Actions
 or a release tag is pushed. The release workflow also calls `Docs` after
 publishing a release. Pull requests build the documentation without publishing.
 
-The GitHub workflow fetches release tags and the development reference from
-GitLab, the canonical repository, so documentation versions match the GitLab
-site. It retains the rendered site and exported wiki as workflow artifacts.
+The GitHub workflow builds from the mirrored release tags and development
+branch on GitHub. It retains the rendered site and exported wiki as workflow
+artifacts.
 
 Before the first GitHub Wiki publication, save a page named `Home` in the
 repository's Wiki tab, then rerun the latest `Docs` workflow. This initializes
