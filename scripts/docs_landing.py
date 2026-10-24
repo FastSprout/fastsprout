@@ -9,13 +9,14 @@ else:
 
 
 def write_landing(output: Path) -> None:
-    landing = (output / "latest" / "index.html").read_text(encoding="utf-8")
-    landing = landing.replace(
-        "<head>",
-        '<head><base href="/latest/">'
+    landing = (
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        '<meta http-equiv="refresh" content="0; url=latest/">'
+        '<link rel="canonical" href="latest/">'
         '<link rel="alternate" type="text/markdown" href="/index.md">'
-        '<link rel="describedby" href="/llms.txt">',
-        1,
+        '<link rel="describedby" href="/llms.txt">'
+        "<title>FastSprout</title></head>"
+        '<body><a href="latest/">Open documentation</a></body></html>\n'
     )
     (output / "index.html").write_text(landing, encoding="utf-8")
 
