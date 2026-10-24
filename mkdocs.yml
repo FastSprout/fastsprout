@@ -5,6 +5,8 @@ site_url: https://fastsprout.dev/dev/
 repo_url: https://github.com/FastSprout/fastsprout
 repo_name: FastSprout/fastsprout
 docs_dir: docs
+exclude_docs: |
+  AGENTS.md
 site_dir: site
 strict: true
 
@@ -76,7 +78,7 @@ copyright: FastSprout · Apache-2.0
 
 extra:
   generator: false
-  package_version: 0.1.0
+  package_version: 0.2.0
   version:
     provider: mike
     default: latest
@@ -89,16 +91,31 @@ extra:
 nav:
   - FastSprout: index.md
   - Features: features.md
-  - Getting Started: getting-started.md
+  - Getting Started:
+      - 1. First action: getting-started.md
+      - 2. Shared checks: tutorial/shared-checks.md
+      - 3. Services: tutorial/services.md
+      - 4. Entity operations: tutorial/entity-operations.md
+      - 5. Transactions: tutorial/transactions.md
+      - 6. Queries: tutorial/queries.md
+      - 7. Workflows: tutorial/workflows.md
+  - Actions: guide/actions.md
+  - Data: guide/data.md
   - Events: guide/events.md
   - Learn: learn/examples/index.md
-  - Reference: reference.md
+  - Reference:
+      - Overview: reference.md
+      - Dependencies: guide/dependencies.md
+      - Testing: guide/testing.md
+      - Documentation: guide/documentation.md
   - API Reference:
       - Overview: api/index.md
       - Core: api/core.md
+      - Actions: api/actions.md
       - Data: api/data.md
       - SQL: api/sql.md
       - Events: api/events.md
+      - Testing: api/testing.md
   - About: about.md
   - Security: security.md
   - Release Notes: release-notes.md

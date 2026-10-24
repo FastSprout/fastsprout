@@ -1,8 +1,8 @@
+from abc import abstractmethod
 from contextlib import AbstractAsyncContextManager
 from typing import Protocol, runtime_checkable
 
-from fastsprout.data.capabilities.query import BaseQuery
-from fastsprout.data.entity import Entitieable, Signpostable
+from fastsprout.data.entity import Signpostable
 from fastsprout.events import EventBus
 from fastsprout.events.event import Eventable
 
@@ -17,17 +17,13 @@ class Backendable[T, F: Finalizable](Protocol):
         self, /, signpost: Signpostable[T], *, bus: EventBus | None = None
     ) -> None: ...
 
+    @abstractmethod
     def bind(self) -> AbstractAsyncContextManager[F]:
         """Open this backend for the current context; exit releases it."""
-        ...
-
-    def query_for[E: Entitieable](self, entity: type[E]) -> BaseQuery:
-        """A base (unfiltered) read query in this backend's dialect."""
-        ...
 
     def transaction(self) -> AbstractAsyncContextManager[T]: ...
 
     @property
     def with_events(self) -> bool: ...
 
-    async def _publish_to_bus[E: Eventable](self, /, *events: E): ...
+    async def publish_to_bus(self, /, *events: Eventable) -> None: ...

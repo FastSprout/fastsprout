@@ -1,26 +1,27 @@
-"""A runnable typed action for the Getting Started guide."""
+"""Prepare one typed task draft and print its result."""
 
 import asyncio
 
-from fastsprout.core import BaseAction, BaseSchema, Field
+from fastsprout.actions import action
+from fastsprout.core import BaseSchema
 
 
-class GreetingInput(BaseSchema):
-    name: Field[str]
+class NewTask(BaseSchema):
+    title: str
 
 
-class Greeting(BaseSchema):
-    message: Field[str]
+class TaskDraft(BaseSchema):
+    title: str
 
 
-class Greet(BaseAction[GreetingInput, Greeting]):
-    async def __call__(self, payload: GreetingInput, /) -> Greeting:
-        return Greeting(message=f"Hello, {payload.name}!")
+@action
+async def prepare_task(payload: NewTask) -> TaskDraft:
+    return TaskDraft(title=payload.title.strip())
 
 
 async def main() -> None:
-    greeting = await Greet()(GreetingInput(name="world"))
-    print(greeting.message)
+    draft = await prepare_task(NewTask(title="  Write documentation  "))
+    print(draft.title)
 
 
 if __name__ == "__main__":

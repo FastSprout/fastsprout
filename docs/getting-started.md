@@ -1,70 +1,65 @@
-# Getting Started
+# 1. Your first action
 
-Install FastSprout with Python 3.12, 3.13, or 3.14:
+An HTTP handler and a worker can both need to prepare a task title. Put that
+operation in one callable function so both entry points can use it. This first
+step trims a title and returns a typed draft.
+
+## Install
+
+Use Python 3.12, 3.13, or 3.14. Create a tutorial directory and virtual
+environment, then install FastSprout from PyPI:
 
 ```bash
-pip install fastsprout
+mkdir fastsprout-tutorial
+cd fastsprout-tutorial
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install 'fastsprout==0.2.0'
+mkdir -p docs_src/tutorial docs_src/data
 ```
 
-The core package includes schemas, fields, actions, and DTOs. Use the optional
-`data-sql` and `events` extras when you need those integrations.
+Keep this environment active and save each example at the path shown. The
+examples import code from earlier steps using these paths.
 
-## Your first action
+The first three steps use application actions. Add the SQL extra when you
+reach [storing tasks](tutorial/entity-operations.md). For a published PyPI
+package, select its matching documentation version.
 
-This example defines an input schema, an output schema, and a class implementing
-`BaseAction`. The source lives in [`docs_src/quickstart.py`](https://github.com/FastSprout/fastsprout/blob/development/docs_src/quickstart.py)
-so it can be run and checked independently of this page.
+## Prepare a task title
+
+Save this program as `docs_src/quickstart.py` in your tutorial directory.
 
 <!-- example-source: docs_src/quickstart.py -->
 
-```python
-"""A runnable typed action for the Getting Started guide."""
-
-import asyncio
-
-from fastsprout.core import BaseAction, BaseSchema, Field
-
-
-class GreetingInput(BaseSchema):
-    name: Field[str]
-
-
-class Greeting(BaseSchema):
-    message: Field[str]
-
-
-class Greet(BaseAction[GreetingInput, Greeting]):
-    async def __call__(self, payload: GreetingInput, /) -> Greeting:
-        return Greeting(message=f"Hello, {payload.name}!")
-
-
-async def main() -> None:
-    greeting = await Greet()(GreetingInput(name="world"))
-    print(greeting.message)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+```{.python}
+--8<-- "docs_src/quickstart.py"
 ```
 
-Run it from the repository root:
+Run it from `fastsprout-tutorial`, the directory containing `docs_src`:
 
 ```bash
-uv run python docs_src/quickstart.py
+python -m docs_src.quickstart
 ```
 
 ## Result
 
 ```text
-Hello, world!
+Write documentation
 ```
 
-An async function can implement the same action protocol; see the
-[class and function examples](learn/examples/core/6-action.md).
+## What happened?
 
-## Next steps
+`NewTask` describes the input: a title supplied by a caller. `TaskDraft`
+describes the result. Both inherit from `BaseSchema`, using ordinary Python
+type annotations for their fields.
 
-- Explore [schemas, fields, DTOs, and actions](features.md).
-- Try the [runnable examples](learn/examples/index.md) for core, data, and events.
-- [Publish and subscribe to an event](guide/events.md).
-- Browse the [API reference](api/index.md) for the exported Python interfaces.
+`@action` wraps the async function as an action and preserves its callable
+signature. `await prepare_task(...)` runs it and returns a `TaskDraft`; its
+`title` has the surrounding spaces removed. The action has the same calling
+interface for an HTTP handler, a worker, or a test.
+
+Try changing the input to another title. An empty string is also a string, so
+this version accepts it. The next step adds the application rule that rejects
+an empty title, then shares that rule between two actions.
+
+Continue to [2. Share a check between actions](tutorial/shared-checks.md).

@@ -1,0 +1,53 @@
+name: Docs
+
+on:
+  pull_request:
+    branches: [development]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+    defaults:
+      run:
+        shell: bash
+    env:
+      DOCS_DEV_REF: ${{ github.event_name == 'pull_request' && 'HEAD' || 'origin/development' }}
+    steps:
+      - name: Install build tools
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends git
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure Git workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Verify generated examples
+        run: |
+          uv run --locked --no-default-groups --group docs --extra testing-data --extra testing-events python scripts/generate_readme_docs.py
+          git diff --exit-code -- docs examples README.md
+          test -z "$(git ls-files --others --exclude-standard docs/learn)"
+
+      - name: Build versioned documentation
+        run: >-
+          uv run --locked --no-default-groups --group docs --extra testing-data --extra testing-events
+          python scripts/build_docs.py --dev-ref "$DOCS_DEV_REF" --output public
+
+      - name: Upload documentation
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: documentation
+          path: public
+          if-no-files-found: error

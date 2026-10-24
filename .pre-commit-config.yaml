@@ -19,7 +19,7 @@ repos:
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.12.8
+    rev: v0.16.7
     hooks:
       # Run the linter.
       - id: ruff-check
@@ -29,16 +29,19 @@ repos:
 
   - repo: local
     hooks:
+      - id: graphify
+        name: Update code knowledge graph
+        entry: uv run --system-certs graphify update .
+        language: system
+        types: [python]
+        pass_filenames: false
+        require_serial: true
+
       - id: pylint-too-many-lines
-        name: pylint too-many-lines (C0302)
+        name: pylint library rules
         entry: uv run --system-certs pylint
         language: system
         types: [python]
-        args:
-          - --disable=all
-          - --enable=C0302,C0415
-          - --max-module-lines=300
-          - --ignore-paths=src/tests
 
       - id: import-linter
         name: import-linter
@@ -51,18 +54,26 @@ repos:
 
       - id: basedpyright
         name: basedpyright
-        entry: uv run --system-certs basedpyright src
+        entry: uv run --system-certs basedpyright src docs_src examples
         files: \.py$
         require_serial: true
         pass_filenames: false
         language: system
         types: [ python ]
 
+      - id: type-coverage
+        name: Public API type completeness (100%)
+        entry: uv run --system-certs --all-extras basedpyright --verifytypes fastsprout --ignoreexternal
+        language: system
+        types: [python]
+        pass_filenames: false
+        require_serial: true
+
       - id: generate-example-readme
         name: Generate example documentation
         entry: uv run --system-certs scripts/generate_readme_docs.py
         language: system
-        files: ^(examples/(core|data|events)/.*\.(py|md)|scripts/generate_readme_docs.py)$
+        files: ^(examples/(core|actions|data|events|testing)/.*\.(py|md)|scripts/(generate_readme_docs|docs_nav).py)$
         pass_filenames: false
 
 

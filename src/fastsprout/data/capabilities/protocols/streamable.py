@@ -2,11 +2,11 @@ from typing import Protocol, runtime_checkable
 
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
-from fastsprout.data.streams.protocols import AsyncEntityStream
+from fastsprout.data.streams.protocols import AsyncEntityStreamable
 
 __all__ = ["Streamable"]
 
 
 @runtime_checkable
 class Streamable[E: Entitieable, Q: BaseQuery](Protocol):
-    def stream(self, query: Q, /) -> AsyncEntityStream[E]: ...
+    def stream(self, query: Q, /) -> AsyncEntityStreamable[E]: ...

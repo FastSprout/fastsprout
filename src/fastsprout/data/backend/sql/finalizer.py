@@ -1,36 +1,52 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from typing import Protocol, runtime_checkable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fastsprout.data.backend.protocols import Finalizable
 
-__all__ = ["SQLFinalizable"]
+__all__ = ["SQLFinalizable", "TransactionStateable"]
+
+
+@runtime_checkable
+class TransactionStateable(Protocol):
+    @property
+    def in_transaction(self) -> bool: ...
 
 
 class SQLFinalizable(Finalizable):
     def __init__(self, session: AsyncSession, /) -> None:
-        self.__session = session
+        self.db_session = session
+        self.after_commit: list[Callable[[], Awaitable[None]]] = []
 
     async def finalize(self) -> None:
-        await self.__session.commit()
+        callbacks, self.after_commit = self.after_commit, []
+        await self.db_session.commit()
+        for callback in callbacks:
+            await callback()
 
     async def abort(self) -> None:
-        await self.__session.rollback()
+        self.after_commit.clear()
+        await self.db_session.rollback()
 
     @asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
-        yield self.__session
+        yield self.db_session
 
     @asynccontextmanager
     async def transaction(self) -> AsyncIterator[AsyncSession]:
-        if self.__session.in_transaction():
-            # one savepoint per operation — a state you can roll back to,
-            # like a commit in a git branch
-            async with self.__session.begin_nested():
-                yield self.__session
-        else:
-            # open the outer transaction and KEEP it open — the
-            # finalizer (finalize/abort) owns its end, not the operation
-            await self.__session.begin()
-            yield self.__session
+        if not self.db_session.in_transaction():
+            await self.db_session.begin()
+        connection = await self.db_session.connection()
+        if connection.dialect.name == "sqlite":
+            raw = await connection.get_raw_connection()
+            driver = raw.driver_connection
+            # SQLite legacy mode does not start a transaction for SELECT or SAVEPOINT.
+            if (
+                isinstance(driver, TransactionStateable)
+                and not driver.in_transaction
+            ):
+                await connection.exec_driver_sql("BEGIN")
+        async with self.db_session.begin_nested():
+            yield self.db_session

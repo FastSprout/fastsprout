@@ -1,0 +1,28 @@
+Contributing to FastSprout
+
+Use Python 3.12, 3.13, or 3.14 and uv. Run commands from the repository root.
+
+Set up the development environment and Git hooks:
+
+    uv sync --locked --all-extras --all-groups
+    uv run prek install
+
+Run the checks before submitting:
+
+    uv run prek run --all-files
+    uv run pytest
+
+After changing examples, regenerate their documentation and check the site:
+
+    uv run --all-extras --group docs python scripts/generate_readme_docs.py
+    uv run --all-extras --group docs mkdocs build --strict
+
+Edit examples and documentation sources. Generated example pages and
+CHANGELOG.txt are updated automatically.
+
+Submit a pull request against development. Keep each commit focused on one
+complete change, including its tests, examples, and documentation. Explain
+the behavior changed and the checks you ran.
+
+For security reports, follow SECURITY.md instead of opening a public issue
+with vulnerability details.

@@ -9,14 +9,14 @@ from fastsprout.core.types import AnyIterable
 from fastsprout.data.capabilities.query import BaseQuery
 from fastsprout.data.entity import Entitieable
 
-__all__ = ["Updatable", "UpdatableByQuery"]
+__all__ = ["Updatable", "UpdatableByQueryable"]
 
 
 @runtime_checkable
 class Updatable[E: Entitieable](Protocol):
     async def update(self, entity: E, /) -> E: ...
     async def bulk_update(self, entities: AnyIterable[E], /) -> Sequence[E]: ...
-    async def iter_bulk_update(
+    def iter_bulk_update(
         self,
         entities: AnyIterable[E],
         /,
@@ -24,7 +24,7 @@ class Updatable[E: Entitieable](Protocol):
 
 
 @runtime_checkable
-class UpdatableByQuery[E: Entitieable, Q: BaseQuery](Protocol):
+class UpdatableByQueryable[E: Entitieable, Q: BaseQuery](Protocol):
     async def update_by_query(
         self,
         query: Q,

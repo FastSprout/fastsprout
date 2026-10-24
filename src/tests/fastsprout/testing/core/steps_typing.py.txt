@@ -1,0 +1,27 @@
+from typing import assert_type
+
+from fastsprout.testing.core import then
+
+
+class Cart:
+    products: list[str]
+
+
+@then("the cart contains the expected products")
+def check_cart(cart: Cart) -> int:
+    assert_type(cart.products, list[str])
+    return len(cart.products)
+
+
+assert_type(check_cart(Cart()), int)
+check_cart("wrong")  # error: reportArgumentType; mypy: arg-type
+
+
+class Checks:
+    @then("the input is positive")
+    async def check(self, value: int) -> None:
+        assert_type(value, int)
+        assert value > 0
+
+
+wrong = Checks().check("wrong")  # error: reportArgumentType; mypy: arg-type

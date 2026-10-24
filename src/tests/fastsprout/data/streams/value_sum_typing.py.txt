@@ -1,0 +1,30 @@
+from decimal import Decimal
+from typing import assert_type
+
+from fastsprout.data.backend.sql import SQLValueStream
+from fastsprout.data.streams.implementation import SimpleAsyncValueStream
+from fastsprout.data.streams.protocols import AsyncValueStreamable
+
+
+async def check(
+    values: list[tuple[int, str]],
+    protocol: AsyncValueStreamable[tuple[int, str]],
+    sql: SQLValueStream[int],
+) -> None:
+    assert_type(
+        await SimpleAsyncValueStream(values).sum(),
+        tuple[int, str] | tuple[int | str, ...] | None,
+    )
+    assert_type(
+        await protocol.sum(),
+        tuple[int, str] | tuple[int | str, ...] | None,
+    )
+    assert_type(await SimpleAsyncValueStream([1, 2]).sum(), int | None)
+    assert_type(await SimpleAsyncValueStream([1.0, 2.0]).sum(), float | None)
+    assert_type(await SimpleAsyncValueStream(["a", "b"]).sum(), str | None)
+    assert_type(await SimpleAsyncValueStream([b"a", b"b"]).sum(), bytes | None)
+    assert_type(
+        await SimpleAsyncValueStream([Decimal(1), Decimal(2)]).sum(),
+        Decimal | None,
+    )
+    assert_type(await sql.sum(), int | None)

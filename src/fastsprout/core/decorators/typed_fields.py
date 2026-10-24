@@ -11,7 +11,7 @@ from fastsprout.core.fields.metaclass import (
 __all__ = ["typed_fields"]
 
 
-def _apply_field_descriptors[C](cls: type[C]) -> type[C]:
+def apply_field_descriptors[C](cls: type[C]) -> type[C]:
     """Unwrap Field[T] annotations and install Field descriptors.
 
     Each descriptor preserves the EXACT declared Field subclass
@@ -33,6 +33,7 @@ def typed_fields[C](cls: type[C]) -> type[C]:
     """Install Field[T] descriptors on a plain class.
 
     You're responsible for __init__. No validation, no auto-generation.
+    Field defaults and factories are resolved on first instance access.
 
     Example:
         @typed_fields
@@ -44,4 +45,4 @@ def typed_fields[C](cls: type[C]) -> type[C]:
                 self.field_int = field_int
                 self.field_str = field_str
     """
-    return _apply_field_descriptors(cls)
+    return apply_field_descriptors(cls)

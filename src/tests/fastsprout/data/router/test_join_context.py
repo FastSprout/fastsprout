@@ -13,6 +13,38 @@ from .conftest import JoinCustomer, JoinOrder
 @pytest.mark.usefixtures("databases")
 class TestJoinedStreamContext:
     @pytest.mark.parametrize("shared", [False, True])
+    @pytest.mark.parametrize("nested", [False, True])
+    async def test_field_join_requires_one_context(
+        self, shared: bool, nested: bool
+    ) -> None:
+        # given
+        async with DataR() as first, DataR() as second:
+            other = first if shared else second
+            left = first.stream(SQLQuery(JoinCustomer))
+            # when
+            stream = left.join(
+                other.stream(SQLQuery(JoinCustomer)),
+                on=(JoinCustomer.id, JoinCustomer.id),
+            )
+            joined = (
+                stream.join(
+                    stream, on=(lambda row: row[0].id, lambda row: row[0].id)
+                )
+                if nested
+                else stream
+            )
+            if shared:
+                # then
+                assert [(row[0].id, row[1].id) async for row in joined] == [
+                    (10, 10),
+                    (11, 11),
+                ]
+            else:
+                # then
+                with pytest.raises(MixedStreamContextsError):
+                    _ = [row async for row in joined]
+
+    @pytest.mark.parametrize("shared", [False, True])
     @pytest.mark.parametrize(
         "transform",
         [
@@ -36,7 +68,7 @@ class TestJoinedStreamContext:
                     lambda customer: customer.id,
                 ),
             )
-            # when / then
+            # then
             if shared:
                 rows = await stream.to_list()
                 assert [
@@ -57,7 +89,7 @@ class TestJoinedStreamContext:
                 second.stream(SQLQuery(entity=JoinCustomer)),
                 on=(lambda row: row[0].id, lambda customer: customer.id),
             )
-            # when / then
+            # then
             with pytest.raises(
                 MixedStreamContextsError, match="same DataR context"
             ):
@@ -98,7 +130,7 @@ class TestJoinedStreamContext:
                 right.take(0) if empty_side == "right" else right,
                 on=(lambda _: 0, lambda _: 0),
             )
-            # when / then
+            # then
             with pytest.raises(
                 MixedStreamContextsError, match="same DataR context"
             ):
@@ -117,7 +149,7 @@ class TestJoinedStreamContext:
                 ),
                 on=(lambda row: row[0], lambda identifier: identifier),
             )
-            # when / then
+            # then
             with pytest.raises(
                 MixedStreamContextsError, match="same DataR context"
             ):
@@ -146,7 +178,7 @@ class TestJoinedStreamContext:
                 stream = JoinedStream(left_iterator).join(
                     right_iterator, on=(lambda _: 0, lambda _: 0)
                 )
-                # when / then
+                # then
                 with pytest.raises(
                     MixedStreamContextsError, match="same DataR context"
                 ):
@@ -166,7 +198,7 @@ class TestJoinedStreamContext:
                     on=(lambda row: row[1], lambda customer: customer.id),
                 )
             )
-            # when / then
+            # then
             with pytest.raises(
                 MixedStreamContextsError, match="same DataR context"
             ):
@@ -190,7 +222,7 @@ class TestJoinedStreamContext:
         async with DataR() as first, DataR() as second:
             left = JoinedStream(first.stream(SQLQuery(entity=JoinOrder)))
             right = JoinedStream(second.stream(SQLQuery(entity=JoinCustomer)))
-            # when / then
+            # then
             async with aclosing(aiter(left)) as iterator:
                 await anext(iterator)
                 assert len(await right.to_list()) == 2
@@ -202,7 +234,7 @@ class TestJoinedStreamContext:
         data = DataR()
         async with data:
             stream = JoinedStream(data.stream(SQLQuery(entity=JoinOrder)))
-        # when / then
+        # then
         if reenter:
             async with data:
                 with pytest.raises(NoSessionError, match="no longer active"):
@@ -216,7 +248,7 @@ class TestJoinedStreamContext:
         async with DataR() as data:
             iterator = aiter(data.join(SQLQuery(entity=JoinOrder)))
             await anext(iterator)
-        # when / then
+        # then
         async with aclosing(iterator):
             with pytest.raises(NoSessionError, match="no longer active"):
                 await anext(iterator)

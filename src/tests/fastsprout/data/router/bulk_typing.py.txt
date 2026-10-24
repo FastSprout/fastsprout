@@ -1,0 +1,24 @@
+from collections.abc import AsyncIterable, Iterable, Sequence
+from typing import assert_type
+
+from fastsprout.data.backend.sql import SQLEntity
+from fastsprout.data.capabilities.protocols import Creatable
+from fastsprout.data.router import DataR
+
+
+class Item(SQLEntity[int]):
+    pass
+
+
+async def check_bulk(
+    data: DataR,
+    ability: Creatable[Item],
+    sync_items: Iterable[Item],
+    async_items: AsyncIterable[Item],
+    wrong_items: AsyncIterable[str],
+) -> None:
+    assert_type(await ability.bulk_create(sync_items), Sequence[Item])
+    assert_type(await ability.bulk_create(async_items), Sequence[Item])
+    assert_type(await data.ability(Item).bulk_create(sync_items), Sequence[Item])
+    assert_type(await data.ability(Item).bulk_create(async_items), Sequence[Item])
+    await ability.bulk_create(wrong_items)  # error: reportArgumentType; mypy: arg-type

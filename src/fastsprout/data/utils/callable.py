@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import Awaitable, Callable
 from functools import wraps
-from inspect import iscoroutinefunction
+from inspect import isawaitable, iscoroutinefunction
 from typing import cast, overload
 
 from fastsprout.core.types.callable import AnyCallable
@@ -28,7 +28,8 @@ def resolve_any_callable(callable):
 
     @wraps(callable)
     async def wrapper(*args, **kwargs):
-        return await asyncio.to_thread(callable, *args, **kwargs)  # type: ignore[arg-type]
+        result = await asyncio.to_thread(callable, *args, **kwargs)
+        return await result if isawaitable(result) else result
 
     return wrapper
 

@@ -1,47 +1,238 @@
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from collections.abc import Hashable
+from contextlib import AbstractAsyncContextManager
+from typing import Annotated, Any, Generic, Never, Self
 
-from sqlalchemy import delete, insert, select, update
-from sqlalchemy.sql import Delete, Insert, Update
+from annotated_types import Ge
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.selectable import Select
+from typing_extensions import TypeVar
 
-from fastsprout.data.capabilities.query import BaseQuery
+from fastsprout.core import Undefined, UndefinedType, dataclass
+from fastsprout.core.fields.field_ref import FieldComparison
+from fastsprout.data.capabilities.query import (
+    And,
+    BaseQuery,
+    Expression,
+    FieldPredicate,
+    Filter,
+)
+from fastsprout.data.entity import Signpostable
+from fastsprout.data.streams.implementation import JoinedStream
+from fastsprout.data.types import PredicateCallable
 
-if TYPE_CHECKING:
-    from fastsprout.data.backend.sql.entity import SQLEntity
+from .data_backend import SQLDataBackend
+from .entity import SQLEntity, SQLEntityClassable, SQLSource, validate_source
+from .predicates import compile_predicate, native_conditions, row_filter
 
-__all__ = ["SQLQuery"]
+__all__ = ["SQLJoinedQuery", "SQLQuery", "compile_predicate"]
+
+E = TypeVar("E", bound=SQLEntity[Any])
+SourceT = TypeVar("SourceT", bound=SQLSource, default=SQLSource)
 
 
 @dataclass
-class SQLQuery[E: SQLEntity[Any]](BaseQuery[E, Select[tuple[E]]]):
-    def _build(self) -> Select[tuple[E]]:
-        return (
-            (
-                self.statement
-                if self.statement is not None
-                else self._built_select
-            )
-            .limit(
-                getattr(self, "_limit_value", None),
-            )
-            .offset(
-                getattr(self, "_offset_value", None),
-            )
+class SQLQuery(BaseQuery[E, Select[tuple[E]]], Generic[E, SourceT]):
+    """Infer the entity's source; source= additionally pins its instance."""
+
+    source: SourceT | None = None
+
+    def __init__(
+        self,
+        entity: SQLEntityClassable[E, SourceT],
+        statement: Select[tuple[E]] | None = None,
+        limit_value: int | UndefinedType | None = Undefined,
+        offset_value: Annotated[int, Ge(0)] = 0,
+        conditions: tuple[Expression[E], ...] = (),
+        orderings: tuple[tuple[str, bool], ...] = (),
+        source: SourceT | None = None,
+    ) -> None:
+        super().__init__(
+            entity.__sql_entity__(),
+            statement,
+            limit_value,
+            offset_value,
+            conditions,
+            orderings,
+        )
+        self.source = source
+
+    @property
+    def native_conditions(self) -> bool:
+        return native_conditions(self)
+
+    def build(self) -> Select[tuple[E]]:
+        validate_source(self.entity, self.source)
+        statement = (
+            self.statement
+            if self.statement is not None
+            else select(self.entity)
+        )
+        return apply_query(self, statement)
+
+    def join[F: SQLEntity[Any], L: SQLEntity[Any], Key: Hashable, LO, RO](
+        self,
+        entity: type[SQLEntity[Any, SourceT]],
+        condition: FieldComparison[L, F, Key, LO, RO],
+    ) -> "SQLJoinedQuery[SourceT, FieldPredicate[F], E, F]":
+        row_conditions: tuple[Filter[Never], ...] = ()
+        return join_query(
+            self,
+            entity,
+            condition,
+            source=self.source,
+            row_conditions=row_conditions,
         )
 
-    @property
-    def _built_select(self) -> Select[tuple[E]]:
-        return select(self.entity)
+
+@dataclass
+class SQLJoinedQuery[S: SQLSource, P: FieldPredicate, E: SQLEntity[Any], *Ts](
+    BaseQuery[E, Select[tuple[E, *Ts]], tuple[E, *Ts]]
+):
+    """Filter fields from joined entities; Python callbacks receive the root."""
+
+    sources: tuple[type[SQLEntity[Any]], ...] = ()
+    source: S | None = None
+    row_conditions: tuple[Filter[P | PredicateCallable[E]], ...] = ()
+
+    def where(self, *conditions: Filter[P | PredicateCallable[E]]) -> Self:
+        self.row_conditions += conditions
+        return self
+
+    def unfiltered(self) -> Self:
+        query = super().unfiltered()
+        query.row_conditions = ()
+        return query
 
     @property
-    def _built_insert(self) -> Insert:
-        return insert(self.entity.__table__)
+    def native_conditions(self) -> bool:
+        root = native_conditions(self)
+        condition: Filter[P | PredicateCallable[E]] = And(*self.row_conditions)
+        joined = compile_predicate(
+            condition,
+            self.sources,
+            lambda name: self.entity.__table__.c[name],
+        )
+        return root and joined is not None
 
-    @property
-    def _built_update(self) -> Update:
-        return update(self.entity.__table__)
+    def stream(
+        self, signpost: Signpostable[AbstractAsyncContextManager[AsyncSession]]
+    ) -> JoinedStream[E, *Ts]:
+        return SQLDataBackend(signpost).stream_rows(
+            self,
+            native_conditions=self.native_conditions,
+            condition=row_filter(And(*self.row_conditions), self.sources),
+        )
 
-    @property
-    def _built_delete(self) -> Delete:
-        return delete(self.entity.__table__)
+    def build(self) -> Select[tuple[E, *Ts]]:
+        validate_source(self.entity, self.source)
+        for source in self.sources:
+            validate_source(source)
+            if source.__signpost__ is not self.entity.__signpost__:
+                raise TypeError("SQL joins require one shared signpost")
+        if self.statement is None:
+            raise TypeError("A joined query requires a SQL statement")
+        condition: Filter[P | PredicateCallable[E]] = And(*self.row_conditions)
+        joined = compile_predicate(
+            condition,
+            self.sources,
+            lambda name: self.entity.__table__.c[name],
+        )
+        if joined is None:
+            raise TypeError(
+                "Python predicates require query execution through stream()"
+            )
+        return apply_query(self, self.statement.where(joined))
+
+    def join[F: SQLEntity[Any], L: SQLEntity[Any], Key: Hashable, LO, RO](
+        self,
+        entity: type[SQLEntity[Any, S]],
+        condition: FieldComparison[L, F, Key, LO, RO],
+    ) -> "SQLJoinedQuery[S, P | FieldPredicate[F], E, *Ts, F]":
+        return join_query(
+            self,
+            entity,
+            condition,
+            source=self.source,
+            row_conditions=self.row_conditions,
+        )
+
+
+def join_query[
+    E: SQLEntity[Any],
+    F: SQLEntity[Any],
+    L: SQLEntity[Any],
+    Key: Hashable,
+    LO,
+    RO,
+    R,
+    S: SQLSource,
+    P: FieldPredicate,
+    *Ts,
+](
+    query: BaseQuery[E, Select[tuple[E, *Ts]], R],
+    entity: type[SQLEntity[Any, S]],
+    condition: FieldComparison[L, F, Key, LO, RO],
+    *,
+    source: S | None,
+    row_conditions: tuple[Filter[P | PredicateCallable[E]], ...],
+) -> SQLJoinedQuery[S, P | FieldPredicate[F], E, *Ts, F]:
+    sources = (
+        query.sources if isinstance(query, SQLJoinedQuery) else (query.entity,)
+    )
+    if not isinstance(condition, FieldComparison):
+        raise TypeError("A SQL join requires a field equality expression")
+    left, right = condition.left, condition.right
+    fields_match = left.entity_cls in sources and right.entity_cls is entity
+    if not fields_match:
+        raise TypeError("Join fields must belong to the joined entities")
+    if entity in sources:
+        raise TypeError("Use SQLAlchemy aliases to join the same entity twice")
+    validate_source(entity)
+    if entity.__signpost__ is not query.entity.__signpost__:
+        raise TypeError("SQL joins require one shared signpost")
+    clause = (
+        left.entity_cls.__table__.c[left.name] == entity.__table__.c[right.name]
+    )
+    prepared = query.unfiltered().unpaged()
+    prepared.orderings = ()
+    return SQLJoinedQuery(
+        query.entity,
+        statement=prepared.build()
+        .add_columns(right.entity_cls)
+        .join_from(left.entity_cls, entity, clause),
+        offset_value=query.offset_value,
+        limit_value=query.limit_value,
+        conditions=query.conditions,
+        orderings=query.orderings,
+        sources=(*sources, entity),
+        source=source,
+        row_conditions=row_conditions,
+    )
+
+
+def apply_query[E: SQLEntity[Any], R, *Ts](
+    query: BaseQuery[E, Select[tuple[*Ts]], R],
+    statement: Select[tuple[*Ts]],
+) -> Select[tuple[*Ts]]:
+    condition: Expression[E] = And(*query.conditions)
+    predicate = compile_predicate(
+        condition,
+        query.entity,
+        lambda name: statement.selected_columns[name],
+    )
+    if predicate is None:
+        raise TypeError(
+            "Python predicates require query execution through stream()"
+        )
+    statement = statement.where(predicate)
+    if query.orderings:
+        statement = statement.order_by(None)
+    for name, reverse in query.effective_orderings:
+        column = statement.selected_columns[name]
+        statement = statement.order_by(
+            column.desc() if reverse else column.asc()
+        )
+    if not isinstance(query.limit_value, UndefinedType):
+        statement = statement.limit(query.limit_value)
+    return statement.offset(query.offset_value or None)

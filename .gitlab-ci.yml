@@ -3,6 +3,19 @@
 # Release on tag, ordered by stage: Nexus -> TestPyPI -> PyPI.
 stages: [static-analysis, test, release-nexus, release-testpypi, release-pypi, docs]
 
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "development" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "development"'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+    - when: always
+
 default:
   retry:
     max: 2
@@ -16,8 +29,8 @@ include:
       extra_index_url: https://nexus.3dcra.eu/repository/pypi-hosted-public/simple
       checks:
         - uv run --all-extras --all-groups --all-packages ruff check
-        - uv run --all-extras --all-groups --all-packages basedpyright --pythonversion $UV_PYTHON src docs_src
-        - uv run  --all-extras --all-groups --all-packages pylint --disable=all --enable=C0302,C0415 --max-module-lines=300 --ignore-paths=src/tests ./src
+        - uv run --all-extras --all-groups --all-packages basedpyright --pythonversion $UV_PYTHON src docs_src examples
+        - uv run --all-extras --all-groups --all-packages pylint ./src ./examples
 
   - component: $CI_SERVER_FQDN/opensource/templates/pytest@0.1.10
     inputs:
@@ -62,6 +75,13 @@ include:
       cert: ""
 
 pytest:
+  rules: &verification_rules
+    - &skip_verified_refs
+      if: '$CI_COMMIT_TAG || $CI_COMMIT_BRANCH == "development" || $CI_COMMIT_BRANCH == "main"'
+      when: never
+    - when: on_success
+  variables:
+    PYTEST_ADDOPTS: '-m "not integration"'
   retry: &retry_nonrelease_job
     max: 2
     when:
@@ -74,11 +94,165 @@ pytest:
   image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
 
 python-quality:
+  rules: *verification_rules
   retry: *retry_nonrelease_job
-  parallel:
+  parallel: &python_matrix
     matrix:
       - UV_PYTHON: ["3.12", "3.13", "3.14"]
   image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
+
+.integration-tests:
+  stage: test
+  retry: *retry_nonrelease_job
+  parallel: *python_matrix
+  resource_group: integration-services
+  interruptible: true
+  dependencies: []
+  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
+  script:
+    - >-
+      uv run --locked --all-extras --all-groups pytest
+      "$TEST_SERVICE_CASE"
+      -m integration --no-cov --junitxml=integration-tests.xml
+  artifacts:
+    when: always
+    reports:
+      junit: integration-tests.xml
+  rules: *verification_rules
+
+.database-tests:
+  extends: .integration-tests
+  variables:
+    TEST_SERVICE_CASE: src/tests/fastsprout/testing/data/test_services.py
+
+postgresql-tests:
+  extends: .database-tests
+  variables:
+    TEST_SERVICE_URL: postgresql+asyncpg://tester:testing@backend:5432/heroes
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/library/postgres:18-alpine
+      alias: backend
+      variables:
+        POSTGRES_USER: tester
+        POSTGRES_PASSWORD: testing
+        POSTGRES_DB: heroes
+        HEALTHCHECK_TCP_PORT: "5432"
+
+mysql-tests:
+  extends: .database-tests
+  variables:
+    TEST_SERVICE_URL: mysql+asyncmy://tester:testing@backend:3306/heroes
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/library/mysql:8.4
+      alias: backend
+      variables:
+        MYSQL_ROOT_PASSWORD: testing_root
+        MYSQL_USER: tester
+        MYSQL_PASSWORD: testing
+        MYSQL_DATABASE: heroes
+        HEALTHCHECK_TCP_PORT: "3306"
+
+mariadb-tests:
+  extends: .database-tests
+  variables:
+    TEST_SERVICE_URL: mysql+asyncmy://tester:testing@backend:3306/heroes
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/library/mariadb:11.4
+      alias: backend
+      variables:
+        MARIADB_ROOT_PASSWORD: testing_root
+        MARIADB_USER: tester
+        MARIADB_PASSWORD: testing
+        MARIADB_DATABASE: heroes
+        HEALTHCHECK_TCP_PORT: "3306"
+
+oracle-tests:
+  extends: .database-tests
+  variables:
+    TEST_SERVICE_URL: oracle+oracledb://tester:testing@backend:1521/?service_name=FREEPDB1
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/gvenzl/oracle-free:23-slim-faststart
+      alias: backend
+      variables:
+        ORACLE_PASSWORD: testing_root
+        APP_USER: tester
+        APP_USER_PASSWORD: testing
+        HEALTHCHECK_TCP_PORT: "1521"
+
+kafka-tests:
+  extends: .integration-tests
+  variables:
+    TEST_SERVICE_CASE: src/tests/fastsprout/events/backend/test_services.py::TestKafkaService
+    TEST_SERVICE_URL: backend:9092
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/confluentinc/cp-kafka:7.6.0
+      alias: backend
+      variables:
+        CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+        KAFKA_NODE_ID: "1"
+        KAFKA_PROCESS_ROLES: broker,controller
+        KAFKA_CONTROLLER_QUORUM_VOTERS: 1@backend:9093
+        KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+        KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://backend:9092
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+        KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+        KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+        KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+        KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+        KAFKA_HEAP_OPTS: -Xms128m -Xmx512m
+        HEALTHCHECK_TCP_PORT: "9092"
+
+nats-tests:
+  extends: .integration-tests
+  variables:
+    TEST_SERVICE_CASE: src/tests/fastsprout/events/backend/test_services.py::TestNATSService
+    TEST_SERVICE_URL: nats://backend:4222
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/library/nats:2-alpine
+      alias: backend
+      variables:
+        HEALTHCHECK_TCP_PORT: "4222"
+
+rabbitmq-tests:
+  extends: .integration-tests
+  variables:
+    TEST_SERVICE_CASE: src/tests/fastsprout/events/backend/test_services.py::TestRabbitMQService
+    TEST_SERVICE_URL: amqp://tester:testing@backend:5672/
+  services:
+    - name: harbor.3dcra.net/dockerhub-proxy/library/rabbitmq:4.1.0-alpine
+      alias: backend
+      variables:
+        RABBITMQ_DEFAULT_USER: tester
+        RABBITMQ_DEFAULT_PASS: testing
+        HEALTHCHECK_TCP_PORT: "5672"
+
+changelog:
+  stage: static-analysis
+  rules: *verification_rules
+  image:
+    name: harbor.3dcra.net/dockerhub-proxy/orhunp/git-cliff:2.14.2
+    entrypoint: [""]
+  variables:
+    GIT_DEPTH: "0"
+    GIT_STRATEGY: clone
+  script:
+    - git-cliff --config cliff.toml --output CHANGELOG.txt
+  artifacts:
+    expose_as: Changelog
+    paths:
+      - CHANGELOG.txt
+
+type-coverage:
+  stage: static-analysis
+  rules: *verification_rules
+  retry: *retry_nonrelease_job
+  parallel: *python_matrix
+  image: harbor.3dcra.net/github-proxy/astral-sh/uv:python$UV_PYTHON-bookworm-slim
+  coverage: '/Type completeness score: (\d+(?:\.\d+)?)%/'
+  script:
+    - uv run --locked --all-extras --all-groups basedpyright --pythonversion $UV_PYTHON --verifytypes fastsprout --ignoreexternal
 
 docs-check:
   stage: static-analysis
@@ -90,19 +264,21 @@ docs-check:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
   script:
     - git fetch origin --tags
-    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/generate_readme_docs.py
+    - uv run --locked --no-default-groups --group docs --extra testing-data --extra testing-events python scripts/generate_readme_docs.py
     - git diff --exit-code -- docs examples
     - test -z "$(git ls-files --others --exclude-standard docs/learn)"
-    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/build_docs.py --dev-ref HEAD --output public
+    - uv run --locked --no-default-groups --group docs --extra testing-data --extra testing-events python scripts/build_docs.py --dev-ref HEAD --output public
   artifacts:
     paths:
       - public
     expire_in: 1 week
   rules:
+    - *skip_verified_refs
     - changes:
         - docs/**/*
         - docs_src/**/*
         - examples/**/*
+        - src/fastsprout/**/*
         - README.md
         - SECURITY.md
         - assets/**/*
@@ -111,6 +287,7 @@ docs-check:
         - scripts/build_docs.py
         - scripts/docs_nav.py
         - scripts/generate_readme_docs.py
+        - .github/workflows/docs.yml
         - pyproject.toml
         - uv.lock
 
@@ -120,12 +297,13 @@ pages:
   image: harbor.3dcra.net/github-proxy/astral-sh/uv:python3.12-bookworm-slim
   variables:
     GIT_DEPTH: "0"
+    DOCS_RUN_EXAMPLES: "0"
   dependencies: []
   before_script:
     - apt-get update -qq && apt-get install -y -qq --no-install-recommends git
   script:
     - git fetch origin +refs/heads/development:refs/remotes/origin/development --tags
-    - uv run --locked --no-default-groups --group docs --extra data-sql --extra events python scripts/build_docs.py --dev-ref origin/development --output public
+    - uv run --locked --no-default-groups --group docs --extra testing-data --extra testing-events python scripts/build_docs.py --dev-ref origin/development --output public
   artifacts:
     paths:
       - public

@@ -4,12 +4,12 @@ from collections.abc import (
     Callable,
 )
 from operator import itemgetter
-from typing import cast
+from typing import cast, overload
 
 from fastsprout.core import hidden_lazy_await, lazy_await
 from fastsprout.core.types import AnyIterable
-from fastsprout.core.types.protocols.ables import RichComparisonable
-from fastsprout.data.streams.protocols import AsyncValueStream
+from fastsprout.core.types.protocols.ables import Addable, RichComparisonable
+from fastsprout.data.streams.protocols import AsyncValueStreamable
 from fastsprout.data.types import (
     ConsumerCallable,
     GetterCallable,
@@ -26,10 +26,10 @@ __all__ = ["SimpleAsyncValueStream"]
 
 
 class SimpleAsyncValueStream[T: Valuable](
-    BaseCommonStream[T], AsyncValueStream[T]
+    BaseCommonStream[T], AsyncValueStreamable[T]
 ):
     @hidden_lazy_await
-    async def concat(self, *others: "AsyncValueStream[T] | AnyIterable[T]"):
+    async def concat(self, *others: "AsyncValueStreamable[T] | AnyIterable[T]"):
         return SimpleAsyncValueStream[T](
             achain(self, *(cast(tuple[AsyncIterable, ...], others)))
         )
@@ -148,9 +148,21 @@ class SimpleAsyncValueStream[T: Valuable](
         decorated.sort(key=itemgetter(0), reverse=reverse)
         return SimpleAsyncValueStream[T]([item for _, item in decorated])
 
+    @overload
     @lazy_await
-    async def sum(self) -> T | None:
-        buffer: T | None = None
+    async def sum[Item](
+        self: AsyncIterable[Addable[T, tuple[Item, ...]]],
+    ) -> T | tuple[Item, ...] | None: ...
+
+    @overload
+    @lazy_await
+    async def sum[R: Valuable](
+        self: AsyncIterable[Addable[T, R]],
+    ) -> T | R | None: ...
+
+    @lazy_await
+    async def sum(self) -> Valuable | None:
+        buffer: Valuable | None = None
         async for item in self:
             if buffer is None:
                 buffer = item

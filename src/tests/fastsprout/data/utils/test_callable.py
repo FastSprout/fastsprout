@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from fastsprout.data.types.callable import AnyCallable
+from fastsprout.core.types import AnyCallable
 from fastsprout.data.utils.callable import (
     resolve_any_callable,
     resolve_callable_to_sync,

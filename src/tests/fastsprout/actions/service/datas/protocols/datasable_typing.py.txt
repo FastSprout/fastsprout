@@ -1,0 +1,92 @@
+from typing import assert_type
+
+from fastsprout.actions import DataSable, Page
+from fastsprout.core import BaseSchema, IdentificatorType, Schema, dataclass, typed_fields
+from fastsprout.core.types import LazyAwait
+from fastsprout.data.capabilities.query import BaseQuery
+from fastsprout.data.entity import Entitieable
+from fastsprout.data.streams.implementation.base_common_stream import BaseCommonStream
+from fastsprout.data.streams.protocols import AsyncCommonStreamable, AsyncEntityStreamable, AsyncValueStreamable
+from fastsprout.data.types import Valuable
+
+
+async def reject_foreign_payload[E: Entitieable](service: DataSable[E]) -> None:
+    await service.create("foreign")  # error: reportArgumentType; mypy: arg-type
+
+
+@dataclass
+class CreateInput(Schema):
+    name: str
+
+
+@typed_fields
+class UpdateInput(Schema):
+    name: str
+
+
+class PatchInput(BaseSchema):
+    name: str | None = None
+
+
+class ForeignInput:
+    name: str
+
+
+def schema_defaults[E: Entitieable](service: DataSable[E]) -> None:
+    assert_type(service.create_schema, type[E])
+    assert_type(service.update_schema, type[E])
+    assert_type(service.patch_schema, type[E])
+
+
+def reject_foreign_schemas[E: Entitieable](
+    create: DataSable[E, E, ForeignInput],  # error: reportInvalidTypeArguments; mypy: type-var
+    update: DataSable[E, E, CreateInput, ForeignInput],  # error: reportInvalidTypeArguments; mypy: type-var
+    patch: DataSable[E, E, CreateInput, UpdateInput, ForeignInput],  # error: reportInvalidTypeArguments; mypy: type-var
+) -> None: ...
+
+
+async def schema_inputs[E: Entitieable](
+    service: DataSable[E, E, CreateInput, UpdateInput, PatchInput],
+    entity: E,
+    identifier: IdentificatorType,
+) -> None:
+    assert_type(service.create_schema, type[CreateInput])
+    assert_type(service.update_schema, type[UpdateInput])
+    assert_type(service.patch_schema, type[PatchInput])
+    assert_type(await service.create(entity), E)
+    assert_type(await service.create(CreateInput(name="Batman")), E)
+    assert_type(await service.update(identifier, UpdateInput(name="Batman")), E)
+    assert_type(await service.patch(identifier, PatchInput()), E)
+    assert_type(service.bulk_create([CreateInput(name="Batman")]), AsyncCommonStreamable[E])
+    await service.create(UpdateInput(name="Batman"))  # error: reportArgumentType; mypy: arg-type
+    await service.create(ForeignInput())  # error: reportArgumentType; mypy: arg-type
+
+
+async def query_results[E: Entitieable, Statement](
+    service: DataSable[E], query: BaseQuery[E, Statement],
+) -> None:
+    assert_type(await service.get(query), E | None)
+    assert_type(await service.exists(query), bool)
+    assert_type(await service.list(query), Page[E])
+    assert_type(await service.count(query), int)
+    stream = service.stream(query)
+    assert_type(stream, AsyncCommonStreamable[E])
+    assert_type(stream.to_list(), LazyAwait[list[E]])
+    assert_type(stream.first(), LazyAwait[E | None])
+    assert_type(stream.sum_by(lambda entity: 1), LazyAwait[int | None])
+    assert_type(stream.min(lambda entity: str(entity)), LazyAwait[E | None])
+    assert_type(stream.max(lambda entity: str(entity)), LazyAwait[E | None])
+    async for chunk in stream.chunked(10):
+        assert_type(chunk, list[E])
+
+
+def common_stream_contract[T: Valuable | Entitieable](stream: BaseCommonStream[T]) -> AsyncCommonStreamable[T]:
+    return stream
+
+
+def entity_stream_contract[E: Entitieable](stream: AsyncEntityStreamable[E]) -> AsyncCommonStreamable[E]:
+    return stream
+
+
+def value_stream_contract[T: Valuable](stream: AsyncValueStreamable[T]) -> AsyncCommonStreamable[T]:
+    return stream

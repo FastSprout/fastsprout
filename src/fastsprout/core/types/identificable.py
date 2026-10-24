@@ -1,8 +1,9 @@
-from typing import Annotated, Any
+from typing import Annotated, Never
 
+import pydantic_core.core_schema as core_schema
 from pydantic import GetCoreSchemaHandler, GetJsonSchemaHandler
 from pydantic.json_schema import JsonSchemaValue
-from pydantic_core import core_schema
+from typing_extensions import TypeForm
 
 from .protocols.identificable import Identificatable
 
@@ -11,14 +12,14 @@ __all__ = ["IDType", "IdentificatableType", "IdentificatorType", "PublicIDType"]
 
 class IdentificatablePydanticValidator:
     @classmethod
-    def __get_pydantic_core_schema__(
-        cls, source: Any, handler: GetCoreSchemaHandler
+    def __get_pydantic_core_schema__[T](
+        cls, source: TypeForm[T], handler: GetCoreSchemaHandler
     ) -> core_schema.CoreSchema:
         """Defines how Pydantic should validate the Identificatable interface."""
 
-        def validate_protocol(v: Any) -> Any:
+        def validate_protocol[V](v: V) -> V:
             # Enforce the runtime_checkable protocol check explicitly
-            if not isinstance(v, Identificatable):
+            if v is None or not isinstance(v, Identificatable):
                 raise ValueError(
                     "Object does not implement the Identificatable protocol"
                 )
@@ -43,7 +44,7 @@ class IdentificatablePydanticValidator:
 
 
 IdentificatableType = Annotated[
-    Identificatable, IdentificatablePydanticValidator
+    Identificatable[Never], IdentificatablePydanticValidator
 ]
 
 

@@ -1,8 +1,31 @@
-from typing import Any, ClassVar, Literal, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol
 
 from .field import Field
 
-__all__ = ["EntityVisibility", "InternalField", "ReadField", "WriteField"]
+__all__ = [
+    "DTOVisibility",
+    "EntityVisibility",
+    "ExtraReadField",
+    "ExtraReadable",
+    "ExtraWritable",
+    "ExtraWriteField",
+    "InternalField",
+    "Internalable",
+    "ReadField",
+    "Readable",
+    "SQLExtraReadable",
+    "SQLExtraWritable",
+    "SQLFieldable",
+    "SQLInternalable",
+    "SQLReadable",
+    "SQLWritable",
+    "Writable",
+    "WriteField",
+]
+
+
+class DTOVisibility:
+    """Identify DTO bases without importing DTO construction."""
 
 
 class EntityVisibility:
@@ -14,42 +37,89 @@ class EntityVisibility:
     """
 
     @property
-    def _fastsprout_visibility(self) -> Any:
+    def fastsprout_visibility(self) -> Any:
         return "entity"
 
 
-class _Readable(Protocol):
+class Readable(Protocol):
     @property
-    def _fastsprout_visibility(
+    def fastsprout_visibility(
         self,
-    ) -> Literal["entity", "read", "read_write"]: ...
+    ) -> Literal[
+        "entity", "read", "read_write", "extra_read", "extra_read_write"
+    ]: ...
 
 
-class _Writable(Protocol):
+class ExtraReadable(Protocol):
     @property
-    def _fastsprout_visibility(
+    def fastsprout_visibility(
         self,
-    ) -> Literal["entity", "write", "read_write"]: ...
+    ) -> Literal["entity", "extra_read", "extra_read_write"]: ...
 
 
-class _Internal(Protocol):
+class ExtraWritable(Protocol):
     @property
-    def _fastsprout_visibility(self) -> Literal["entity"]: ...
+    def fastsprout_visibility(
+        self,
+    ) -> Literal["entity", "extra_write", "extra_read_write"]: ...
 
 
-class ReadField[T](Field[T, _Readable]):
+class Writable(Protocol):
+    @property
+    def fastsprout_visibility(
+        self,
+    ) -> Literal[
+        "entity", "write", "read_write", "extra_write", "extra_read_write"
+    ]: ...
+
+
+class Internalable(Protocol):
+    @property
+    def fastsprout_visibility(self) -> Literal["entity"]: ...
+
+
+if TYPE_CHECKING:
+    from sqlalchemy import Table
+
+    class SQLFieldable(Protocol):
+        __table__: ClassVar[Table]
+
+    class SQLReadable(Readable, SQLFieldable, Protocol): ...
+
+    class SQLWritable(Writable, SQLFieldable, Protocol): ...
+
+    class SQLInternalable(Internalable, SQLFieldable, Protocol): ...
+
+    class SQLExtraReadable(ExtraReadable, SQLFieldable, Protocol): ...
+
+    class SQLExtraWritable(ExtraWritable, SQLFieldable, Protocol): ...
+
+
+class ReadField[T](Field[T, Readable]):
     """Included in read DTOs, excluded from write-only DTOs."""
 
     __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"read"})
 
 
-class WriteField[T](Field[T, _Writable]):
+class WriteField[T](Field[T, Writable]):
     """Included in write DTOs, excluded from read-only DTOs."""
 
     __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"write"})
 
 
-class InternalField[T](Field[T, _Internal]):
+class InternalField[T](Field[T, Internalable]):
     """Accessible on the entity, excluded from every public DTO."""
 
     __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"internal"})
+
+
+class ExtraReadField[T](Field[T, ExtraReadable]):
+    """Excluded from ordinary DTOs; requires extended read visibility."""
+
+    __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"extra_read"})
+
+
+class ExtraWriteField[T](Field[T, ExtraWritable]):
+    """Excluded from ordinary DTOs; requires extended write visibility."""
+
+    __fastsprout_ops__: ClassVar[frozenset[str]] = frozenset({"extra_write"})

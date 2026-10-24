@@ -2,22 +2,23 @@ import asyncio
 from collections.abc import (
     AsyncGenerator,
     AsyncIterable,
-    AsyncIterator,
-    Awaitable,
     Callable,
     Hashable,
 )
-from contextlib import asynccontextmanager
+from contextlib import aclosing
 from inspect import isawaitable, iscoroutinefunction
 
 from fastsprout.data.streams.context import in_join_context
+from fastsprout.data.streams.protocols.joined_stream import (
+    AsyncJoinedStreamable,
+    JoinKey,
+)
+from fastsprout.data.utils.iterable import resolve_any_iterable
 
-__all__ = ["JoinedStream"]
-
-type JoinKey[T] = Callable[[T], Hashable | Awaitable[Hashable]]
+__all__ = ["JoinKey", "JoinedStream"]
 
 
-async def _key[T](callback: JoinKey[T], item: T) -> Hashable:
+async def resolve_key[T](callback: JoinKey[T], item: T) -> Hashable:
     result = (
         callback(item)
         if iscoroutinefunction(callback)
@@ -26,20 +27,7 @@ async def _key[T](callback: JoinKey[T], item: T) -> Hashable:
     return await result if isawaitable(result) else result
 
 
-@asynccontextmanager
-async def _iterating[T](
-    source: AsyncIterable[T],
-) -> AsyncIterator[AsyncIterator[T]]:
-    iterator = aiter(source)
-    try:
-        yield iterator
-    finally:
-        close = getattr(iterator, "aclose", None)
-        if close is not None:
-            await close()
-
-
-class JoinedStream[*Ts]:
+class JoinedStream[*Ts](AsyncJoinedStreamable[*Ts]):
     """Lazy inner joins producing flat, statically typed tuples.
 
     Each step buffers its right source in a hash index, then streams the
@@ -50,22 +38,22 @@ class JoinedStream[*Ts]:
     during iteration, including sources wrapped in stream transformations.
     """
 
-    _iterate: Callable[[], AsyncGenerator[tuple[*Ts], None]]
+    iterate: Callable[[], AsyncGenerator[tuple[*Ts], None]]
 
     def __init__[T](self: "JoinedStream[T]", first: AsyncIterable[T]) -> None:
         async def rows() -> AsyncGenerator[tuple[T], None]:
-            async with _iterating(first) as iterator:
+            async with aclosing(resolve_any_iterable(first)) as iterator:
                 async for item in iterator:
                     yield (item,)
 
-        self._iterate = rows
+        self.iterate = rows
 
     @staticmethod
-    def _from_factory[*Rs](
+    def from_factory[*Rs](
         factory: Callable[[], AsyncGenerator[tuple[*Rs], None]],
     ) -> "JoinedStream[*Rs]":
         joined: JoinedStream[*Rs] = object.__new__(JoinedStream)
-        joined._iterate = factory
+        joined.iterate = factory
         return joined
 
     def join[T](
@@ -83,21 +71,23 @@ class JoinedStream[*Ts]:
 
         async def rows() -> AsyncGenerator[tuple[*Ts, T], None]:
             index: dict[Hashable, list[T]] = {}
-            async with _iterating(stream) as right:
+            async with aclosing(resolve_any_iterable(stream)) as right:
                 async for item in right:
-                    index.setdefault(await _key(right_key, item), []).append(
-                        item
-                    )
-            async with _iterating(self) as left:
+                    index.setdefault(
+                        await resolve_key(right_key, item), []
+                    ).append(item)
+            async with aclosing(resolve_any_iterable(self)) as left:
                 async for row in left:
-                    for match in index.get(await _key(left_key, row), ()):
+                    for match in index.get(
+                        await resolve_key(left_key, row), ()
+                    ):
                         yield (*row, match)
 
-        return JoinedStream._from_factory(rows)
+        return JoinedStream.from_factory(rows)
 
     def __aiter__(self) -> AsyncGenerator[tuple[*Ts], None]:
         """Return an iterator; close it explicitly when stopping early."""
-        return in_join_context(self._iterate())
+        return in_join_context(self.iterate())
 
     async def to_list(self) -> list[tuple[*Ts]]:
         return [row async for row in self]

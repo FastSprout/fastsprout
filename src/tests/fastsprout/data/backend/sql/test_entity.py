@@ -1,13 +1,21 @@
 import subprocess
 import sys
 from datetime import datetime
-from typing import Any, ClassVar
+from typing import ClassVar
+from uuid import uuid4
 
 import pytest
 
-from fastsprout.core import Field, InternalField, ReadField, WriteField
+from fastsprout.core import (
+    Field,
+    InternalField,
+    ReadField,
+    WriteDTO,
+    WriteField,
+)
+from fastsprout.testing.core import given, then, when
 
-from .base_test_sql_entity import BaseTestSQLEntity
+from .base_test_sql_entity import BaseTestSQLEntity, SQLTestField
 from .conftest import (
     CustomSQLBase,
     CustomSQLMiddle,
@@ -18,22 +26,34 @@ from .conftest import (
 )
 
 
+class VisibilitySQLUserCreate(WriteDTO, VisibilitySQLUser): ...
+
+
 class TestCustomSQLFields(BaseTestSQLEntity[CustomSQLRecord]):
-    _entity_type = CustomSQLRecord
-    _data: ClassVar[dict[str, Any]] = {
+    entity_type = CustomSQLRecord
+    data: ClassVar[dict[str, str | datetime]] = {
         "code": "a",
         "sort_key": "01",
         "inherited": "base",
         "name": "first",
     }
-    _updated_data: ClassVar[dict[str, Any]] = {"code": "updated"}
-    _field_types: ClassVar[dict[str, type[Field[Any, Any]]]] = {
-        "id": Field,
+    updated_data: ClassVar[dict[str, str]] = {"code": "updated"}
+    field_types: ClassVar[dict[str, type[SQLTestField]]] = {
+        "id": ReadField,
         "code": SearchField,
         "sort_key": SortField,
         "inherited": SearchField,
         "name": SearchField,
     }
+
+    @when("an unmapped base descriptor is inspected")
+    def descriptor_matches(
+        self,
+        entity_type: type[CustomSQLBase],
+        name: str,
+        field_type: type[SearchField[str] | SortField[str]],
+    ) -> bool:
+        return type(vars(entity_type)[name]) is field_type
 
     @pytest.mark.parametrize(
         "entity_type, name, field_type",
@@ -42,26 +62,24 @@ class TestCustomSQLFields(BaseTestSQLEntity[CustomSQLRecord]):
             (CustomSQLMiddle, "sort_key", SortField),
         ],
     )
+    @then("unmapped inheritance preserves custom descriptor classes")
     def test_unmapped_bases_preserve_descriptors(
-        self, entity_type, name, field_type
-    ):
-        # when
-        descriptor = vars(entity_type)[name]
-        # then
-        assert type(descriptor) is field_type
+        self, descriptor_matches: bool
+    ) -> None:
+        assert descriptor_matches
 
 
 class TestSQLVisibilityFields(BaseTestSQLEntity[VisibilitySQLUser]):
-    _entity_type = VisibilitySQLUser
-    _data: ClassVar[dict[str, Any]] = {
+    entity_type = VisibilitySQLUser
+    data: ClassVar[dict[str, str | datetime]] = {
         "email": "a@b.c",
         "password": "secret",
         "password_hash": "hash",
         "created_at": datetime(2026, 9, 17),
     }
-    _updated_data: ClassVar[dict[str, Any]] = {"password_hash": "updated-hash"}
-    _field_types: ClassVar[dict[str, type[Field[Any, Any]]]] = {
-        "id": Field,
+    updated_data: ClassVar[dict[str, str]] = {"password_hash": "updated-hash"}
+    field_types: ClassVar[dict[str, type[SQLTestField]]] = {
+        "id": ReadField,
         "email": Field,
         "password": WriteField,
         "password_hash": InternalField,
@@ -69,21 +87,125 @@ class TestSQLVisibilityFields(BaseTestSQLEntity[VisibilitySQLUser]):
         "last_login": InternalField,
     }
 
-    def test_inherited_internal_default(self, entity: VisibilitySQLUser):
+    @then("the inherited internal default remains None")
+    def test_inherited_internal_default(
+        self, entity: VisibilitySQLUser
+    ) -> None:
         assert entity.last_login is None
 
 
-def test_sql_can_be_imported_in_a_fresh_interpreter() -> None:
-    # when
-    result = subprocess.run(
+class TestSQLCreateDTO:
+    @when("a write DTO is constructed without the generated identity")
+    def user(self) -> VisibilitySQLUserCreate:
+        return VisibilitySQLUserCreate(email="a@b.c", password="secret")
+
+    @when("the generated identity is accessed or supplied explicitly")
+    def identity_errors(
+        self, user: VisibilitySQLUserCreate
+    ) -> list[AttributeError]:
+        errors: list[AttributeError] = []
+        try:
+            user.__getattribute__("id")
+        except AttributeError as error:
+            errors.append(error)
+        try:
+            VisibilitySQLUserCreate(
+                id=uuid4(), email="a@b.c", password="secret"
+            )
+        except AttributeError as error:
+            errors.append(error)
+        return errors
+
+    @then("write DTOs exclude generated identities and reject explicit access")
+    def test_create_dto_excludes_generated_identity(
+        self,
+        user: VisibilitySQLUserCreate,
+        identity_errors: list[AttributeError],
+    ) -> None:
+        assert "id" not in vars(user)
+        assert len(identity_errors) == 2
+        assert all("not accessible" in str(error) for error in identity_errors)
+
+
+class TestSQLImports:
+    @when("SQL is imported by a fresh interpreter")
+    def imported(self) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from fastsprout.data.backend.sql import SQLEntity",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    @then("the SQL import succeeds without prior initialization")
+    def test_sql_can_be_imported_in_a_fresh_interpreter(
+        self, imported: subprocess.CompletedProcess[str]
+    ) -> None:
+        assert imported.returncode == 0, imported.stdout + imported.stderr
+
+
+class TestSQLDeclarationErrors:
+    @given("an isolated registry for an invalid SQL declaration")
+    def client(self) -> str:
+        return """
+from sqlmodel import Field as SQLField
+from fastsprout.core import Field, ReadField
+from fastsprout.data import Relationship
+from fastsprout.data.backend.sql import SQLEntity, SQLQuery
+
+class Unmapped(SQLEntity[int], table=False):
+    id: ReadField[int] = SQLField(primary_key=True)
+
+class Parent(SQLEntity[int]):
+    id: ReadField[int] = SQLField(primary_key=True)
+"""
+
+    @when("a declaration bypasses static validation")
+    def rejected(
+        self, client: str, declaration: str
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-c", client + declaration],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=15,
+        )
+
+    @pytest.mark.parametrize(
+        "declaration, message",
         [
-            sys.executable,
-            "-c",
-            "from fastsprout.data.backend.sql import SQLEntity",
+            (
+                """
+class Child(SQLEntity[int]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    parent: Field[Unmapped] = Relationship()
+""",
+                "Relationship Child.parent requires a mapped entity",
+            ),
+            (
+                """
+class Child(SQLEntity[int]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    parent_id: Field[int]
+    parent: Field[Parent] = Relationship()
+""",
+                "Relationship Child.parent already has parent_id",
+            ),
+            (
+                "SQLQuery(Parent).join(Parent, True)",
+                "A SQL join requires a field equality expression",
+            ),
         ],
-        capture_output=True,
-        text=True,
-        check=False,
+        ids=["unmapped-relation", "foreign-key-collision", "boolean-join"],
     )
-    # then
-    assert result.returncode == 0, result.stdout + result.stderr
+    @then("runtime guards reject invalid relationships and join expressions")
+    def test_declaration(
+        self, rejected: subprocess.CompletedProcess[str], message: str
+    ) -> None:
+        assert rejected.returncode != 0
+        assert f"TypeError: {message}" in rejected.stderr

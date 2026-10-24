@@ -1,0 +1,136 @@
+from collections.abc import AsyncIterator
+from typing import Any, assert_type
+
+from sqlmodel import Field as SQLField
+
+from fastsprout.core import Field, ReadDTO, ReadField
+from fastsprout.core.fields.field_predicate import FieldPredicate
+from fastsprout.data import DataR
+from fastsprout.data.backend.sql import SQLEntity, SQLJoinedQuery, SQLQuery, SQLSignpost
+from fastsprout.data.backend.sql.capabilities import SQLAbilitable
+from fastsprout.data.streams.protocols import AsyncEntityStreamable, AsyncJoinedStreamable
+
+
+class CRM(SQLSignpost): ...
+class ERP(SQLSignpost): ...
+
+
+class Hero(SQLEntity[int, CRM]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+
+class Other(SQLEntity[int, ERP]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+
+class Team(SQLEntity[int, CRM]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+
+class Country(SQLEntity[int, CRM]):
+    id: ReadField[int] = SQLField(primary_key=True)
+
+
+class Unjoined(SQLEntity[int, CRM]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+
+class DynamicSource(SQLEntity[int, Any]):
+    id: ReadField[int] = SQLField(primary_key=True)
+    name: Field[str]
+
+
+class InvalidSource(SQLEntity[int, str]): ...  # error: reportInvalidTypeArguments; mypy: type-var
+
+
+class HeroRead(ReadDTO, Hero): ...
+
+
+def crm_entity[E: SQLEntity[int, CRM]](entity: type[E]) -> type[E]:
+    return entity
+
+
+def crm_query[E: SQLEntity[int, CRM]](query: SQLQuery[E]) -> SQLQuery[E]:
+    return query
+
+
+assert_type(crm_entity(Hero), type[Hero])
+assert_type(crm_entity(Team), type[Team])
+assert_type(crm_entity(DynamicSource), type[DynamicSource])
+assert_type(crm_entity(HeroRead), type[HeroRead])
+assert_type(crm_query(SQLQuery(Hero)), SQLQuery[Hero])
+assert_type(crm_query(SQLQuery(Team)), SQLQuery[Team])
+assert_type(SQLQuery(DynamicSource), SQLQuery[DynamicSource, Any])
+assert_type(Hero.name.eq("Batman"), FieldPredicate[Hero])
+crm_entity(Other)  # error: reportArgumentType; mypy: type-var
+crm_query(SQLQuery(Other))  # error: reportArgumentType; mypy: type-var
+
+
+def routed(ability: SQLAbilitable[Hero]) -> None:
+    query = crm_query(ability.query_for())
+    assert_type(query.entity, type[Hero])
+    assert_type(query.where(query.Or(Hero.name.eq("Batman"))), SQLQuery[Hero])
+    query.where(query.Or(Hero.name.eq("Batman"), Other.name.eq("Robin")))  # error: reportArgumentType; mypy: arg-type
+
+
+async def joined_sources(datar: DataR) -> None:
+    comparison = Hero.id == Team.id
+    assert_type(crm_entity(comparison.left.entity_cls), type[Hero])
+    assert_type(crm_entity(comparison.right.entity_cls), type[Team])
+    root = SQLQuery(Hero)
+    assert_type(root, SQLQuery[Hero, CRM])
+    assert_type(root.copy().where(Hero.name.eq("Batman")), SQLQuery[Hero, CRM])
+    query = root.join(Team, comparison)
+    assert_type(query, SQLJoinedQuery[CRM, FieldPredicate[Team], Hero, Team])
+    assert_type(crm_entity(query.entity), type[Hero])
+    nested = query.copy().join(Country, Team.id == Country.id)
+    assert_type(nested, SQLJoinedQuery[CRM, FieldPredicate[Team] | FieldPredicate[Country], Hero, Team, Country])
+    assert_type(
+        nested.where(nested.Or(Hero.name.eq("Batman"))),
+        SQLJoinedQuery[CRM, FieldPredicate[Team] | FieldPredicate[Country], Hero, Team, Country],
+    )
+    assert_type(datar.stream(nested), AsyncJoinedStreamable[Hero, Team, Country])
+    async for hero, team, country in datar.stream(nested):
+        assert_type(hero, Hero)
+        assert_type(team, Team)
+        assert_type(country, Country)
+        crm_entity(type(hero))
+        crm_entity(type(team))
+        crm_entity(type(country))
+    nested.where(nested.Or(Hero.name.eq("Batman"), Other.name.eq("Robin")))  # error: reportArgumentType; mypy: arg-type
+    root.join(Other, Hero.id == Other.id)  # error: reportArgumentType; mypy: arg-type
+    query.copy().join(Other, Team.id == Other.id)  # error: reportArgumentType; mypy: arg-type
+    nested.join(Other, Country.id == Other.id)  # error: reportArgumentType; mypy: arg-type
+
+
+def dto_source() -> None:
+    assert_type(SQLQuery(HeroRead), SQLQuery[HeroRead, CRM])
+    SQLQuery(int)  # error: reportArgumentType; mypy: arg-type
+
+
+def scoped_joins(source: CRM) -> None:
+    source.bind(Hero)
+    source.bind(Team)
+    source.bind(Other)  # error: reportArgumentType; mypy: arg-type
+    query = SQLQuery(Hero, source=source)
+    assert_type(query, SQLQuery[Hero, CRM])
+    joined = query.join(Team, Hero.id == Team.id)
+    assert_type(joined, SQLJoinedQuery[CRM, FieldPredicate[Team], Hero, Team])
+    nested = joined.copy().join(Country, Team.id == Country.id)
+    assert_type(nested, SQLJoinedQuery[CRM, FieldPredicate[Team] | FieldPredicate[Country], Hero, Team, Country])
+    nested.where(nested.Or(Hero.name.eq("Batman"), Team.name.eq("Avengers"), Country.id.eq(1)))
+    nested.where(Unjoined.name.eq("Unknown"))  # error: reportArgumentType; mypy: arg-type
+    query.join(Other, Hero.id == Other.id)  # error: reportArgumentType; mypy: arg-type
+    joined.join(Other, Team.id == Other.id)  # error: reportArgumentType; mypy: arg-type
+    nested.join(Other, Country.id == Other.id)  # error: reportArgumentType; mypy: arg-type
+
+
+async def scoped_reads(ability: SQLAbilitable[Hero], source: CRM) -> None:
+    query = SQLQuery(Hero, source=source)
+    assert_type(await ability.find_first(query), Hero | None)
+    assert_type(ability.stream(query), AsyncEntityStreamable[Hero])
+    assert_type(ability.iter(query), AsyncIterator[Hero])

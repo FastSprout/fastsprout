@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import inspect
+from collections.abc import Awaitable, Callable
 from typing import (
     TYPE_CHECKING,
     Protocol,
-    cast,
+    TypeGuard,
     get_args,
     get_origin,
     get_type_hints,
@@ -15,21 +16,31 @@ from fastsprout.events.event import Eventable, EventState
 if TYPE_CHECKING:
     from fastsprout.events.bus import EventBus
 
-__all__ = ["EventsMiddleware", "EventsMiddlewareFactory"]
+__all__ = [
+    "EventsMiddleware",
+    "EventsMiddlewareFactoryable",
+    "MiddlewareBindable",
+]
 
 
-class EventsMiddlewareFactory[**P](Protocol):
+class EventsMiddlewareFactoryable[E: Eventable, **P](Protocol):
     def __init__(
         self, bus: EventBus, /, *args: P.args, **kwargs: P.kwargs
     ) -> None: ...
 
-    async def __call__(self, *args, **kwargs) -> None: ...
+    async def __call__(self, state: EventState[E], /) -> None: ...
 
 
-class EventsMiddleware[**P]:
+class MiddlewareBindable(Protocol):
+    def resolve(
+        self, bus: EventBus
+    ) -> Callable[[EventState[Eventable]], Awaitable[None]]: ...
+
+
+class EventsMiddleware[E: Eventable, **P]:
     def __init__(
         self,
-        cls: type[EventsMiddlewareFactory[P]],
+        cls: type[EventsMiddlewareFactoryable[E, P]],
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> None:
@@ -45,15 +56,26 @@ class EventsMiddleware[**P]:
         if get_origin(annotation) is not EventState:
             return True
         event_type = get_args(annotation)[0]
-        return not isinstance(event_type, type) or isinstance(
-            event, event_type
-        )
+        return not isinstance(event_type, type) or isinstance(event, event_type)
 
-    def bind(self, bus: EventBus) -> EventsMiddlewareFactory[P]:
-        return cast(
-            EventsMiddlewareFactory[P],
-            self.cls(bus, *self.args, **self.kwargs),
-        )
+    def accepts_state(
+        self, state: EventState[Eventable]
+    ) -> TypeGuard[EventState[E]]:
+        return self.accepts(state.event)
+
+    def bind(self, bus: EventBus) -> EventsMiddlewareFactoryable[E, P]:
+        return self.cls(bus, *self.args, **self.kwargs)
+
+    def resolve(
+        self, bus: EventBus
+    ) -> Callable[[EventState[Eventable]], Awaitable[None]]:
+        handler = self.bind(bus)
+
+        async def call(state: EventState[Eventable]) -> None:
+            if self.accepts_state(state):
+                await handler(state)
+
+        return call
 
     def __repr__(self) -> str:
         class_name = self.__class__.__name__

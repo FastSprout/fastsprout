@@ -1,66 +1,74 @@
 """Export rendered documentation as one Markdown file per version."""
 
 import re
-from html.parser import HTMLParser
+from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import urljoin
+
+from bs4 import BeautifulSoup, Tag
+from markdownify import MarkdownConverter, markdownify
 
 SITE_URL = "https://fastsprout.dev"
 
 
-class ArticleMarkdown(HTMLParser):
-    """Extract readable Markdown from the rendered API reference article."""
+class ArticleConverter(MarkdownConverter):
+    def convert_a(self, el: Tag, text: str, parent_tags: set[str]) -> str:
+        if el.find_parent(["pre", "code"]) is not None:
+            return text
+        if el.get("id") and not el.get("href"):
+            return str(el)
+        return markdownify(str(el)).strip()
+
+
+def code_language(element: Tag) -> str:
+    for parent in (element, *element.parents):
+        for name in parent.get_attribute_list("class"):
+            if isinstance(name, str) and name.startswith("language-"):
+                return name.removeprefix("language-")
+    return ""
+
+
+class ArticleMarkdown:
+    """Export rendered articles for full-text documentation."""
 
     def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self.in_article = False
-        self.block: str | None = None
-        self.fragments: list[str] = []
         self.blocks: list[str] = []
 
-    def handle_starttag(
-        self, tag: str, attrs: list[tuple[str, str | None]]
+    def feed(
+        self, data: str, rewrite_link: Callable[[str], str] | None = None
     ) -> None:
-        if (
-            tag == "article"
-            and ("class", "md-content__inner md-typeset") in attrs
+        soup = BeautifulSoup(data, "html.parser")
+        article = soup.select_one("article.md-content__inner")
+        if article is None:
+            return
+        for decorative in article.select(
+            ".headerlink, .md-content__button, svg"
         ):
-            self.in_article = True
-        elif (
-            self.in_article
-            and self.block is None
-            and tag
-            in {"h1", "h2", "h3", "h4", "h5", "h6", "p", "pre", "li", "summary"}
+            decorative.decompose()
+        for heading in article.select(
+            "h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]"
         ):
-            self.block = tag
-            self.fragments = []
-
-    def handle_data(self, data: str) -> None:
-        if self.block is not None:
-            self.fragments.append(data)
-
-    def handle_endtag(self, tag: str) -> None:
-        if tag == self.block:
-            value = "".join(self.fragments).strip()
-            if value:
-                self.blocks.append(self.format_block(tag, value))
-            self.block = None
-            self.fragments = []
-        elif tag == "article":
-            self.in_article = False
-
-    @staticmethod
-    def format_block(tag: str, value: str) -> str:
-        if tag.startswith("h") and len(tag) == 2:
-            return f"{'#' * int(tag[1])} {value.splitlines()[0].strip()}"
-        if tag == "pre":
-            return f"```python\n{value}\n```"
-        if tag == "li":
-            return f"- {value}"
-        return value
+            heading.insert_before(soup.new_tag("a", id=str(heading["id"])))
+        if rewrite_link is not None:
+            self.rewrite_links(article, rewrite_link)
+        self.blocks.append(
+            ArticleConverter(
+                heading_style="ATX", code_language_callback=code_language
+            )
+            .convert_soup(article)
+            .strip()
+        )
 
     def markdown(self) -> str:
         return "\n\n".join(self.blocks) + "\n"
+
+    @staticmethod
+    def rewrite_links(article: Tag, rewrite: Callable[[str], str]) -> None:
+        for tag in article.select("[href], [src]"):
+            for attribute in ("href", "src"):
+                value = tag.get(attribute)
+                if isinstance(value, str):
+                    tag[attribute] = rewrite(value)
 
 
 def page_url(relative: Path, slug: str) -> str:
