@@ -5,11 +5,13 @@ The versioned documentation site is published at
 examples, and an API reference generated from the Python source.
 
 GitLab's `docs` stage publishes the site when `development` or a release tag
-is pushed. The GitHub Actions `Docs` workflow builds the same documentation
-from the mirrored release tags and development branch on GitHub, and retains
-the rendered site as a workflow artifact named `documentation`. The release
-workflow also calls `Docs` after publishing a release. Pull requests build
-the documentation for review.
+is pushed. CI verifies changes before they enter `development`; it does not
+repeat tests on `development`, on `main`, on release tags, or when merging
+`development` into `main`. Tags run package publishing and GitLab Pages.
+Publishing uses the committed example output without rerunning examples.
+The GitHub Actions `Docs` workflow builds documentation for pull requests
+targeting `development`, or when started manually, and retains the rendered
+site as a workflow artifact named `documentation`.
 
 Build the complete versioned site from the repository root:
 

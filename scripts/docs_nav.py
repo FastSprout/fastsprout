@@ -251,7 +251,10 @@ def replace_source_block(markdown: str, source: Path, root: Path) -> str:
 
 
 def render_example_output(markdown: str, root: Path) -> str:
-    if "<!-- example-source:" not in markdown:
+    if (
+        "<!-- example-source:" not in markdown
+        or os.environ.get("DOCS_RUN_EXAMPLES") == "0"
+    ):
         return markdown
     source = example_source(markdown, root)
     output = run_python_example(source, root)

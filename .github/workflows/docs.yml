@@ -1,12 +1,9 @@
 name: Docs
 
 on:
-  push:
-    branches: [development]
-    tags: ["*"]
   pull_request:
+    branches: [development]
   workflow_dispatch:
-  workflow_call:
 
 permissions:
   contents: read
