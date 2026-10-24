@@ -18,11 +18,11 @@ from mkdocs.config import load_config
 from packaging.version import Version
 
 if __package__:
-    from .docs_landing import write_landing
+    from .docs_landing import write_landing, write_version_selectors
     from .docs_nav import render_example_output
     from .llms_full import SITE_URL, page_url, write_full
 else:
-    from docs_landing import write_landing
+    from docs_landing import write_landing, write_version_selectors
     from docs_nav import render_example_output
     from llms_full import SITE_URL, page_url, write_full
 
@@ -218,6 +218,9 @@ def write_index(output: Path, releases: list[tuple[Version, str, str]]) -> None:
         json.dumps(versions, indent=2) + "\n", encoding="utf-8"
     )
     write_landing(output)
+    write_version_selectors(
+        output, [*(version for _, version, _ in releases), "dev"]
+    )
     for verification in (ROOT / "assets").glob("google*.html"):
         expected = f"google-site-verification: {verification.name}"
         if verification.read_text(encoding="utf-8").strip() != expected:
