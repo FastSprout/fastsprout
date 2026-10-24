@@ -10,11 +10,10 @@ address together. For a guided introduction, start with
 [one action](../getting-started.md), then add checks, services, persistence,
 and a workflow through the seven tutorial steps.
 
-Install FastSprout 0.2.0 from PyPI with the standard extra, or follow the
-[tutorial setup](../getting-started.md#install):
+Install FastSprout:
 
 ```bash
-pip install 'fastsprout[standard]==0.2.0'
+pip install 'fastsprout[standard]'
 ```
 
 | Use | Start with |

@@ -10,11 +10,10 @@ operation can compose both when it needs to prepare a title and persist it.
 
 ## Enable SQL support
 
-Install the SQL extra and SQLite driver from PyPI in your active tutorial
-environment:
+Install SQL support and the SQLite driver:
 
 ```bash
-python -m pip install 'fastsprout[data-sql]==0.2.0' aiosqlite
+python -m pip install 'fastsprout[data-sql]' aiosqlite
 ```
 
 ## Create and get a task

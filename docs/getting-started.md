@@ -6,15 +6,14 @@ step trims a title and returns a typed draft.
 
 ## Install
 
-Use Python 3.12, 3.13, or 3.14. Create a tutorial directory and virtual
-environment, then install FastSprout from PyPI:
+Use Python 3.12-3.14. Create a tutorial directory and virtual environment:
 
 ```bash
 mkdir fastsprout-tutorial
 cd fastsprout-tutorial
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install 'fastsprout==0.2.0'
+python -m pip install fastsprout
 mkdir -p docs_src/tutorial docs_src/data
 ```
 
@@ -22,8 +21,7 @@ Keep this environment active and save each example at the path shown. The
 examples import code from earlier steps using these paths.
 
 The first three steps use application actions. Add the SQL extra when you
-reach [storing tasks](tutorial/entity-operations.md). For a published PyPI
-package, select its matching documentation version.
+reach [storing tasks](tutorial/entity-operations.md).
 
 ## Prepare a task title
 
