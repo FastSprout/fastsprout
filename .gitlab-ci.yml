@@ -8,7 +8,7 @@ workflow:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME == "development" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
       when: never
     - if: '$CI_COMMIT_BRANCH == "main"'
-      when: never
+      when: always
     - if: '$CI_COMMIT_BRANCH == "development"'
       when: always
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -309,4 +309,5 @@ pages:
       - public
   rules:
     - if: '$CI_COMMIT_BRANCH == "development"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
     - if: '$CI_COMMIT_TAG'

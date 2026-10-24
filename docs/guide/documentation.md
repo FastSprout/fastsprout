@@ -4,8 +4,8 @@ The versioned documentation site is published at
 [fastsprout.dev](https://fastsprout.dev/). It contains usage guides, runnable
 examples, and an API reference generated from the Python source.
 
-GitLab's `docs` stage publishes the site when `development` or a release tag
-is pushed. CI verifies changes before they enter `development`; it does not
+GitLab's `docs` stage publishes the site when `development`, `main`, or a release
+tag is pushed. CI verifies changes before they enter `development`; it does not
 repeat tests on `development`, on `main`, on release tags, or when merging
 `development` into `main`. Tags run package publishing and GitLab Pages.
 Publishing uses the committed example output without rerunning examples.
