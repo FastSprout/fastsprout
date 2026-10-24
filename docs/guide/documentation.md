@@ -13,6 +13,11 @@ The GitHub Actions `Docs` workflow builds documentation for pull requests
 targeting `development`, or when started manually, and retains the rendered
 site as a workflow artifact named `documentation`.
 
+The built-in Material `privacy` plugin downloads the three GitLab CI badges
+during each build and serves them from the documentation site. Badge images
+are refreshed when documentation is published; viewing them does not send
+requests to GitLab. This applies to historical versions and `latest` too.
+
 Build the complete versioned site from the repository root:
 
 ```bash

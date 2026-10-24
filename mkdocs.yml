@@ -39,6 +39,11 @@ theme:
 
 plugins:
   - search
+  - privacy:
+      cache: false
+      links: false
+      assets_include:
+        - gitlab.3dcra.eu/opensource/fastsprout/fastsprout/badges/*
   - mkdocstrings:
       handlers:
         python:

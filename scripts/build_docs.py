@@ -75,6 +75,11 @@ def build(source: Path, destination: Path, slug: str) -> None:
             site_url=f"{SITE_URL}/{slug}/",
             site_dir=str(destination),
         )
+        if "material/privacy" not in config.plugins:
+            publishing = load_config(config_file=str(ROOT / "mkdocs.yml"))
+            config.plugins["material/privacy"] = publishing.plugins[
+                "material/privacy"
+            ]
         project = tomllib.loads((source / "pyproject.toml").read_text())[
             "project"
         ]
