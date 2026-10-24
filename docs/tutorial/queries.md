@@ -6,6 +6,7 @@ use it for a page or a stream.
 
 This example reuses the entity, DataS service, and database setup from the
 previous steps. It creates two pending tasks and one completed task.
+Save it as `docs_src/tutorial/queries.py`.
 
 <!-- example-source: docs_src/tutorial/queries.py -->
 
@@ -13,10 +14,10 @@ previous steps. It creates two pending tasks and one completed task.
 --8<-- "docs_src/tutorial/queries.py"
 ```
 
-Run it from the repository root:
+Run it from your tutorial directory:
 
 ```bash
-uv run python -m docs_src.tutorial.queries
+python -m docs_src.tutorial.queries
 ```
 
 ## Result

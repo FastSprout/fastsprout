@@ -6,7 +6,7 @@ actions so each caller gets that check automatically.
 
 This program reuses `NewTask`, `TaskDraft`, and title normalization from
 [the first step](../getting-started.md). The new pieces are `require_title`
-and `Depends`.
+and `Depends`. Save it as `docs_src/tutorial/shared_checks.py`.
 
 <!-- example-source: docs_src/tutorial/shared_checks.py -->
 
@@ -14,10 +14,10 @@ and `Depends`.
 --8<-- "docs_src/tutorial/shared_checks.py"
 ```
 
-Run it from the repository root:
+Run it from your tutorial directory:
 
 ```bash
-uv run python -m docs_src.tutorial.shared_checks
+python -m docs_src.tutorial.shared_checks
 ```
 
 ## Result

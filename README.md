@@ -32,16 +32,16 @@ contexts, and workflows for composing async operations.
 
 ## Install
 
-FastSprout supports Python 3.12-3.14. The guides linked here describe the
-development API; PyPI release `0.1.1` predates `fastsprout.actions`. Install the
-development version for these features:
+FastSprout supports Python 3.12-3.14. Install version 0.2.0 with SQL and
+event support:
 
 ```bash
-pip install 'fastsprout[standard] @ git+https://github.com/FastSprout/fastsprout.git@development'
+pip install 'fastsprout[standard]==0.2.0'
 ```
 
-See [Getting Started](https://fastsprout.dev/dev/getting-started/) to run the
-repository examples. For a PyPI release, choose its matching documentation version.
+See [Getting Started for 0.2.0](https://fastsprout.dev/0.2.0/getting-started/)
+to run the examples for this release. The other guides linked here follow
+development; choose the matching documentation version for a PyPI release.
 
 ## What it helps with
 

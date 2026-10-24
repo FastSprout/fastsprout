@@ -13,6 +13,7 @@ and one SQLite database for both writes.
 Reuse the service and database setup from [the previous step](entity-operations.md).
 The first pair of calls uses the per-call contexts from that setup. The deletes
 reset the example before the second pair uses an explicit shared context.
+Save this program as `docs_src/tutorial/transactions.py`.
 
 <!-- example-source: docs_src/tutorial/transactions.py -->
 
@@ -20,10 +21,10 @@ reset the example before the second pair uses an explicit shared context.
 --8<-- "docs_src/tutorial/transactions.py"
 ```
 
-Run it from the repository root:
+Run it from your tutorial directory:
 
 ```bash
-uv run python -m docs_src.tutorial.transactions
+python -m docs_src.tutorial.transactions
 ```
 
 ## Result

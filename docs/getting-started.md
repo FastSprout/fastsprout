@@ -6,26 +6,20 @@ step trims a title and returns a typed draft.
 
 ## Install
 
-Use Python 3.12, 3.13, or 3.14. This tutorial follows development; PyPI release
-`0.1.1` predates `fastsprout.actions`. Run the examples from a development
-checkout:
+Use Python 3.12, 3.13, or 3.14. Create a tutorial directory and virtual
+environment, then install FastSprout from PyPI:
 
 ```bash
-git clone --branch development https://github.com/FastSprout/fastsprout.git
-cd fastsprout
-uv sync
+mkdir fastsprout-tutorial
+cd fastsprout-tutorial
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install 'fastsprout==0.2.0'
+mkdir -p docs_src/tutorial docs_src/data
 ```
 
-<details markdown="1">
-<summary>Install in another project</summary>
-
-Install the same development version directly:
-
-```bash
-pip install 'fastsprout @ git+https://github.com/FastSprout/fastsprout.git@development'
-```
-
-</details>
+Keep this environment active and save each example at the path shown. The
+examples import code from earlier steps using these paths.
 
 The first three steps use application actions. Add the SQL extra when you
 reach [storing tasks](tutorial/entity-operations.md). For a published PyPI
@@ -33,8 +27,7 @@ package, select its matching documentation version.
 
 ## Prepare a task title
 
-Save this program as `docs_src/quickstart.py` in the checkout. The file is
-already included so you can also run it immediately.
+Save this program as `docs_src/quickstart.py` in your tutorial directory.
 
 <!-- example-source: docs_src/quickstart.py -->
 
@@ -42,10 +35,10 @@ already included so you can also run it immediately.
 --8<-- "docs_src/quickstart.py"
 ```
 
-Run it from the repository root:
+Run it from `fastsprout-tutorial`, the directory containing `docs_src`:
 
 ```bash
-uv run python -m docs_src.quickstart
+python -m docs_src.quickstart
 ```
 
 ## Result
