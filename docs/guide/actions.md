@@ -10,12 +10,11 @@ address together. For a guided introduction, start with
 [one action](../getting-started.md), then add checks, services, persistence,
 and a workflow through the seven tutorial steps.
 
-The examples use the development API. Start with the
-[development checkout](../getting-started.md#install), or install that version
-with the standard extra:
+Install FastSprout 0.2.0 from PyPI with the standard extra, or follow the
+[tutorial setup](../getting-started.md#install):
 
 ```bash
-pip install 'fastsprout[standard] @ git+https://github.com/FastSprout/fastsprout.git@development'
+pip install 'fastsprout[standard]==0.2.0'
 ```
 
 | Use | Start with |
@@ -35,10 +34,11 @@ returns an awaitable result:
 --8<-- "examples/actions/01_action/03_function/01_pyd.py"
 ```
 
-Run it from the repository root:
+Save it as `action_example.py` and run it in the environment where you
+installed FastSprout:
 
 ```bash
-uv run --extra standard python examples/actions/01_action/03_function/01_pyd.py
+python action_example.py
 ```
 
 For a class with a single operation, inherit from `Action[Input, Output]`

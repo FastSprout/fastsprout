@@ -3,6 +3,7 @@
 The task feature now has preparation and preview operations. Give callers one
 service object for the feature. Reuse the checked actions from
 [the previous step](shared-checks.md), including their existing dependencies.
+Save this program as `docs_src/tutorial/services.py`.
 
 <!-- example-source: docs_src/tutorial/services.py -->
 
@@ -10,10 +11,10 @@ service object for the feature. Reuse the checked actions from
 --8<-- "docs_src/tutorial/services.py"
 ```
 
-Run it from the repository root:
+Run it from your tutorial directory:
 
 ```bash
-uv run python -m docs_src.tutorial.services
+python -m docs_src.tutorial.services
 ```
 
 ## Result

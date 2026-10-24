@@ -1,6 +1,6 @@
 [project]
 name = "fastsprout"
-version = "0.1.1"
+version = "0.2.0"
 description = "FastSprout - Python backend framework that grows from a seed. Modular monolith first. Async-native. Built on FastAPI."
 readme = "README.md"
 license = "Apache-2.0"
@@ -31,7 +31,7 @@ dependencies = ["pydantic>=2.13.5", "typing-extensions>=4.14"]
 
 
 [project.optional-dependencies]
-data-sql = ["sqlmodel==0.0.42", 'sqlalchemy']
+data-sql = ["sqlmodel==0.0.42", 'sqlalchemy[asyncio]']
 events = ["bubus>=1.5.6", "croniter>=6.2.4"]
 testing = ["hypothesis>=6.0", "pytest>=9.0.3", "pytest-asyncio>=1.4.0", "typeguard>=4.4,<5"]
 standard = ["fastsprout[data-sql,events]"]

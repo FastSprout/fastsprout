@@ -7,6 +7,7 @@ Compose those stages as a reusable workflow.
 The example reuses `NewTask`, `TaskDraft`, and the checked preparation action
 from the earlier steps. The new operation accepts a `TaskDraft` and returns
 another `TaskDraft` with an uppercase title.
+Save this program as `docs_src/tutorial/workflows.py`.
 
 <!-- example-source: docs_src/tutorial/workflows.py -->
 
@@ -14,10 +15,10 @@ another `TaskDraft` with an uppercase title.
 --8<-- "docs_src/tutorial/workflows.py"
 ```
 
-Run it from the repository root:
+Run it from your tutorial directory:
 
 ```bash
-uv run python -m docs_src.tutorial.workflows
+python -m docs_src.tutorial.workflows
 ```
 
 ## Result

@@ -10,29 +10,19 @@ operation can compose both when it needs to prepare a title and persist it.
 
 ## Enable SQL support
 
-In the development checkout, add the SQL extra:
+Install the SQL extra and SQLite driver from PyPI in your active tutorial
+environment:
 
 ```bash
-uv sync --extra data-sql
+python -m pip install 'fastsprout[data-sql]==0.2.0' aiosqlite
 ```
-
-The development environment includes the SQLite driver.
-
-<details markdown="1">
-<summary>Install in another project</summary>
-
-Install the development package and SQLite driver:
-
-```bash
-pip install 'fastsprout[data-sql] @ git+https://github.com/FastSprout/fastsprout.git@development' aiosqlite
-```
-
-</details>
 
 ## Create and get a task
 
 The example setup supplies a `Task` entity with `id`, `title`, and `completed`
 fields, plus a fresh in-memory database. The service is `DataS(Task)`.
+Save the shared setup under **SQLite setup and the Task entity** below as
+`docs_src/data/common.py`, then save this program as `docs_src/data/quickstart.py`.
 
 <!-- example-source: docs_src/data/quickstart.py -->
 
@@ -40,10 +30,10 @@ fields, plus a fresh in-memory database. The service is `DataS(Task)`.
 --8<-- "docs_src/data/quickstart.py"
 ```
 
-Run it from the repository root:
+Run it from your tutorial directory:
 
 ```bash
-uv run python -m docs_src.data.quickstart
+python -m docs_src.data.quickstart
 ```
 
 ## Result
